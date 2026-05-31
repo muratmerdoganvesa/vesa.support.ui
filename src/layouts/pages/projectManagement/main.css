@@ -1,0 +1,208 @@
+
+
+
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.selection-screen {
+    transform: translateX(0);
+    
+}
+
+
+.selection-screen.slide-out {
+    transform: translateX(-100%);
+}
+
+.test-screen {
+    transform: translateX(100%);
+}
+
+.test-screen.slide-in {
+    transform: translateX(0);
+}
+
+.selection-content {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+   
+    padding: 24px;
+}
+
+.selection-card {
+    width: 100%;
+    max-width: 800px;
+    padding: 48px;
+    border-radius: 24px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    opacity: 1;
+    transform: scale(1);
+    transition: all 0.5s ease;
+}
+
+.selection-card.fade-out {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+.header-section {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.icon-container1 {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #1976d2, #9c27b0);
+    border-radius: 50%;
+    margin-bottom: 24px;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700 !important;
+}
+
+.autocomplete-container {
+    margin-bottom: 32px;
+}
+
+/* .project-card {
+    padding: 24px;
+    background: rgba(102, 126, 234, 0.05) !important;
+    border: 2px solid rgba(102, 126, 234, 0.2) !important;
+    border-radius: 16px !important;
+    margin-top: 16px;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideIn 0.3s ease forwards;
+} */
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.clear-button {
+    min-width: 120px !important;
+    border-radius: 16px !important;
+    border-width: 2px !important;
+    text-transform: none !important;
+    font-weight: 600 !important;
+}
+
+.continue-button {
+    min-width: 120px !important;
+    border-radius: 16px !important;
+    text-transform: none !important;
+    font-weight: 600 !important;
+}
+
+.continue-button.enabled {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    transition: all 0.2s ease;
+}
+
+.continue-button.enabled:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%) !important;
+    transform: scale(1.05);
+}
+
+.test-component {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 24px;
+}
+
+.test-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.back-button {
+    color: white !important;
+    margin-right: 16px !important;
+}
+
+.back-button:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.test-content {
+    flex: 1;
+    padding: 32px;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-radius: 16px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+    color: #333 !important;
+}
+
+.project-info-card {
+    margin-top: 32px;
+    padding: 24px;
+    background: rgba(102, 126, 234, 0.1) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.autocomplete-input {
+    border-radius: 16px !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.autocomplete-input:hover {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.autocomplete-input.Mui-focused {
+    background-color: white !important;
+}
+
+.option-item {
+    padding: 16px !important;
+}
+
+.option-content {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.option-icon {
+    color: #1976d2 !important;
+    margin-right: 16px !important;
+}
+
+.option-text {
+    flex-grow: 1;
+}

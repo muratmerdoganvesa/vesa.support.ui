@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "typeRoots": ["node_modules/@types", "./src/types"],
+    "target": "es2020",
+    "lib": ["dom", "dom.iterable", "esnext", "es2020"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "Bundler", 
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": false,
+    "allowImportingTsExtensions": true,
+    
+    /* ALIAS TANIMLARI BURADAN BAŞLIYOR */
+    "paths": {
+      "api/generated": ["./src/api/generated/index"],
+      "layouts/*": ["./src/layouts/*"],
+      "components/*": ["./src/components/*"],
+      "context": ["./src/context/index"],
+      "context/*": ["./src/context/*"],
+      "assets/*": ["./src/assets/*"],
+      "examples/*": ["./src/examples/*"],
+      "routes": ["./src/routes"],
+      "api/*": ["./src/api/*"],
+      "lib/*": ["./src/lib/*"],
+      "utils/*": ["./src/utils/*"],
+      "locales/*": ["./src/locales/*"],
+      "page.routes": ["./src/page.routes"],
+      "confiuration": ["./src/confiuration"],
+      "App": ["./src/App"],
+      "i18n": ["./src/i18n"]
+    }
+  },
+  "include": [
+    "src", "vite.config.ts", "vite.config.mjs",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.d.ts",
+    "src/**/*.js",
+    "src/**/*.jsx"
+  ],
+  "exclude": ["node_modules"]
+}

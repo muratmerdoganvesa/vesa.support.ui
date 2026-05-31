@@ -1,0 +1,1062 @@
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery } from "react-query";
+import { MessageBoxType } from "@ui5/webcomponents-react";
+import {
+  Bell,
+  Menu as MenuIcon,
+  ChevronDown,
+  LogOut,
+  User,
+  Ticket,
+  Key,
+  FolderOpen,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import "primeicons/primeicons.css";
+
+import { Button } from "components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "components/ui/avatar";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "components/ui/dialog";
+import { Input } from "components/ui/input";
+import { Label } from "components/ui/label";
+import { Separator } from "components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
+import { cn } from "lib/utils";
+
+import saplogo from "../../../assets/images/small-logos/sap-logo-svg.svg";
+import profileImg from "../../../assets/images/profile-icon.png";
+
+import {
+  MenuApi,
+  TicketPermDto,
+  TicketApi,
+  UserApi,
+  ApproveItemsApi,
+} from "api/generated/api";
+import getConfiguration, { getConfigurationAccessTokenLogin } from "confiuration";
+import { useAlert } from "layouts/pages/hooks/useAlert";
+import { useBusy } from "layouts/pages/hooks/useBusy";
+import { useMaterialUIController, setTransparentNavbar } from "context";
+import { menuAPIController } from "locales/controller";
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
+interface Props {
+  absolute?: boolean;
+  light?: boolean;
+  isMini?: boolean;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const MENU_ICON_RULES: ReadonlyArray<{ keywords: string[]; icon: string }> = [
+  { keywords: ["dashboard", "anasayfa", "home"], icon: "home" },
+  { keywords: ["profil", "profile", "kullanici", "user"], icon: "user" },
+  { keywords: ["rol", "role", "yetki", "permission"], icon: "shield" },
+  { keywords: ["departman", "department", "team", "ekip"], icon: "users" },
+  { keywords: ["talep", "ticket", "request", "support"], icon: "ticket" },
+  { keywords: ["form", "anket", "survey", "parametre"], icon: "file-edit" },
+  { keywords: ["rapor", "report", "analiz", "istatistik"], icon: "chart-bar" },
+  { keywords: ["takvim", "calendar", "plan"], icon: "calendar" },
+  { keywords: ["envanter", "inventory", "stok"], icon: "database" },
+  { keywords: ["proje", "project", "gorev", "task"], icon: "briefcase" },
+  { keywords: ["mesaj", "chat", "sohbet", "message"], icon: "comments" },
+  { keywords: ["ayar", "settings", "config"], icon: "cog" },
+  { keywords: ["onay", "approve", "approval"], icon: "check-circle" },
+  { keywords: ["modul", "module", "uygulama", "app"], icon: "th-large" },
+];
+
+const PARENT_ICON_POOLS: ReadonlyArray<{ parentKeywords: string[]; icons: string[] }> = [
+  {
+    parentKeywords: ["yonetim", "yönetim"],
+    icons: ["users", "shield", "sitemap", "id-card", "briefcase", "cog"],
+  },
+  {
+    parentKeywords: ["yardim masasi", "yardım masası", "help desk", "destek"],
+    icons: ["ticket", "headphones", "comment", "bell", "inbox", "wrench"],
+  },
+  {
+    parentKeywords: ["ekip planlama", "team planning", "planlama"],
+    icons: ["calendar", "clock", "users", "list-check", "chart-line", "send"],
+  },
+  {
+    parentKeywords: ["form yonetimi", "form yönetimi"],
+    icons: ["file-edit", "file", "check-square", "sliders-h", "clipboard", "folder-open"],
+  },
+  {
+    parentKeywords: ["performans yonetimi", "performans yönetimi"],
+    icons: ["chart-bar", "trophy", "star", "chart-line", "target", "bolt"],
+  },
+  {
+    parentKeywords: ["proje yonetimi", "proje yönetimi", "project management"],
+    icons: ["briefcase", "diagram-3", "tasks", "sitemap", "compass", "flag"],
+  },
+];
+
+const PASSWORD_REQUIREMENTS = [
+  "Parola en az 6 karakter uzunluğunda olmalıdır",
+  "Parola en az bir özel karakter içermelidir",
+  "Parola en az bir rakam içermelidir",
+  "Parola en az bir büyük harf (A-Z) içermelidir",
+];
+
+// ─── Pure Helpers ─────────────────────────────────────────────────────────────
+
+const resolveMenuIconClass = (
+  menuItem: any,
+  parentMenuName?: string,
+  siblingIndex = 0
+): string => {
+  const explicitIcon = menuItem?.icon;
+  if (explicitIcon && explicitIcon !== "null" && explicitIcon !== "undefined") {
+    return `pi pi-${explicitIcon}`;
+  }
+
+  const normalizedName = String(menuItem?.name || "").toLocaleLowerCase("tr-TR");
+  const normalizedHref = String(menuItem?.href || "").toLocaleLowerCase("tr-TR");
+  const composite = `${normalizedName} ${normalizedHref}`;
+  const parentName = String(parentMenuName || "").toLocaleLowerCase("tr-TR");
+
+  if (
+    parentName.includes("yardim masasi") ||
+    parentName.includes("yardım masası") ||
+    parentName.includes("help desk")
+  ) {
+    if (composite.includes("taleplerim")) return "pi pi-inbox";
+    if (composite.includes("talep yonetimi") || composite.includes("talep yönetimi"))
+      return "pi pi-sitemap";
+  }
+
+  const matchedRule = MENU_ICON_RULES.find((r) =>
+    r.keywords.some((kw) => composite.includes(kw))
+  );
+  if (matchedRule) return `pi pi-${matchedRule.icon}`;
+
+  const matchedPool = PARENT_ICON_POOLS.find((p) =>
+    p.parentKeywords.some((kw) => parentName.includes(kw))
+  );
+  if (matchedPool) {
+    return `pi pi-${matchedPool.icons[siblingIndex % matchedPool.icons.length]}`;
+  }
+
+  return "pi pi-circle-fill";
+};
+
+// ─── Custom Hook ──────────────────────────────────────────────────────────────
+
+const useIsDesktop = (breakpoint = 1024): boolean => {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= breakpoint
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${breakpoint}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+
+  return isDesktop;
+};
+
+// ─── ProfileMenu ──────────────────────────────────────────────────────────────
+
+interface ProfileMenuProps {
+  photo?: string;
+  userName?: string;
+  onChangePassword: () => void;
+}
+
+const ProfileMenu = ({ photo, userName, onChangePassword }: ProfileMenuProps) => {
+  const navigate = useNavigate();
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={cn(
+            "flex items-center gap-1.5 rounded-full p-0.5",
+            "outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1"
+          )}
+          aria-label="Profil menüsü"
+        >
+          <Avatar className="h-8 w-8">
+            {photo ? (
+              <AvatarImage
+                src={`data:image/jpeg;base64,${photo}`}
+                alt="Profil fotoğrafı"
+                loading="lazy"
+              />
+            ) : (
+              <AvatarImage src={profileImg} alt="Varsayılan profil" loading="lazy" />
+            )}
+            <AvatarFallback className="bg-blue-100 text-blue-700 text-xs font-semibold">
+              {userName?.slice(0, 2)?.toUpperCase() ?? "U"}
+            </AvatarFallback>
+          </Avatar>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        className="w-52 rounded-xl border-slate-100 shadow-md shadow-slate-100/80"
+      >
+        {userName && (
+          <>
+            <DropdownMenuLabel className="truncate text-xs font-normal text-slate-400">
+              {userName}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem
+            className="cursor-pointer gap-2 rounded-lg"
+            onClick={() => navigate("/profile/profile-overview")}
+          >
+            <User className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+            Profilim
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer gap-2 rounded-lg"
+            onClick={() => navigate("/tickets")}
+          >
+            <Ticket className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+            Talep Yönetimi
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer gap-2 rounded-lg"
+            onClick={() => navigate("/solveAllTicket")}
+          >
+            <CheckCircle className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+            Talep Çözümleme
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer gap-2 rounded-lg"
+            onClick={() => navigate("/profile/all-projects")}
+          >
+            <FolderOpen className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+            Projelerim
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="cursor-pointer gap-2 rounded-lg"
+            onClick={onChangePassword}
+          >
+            <Key className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+            Şifre Değiştir
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          className="cursor-pointer gap-2 rounded-lg text-rose-500 focus:bg-rose-50 focus:text-rose-600"
+          onClick={() => navigate("/logout")}
+        >
+          <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
+          Çıkış Yap
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+// ─── NotificationSection ──────────────────────────────────────────────────────
+
+interface NotificationSectionProps {
+  count: number;
+  showEmpty: boolean;
+  onShowEmpty: (open: boolean) => void;
+  onGoToApprove: () => void;
+}
+
+const NotificationSection = ({
+  count,
+  showEmpty,
+  onShowEmpty,
+  onGoToApprove,
+}: NotificationSectionProps) => {
+  const bellButtonClass = cn(
+    "relative flex h-8 w-8 items-center justify-center rounded-full",
+    "transition-colors hover:bg-slate-100",
+    "outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+  );
+
+  if (count > 0) {
+    return (
+      <button
+        onClick={onGoToApprove}
+        className={bellButtonClass}
+        aria-label={`${count} bekleyen onay`}
+      >
+        <Bell className="h-4 w-4 text-slate-600" />
+        <span
+          className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold leading-none text-white"
+          aria-hidden="true"
+        >
+          {count > 9 ? "9+" : count}
+        </span>
+      </button>
+    );
+  }
+
+  return (
+    <Popover open={showEmpty} onOpenChange={onShowEmpty}>
+      <PopoverTrigger asChild>
+        <button className={bellButtonClass} aria-label="Bildirimler">
+          <Bell className="h-4 w-4 text-slate-500" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-56 rounded-xl border-slate-100 p-3 shadow-md shadow-slate-100/80"
+      >
+        <p className="flex items-center gap-2 text-sm text-slate-500">
+          <Bell className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          Bildiriminiz bulunmamaktadır.
+        </p>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+// ─── DesktopMenuItem ──────────────────────────────────────────────────────────
+
+interface DesktopMenuItemProps {
+  item: any;
+  pathname: string;
+  parentIndex: number;
+}
+
+const DesktopMenuItem = ({ item, pathname, parentIndex }: DesktopMenuItemProps) => {
+  const navigate = useNavigate();
+  const hasSubMenus = Array.isArray(item?.subMenus) && item.subMenus.length > 0;
+
+  const isActive = hasSubMenus
+    ? (item.subMenus as any[]).some(
+        (sub) => sub.href && sub.href !== "#" && pathname === sub.href
+      )
+    : !!(item.href && item.href !== "#" && pathname === item.href);
+
+  const iconClass = resolveMenuIconClass(item, undefined, parentIndex);
+
+  const triggerClass = cn(
+    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+    "text-sm font-semibold whitespace-nowrap transition-all duration-150",
+    "outline-none focus-visible:ring-2 focus-visible:ring-blue-400",
+    isActive
+      ? "bg-blue-600 text-white shadow-[0_3px_8px_rgba(37,99,235,0.22)]"
+      : "text-blue-600 hover:bg-blue-50"
+  );
+
+  if (hasSubMenus) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className={triggerClass} aria-current={isActive ? "page" : undefined}>
+            <i className={cn(iconClass, "text-[0.85rem] leading-none")} aria-hidden="true" />
+            {menuAPIController(item.name)}
+            <ChevronDown className="h-3 w-3 opacity-60" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="min-w-[220px] rounded-xl border-slate-100 py-1.5 shadow-md shadow-slate-100/80"
+        >
+          {(item.subMenus as any[]).map((subItem, subIndex) => {
+            const isSelected =
+              subItem.href && subItem.href !== "#" && pathname === subItem.href;
+            return (
+              <DropdownMenuItem
+                key={subItem.id}
+                onClick={() => navigate(subItem.href || "#")}
+                className={cn(
+                  "mx-1 cursor-pointer gap-2.5 rounded-lg",
+                  isSelected &&
+                    "bg-blue-600 text-white focus:bg-blue-700 focus:text-white"
+                )}
+                aria-current={isSelected ? "page" : undefined}
+              >
+                <i
+                  className={cn(
+                    resolveMenuIconClass(subItem, item?.name, subIndex),
+                    "text-sm shrink-0"
+                  )}
+                  aria-hidden="true"
+                />
+                {menuAPIController(subItem.name)}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => navigate(item.href || "#")}
+      className={triggerClass}
+      aria-current={isActive ? "page" : undefined}
+    >
+      <i className={cn(iconClass, "text-[0.85rem] leading-none")} aria-hidden="true" />
+      {menuAPIController(item.name)}
+    </button>
+  );
+};
+
+// ─── MobileMenuSheet ──────────────────────────────────────────────────────────
+
+interface MobileMenuSheetProps {
+  open: boolean;
+  onClose: () => void;
+  items: any[];
+  pathname: string;
+  onNavigate: (href: string) => void;
+}
+
+const MobileMenuSheet = ({
+  open,
+  onClose,
+  items,
+  pathname,
+  onNavigate,
+}: MobileMenuSheetProps) => {
+  const isActiveRoute = (href?: string) =>
+    !!href && href !== "#" && pathname === href;
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="left" className="flex w-72 flex-col p-0">
+        <SheetHeader className="border-b border-slate-100 px-4 py-3">
+          <SheetTitle className="text-sm font-semibold text-slate-700">
+            Menüler
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto py-1">
+          {items.map((menuItem, parentIndex) => {
+            const hasSubMenus =
+              Array.isArray(menuItem?.subMenus) && menuItem.subMenus.length > 0;
+
+            if (hasSubMenus) {
+              return (
+                <div key={menuItem.id} className="mb-1">
+                  <p className="px-4 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    {menuAPIController(menuItem.name)}
+                  </p>
+                  {(menuItem.subMenus as any[]).map((subItem, subIndex) => {
+                    const isActive = isActiveRoute(subItem.href);
+                    return (
+                      <button
+                        key={subItem.id}
+                        onClick={() => {
+                          onNavigate(subItem.href || "#");
+                          onClose();
+                        }}
+                        className={cn(
+                          "flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors",
+                          isActive
+                            ? "bg-blue-50 font-semibold text-blue-700"
+                            : "text-slate-600 hover:bg-slate-50"
+                        )}
+                        aria-current={isActive ? "page" : undefined}
+                      >
+                        <i
+                          className={cn(
+                            resolveMenuIconClass(subItem, menuItem?.name, subIndex),
+                            "w-4 shrink-0 text-sm",
+                            isActive ? "text-blue-600" : "text-slate-400"
+                          )}
+                          aria-hidden="true"
+                        />
+                        {menuAPIController(subItem.name)}
+                      </button>
+                    );
+                  })}
+                  <Separator className="mt-1" />
+                </div>
+              );
+            }
+
+            const isActive = isActiveRoute(menuItem.href);
+            return (
+              <button
+                key={menuItem.id}
+                onClick={() => {
+                  onNavigate(menuItem.href || "#");
+                  onClose();
+                }}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors",
+                  isActive
+                    ? "bg-blue-50 font-semibold text-blue-700"
+                    : "text-slate-600 hover:bg-slate-50"
+                )}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <i
+                  className={cn(
+                    resolveMenuIconClass(menuItem, undefined, parentIndex),
+                    "w-4 shrink-0 text-sm",
+                    isActive ? "text-blue-600" : "text-slate-400"
+                  )}
+                  aria-hidden="true"
+                />
+                {menuAPIController(menuItem.name)}
+              </button>
+            );
+          })}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+// ─── ChangePasswordDialog ─────────────────────────────────────────────────────
+
+interface ChangePasswordDialogProps {
+  open: boolean;
+  onClose: () => void;
+  newPw: string;
+  newPwConfirm: string;
+  passwordError: string;
+  pswDisabled: boolean;
+  onNewPwChange: (val: string) => void;
+  onConfirmPwChange: (val: string) => void;
+  onSubmit: () => void;
+}
+
+const ChangePasswordDialog = ({
+  open,
+  onClose,
+  newPw,
+  newPwConfirm,
+  passwordError,
+  pswDisabled,
+  onNewPwChange,
+  onConfirmPwChange,
+  onSubmit,
+}: ChangePasswordDialogProps) => {
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleClose = () => {
+    setShowNew(false);
+    setShowConfirm(false);
+    onClose();
+  };
+
+  const PasswordToggleButton = ({
+    show,
+    onToggle,
+    label,
+  }: {
+    show: boolean;
+    onToggle: () => void;
+    label: string;
+  }) => (
+    <button
+      type="button"
+      tabIndex={-1}
+      onClick={onToggle}
+      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+      aria-label={label}
+    >
+      {show ? (
+        <EyeOff className="h-4 w-4" aria-hidden="true" />
+      ) : (
+        <Eye className="h-4 w-4" aria-hidden="true" />
+      )}
+    </button>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="sm:max-w-[420px] rounded-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+              <Key className="h-4 w-4 text-blue-600" aria-hidden="true" />
+            </div>
+            <DialogTitle className="text-base font-semibold text-slate-800">
+              Şifre Değiştirme
+            </DialogTitle>
+          </div>
+        </DialogHeader>
+
+        <div className="mt-2 flex flex-col gap-4">
+          {/* New password */}
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor="nav-new-pw"
+              className="text-sm font-medium text-slate-700"
+            >
+              Yeni Şifre
+            </Label>
+            <div className="relative">
+              <Input
+                id="nav-new-pw"
+                type={showNew ? "text" : "password"}
+                value={newPw}
+                onChange={(e) => onNewPwChange(e.target.value)}
+                placeholder="••••••••"
+                className={cn(
+                  "pr-9",
+                  passwordError && "border-rose-300 focus-visible:ring-rose-200"
+                )}
+              />
+              <PasswordToggleButton
+                show={showNew}
+                onToggle={() => setShowNew((v) => !v)}
+                label={showNew ? "Şifreyi gizle" : "Şifreyi göster"}
+              />
+            </div>
+          </div>
+
+          {/* Confirm password */}
+          <div className="flex flex-col gap-1.5">
+            <Label
+              htmlFor="nav-confirm-pw"
+              className="text-sm font-medium text-slate-700"
+            >
+              Yeni Şifre Tekrar
+            </Label>
+            <div className="relative">
+              <Input
+                id="nav-confirm-pw"
+                type={showConfirm ? "text" : "password"}
+                value={newPwConfirm}
+                onChange={(e) => onConfirmPwChange(e.target.value)}
+                placeholder="••••••••"
+                className={cn(
+                  "pr-9",
+                  passwordError && "border-rose-300 focus-visible:ring-rose-200"
+                )}
+              />
+              <PasswordToggleButton
+                show={showConfirm}
+                onToggle={() => setShowConfirm((v) => !v)}
+                label={showConfirm ? "Şifreyi gizle" : "Şifreyi göster"}
+              />
+            </div>
+          </div>
+
+          {/* Inline error */}
+          {passwordError && (
+            <div className="flex items-center gap-2 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-xs text-rose-600">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {passwordError}
+            </div>
+          )}
+
+          {/* Requirements */}
+          <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <p className="mb-2 text-xs font-medium text-slate-500">
+              Şifre gereksinimleri:
+            </p>
+            <ul className="flex flex-col gap-1">
+              {PASSWORD_REQUIREMENTS.map((req, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-slate-500">
+                  <span
+                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-slate-300"
+                    aria-hidden="true"
+                  />
+                  {req}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <DialogFooter className="mt-2 gap-2 sm:gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleClose}
+            className="flex-1"
+          >
+            İptal
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={pswDisabled}
+            onClick={onSubmit}
+            className="flex-1 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            Kaydet
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// ─── DashboardNavbar ──────────────────────────────────────────────────────────
+
+function DashboardNavbar({ absolute, light, isMini }: Props): JSX.Element {
+  const [controller, dispatch] = useMaterialUIController();
+  const { fixedNavbar, darkMode } = controller;
+
+  const [userData, setUserData] = useState<TicketPermDto>();
+  const [topMenuItems, setTopMenuItems] = useState<any[]>([]);
+  const [waitingCount, setWaitingCount] = useState(0);
+  const [showNoNotification, setShowNoNotification] = useState(false);
+  const [isTopMenuDrawerOpen, setIsTopMenuDrawerOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [loginMail, setLoginMail] = useState("");
+
+  const [newPw, setNewPw] = useState("");
+  const [newPwConfirm, setNewPwConfirm] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [pswTrue, setPswTrue] = useState(true);
+
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const dispatchAlert = useAlert();
+  const dispatchBusy = useBusy();
+  const isDesktop = useIsDesktop();
+
+  // Keep transparent navbar context in sync with scroll position
+  useEffect(() => {
+    const handleTransparentNavbar = () => {
+      setTransparentNavbar(
+        dispatch,
+        (fixedNavbar && window.scrollY === 0) || !fixedNavbar
+      );
+    };
+    window.addEventListener("scroll", handleTransparentNavbar);
+    handleTransparentNavbar();
+    return () => window.removeEventListener("scroll", handleTransparentNavbar);
+  }, [dispatch, fixedNavbar]);
+
+  // ── Queries ──────────────────────────────────────────────────────────────
+
+  const { data: userDataQuery } = useQuery(
+    "dashboardUserData",
+    async () => {
+      dispatchBusy({ isBusy: true });
+      try {
+        const conf = getConfiguration();
+        const [ticketData, userDetail] = await Promise.all([
+          new TicketApi(conf).apiTicketCheckPermGet(),
+          new UserApi(conf).apiUserGetLoginUserDetailGet(),
+        ]);
+        return {
+          ticketPermission: ticketData.data,
+          userDetail: userDetail.data,
+        };
+      } finally {
+        dispatchBusy({ isBusy: false });
+      }
+    },
+    {
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 60,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      enabled: !!localStorage.getItem("accessToken"),
+    }
+  );
+
+  const { data: topMenuItemsQuery } = useQuery(
+    "menuItems",
+    async () => {
+      const conf = getConfigurationAccessTokenLogin();
+      const data = await new MenuApi(conf).apiMenuGet();
+      return data.data;
+    },
+    {
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 60,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      enabled: !!localStorage.getItem("accessToken"),
+    }
+  );
+
+  // Keep menu data cached for other consumers
+  useQuery(
+    "dashboardMenuData",
+    async () => {
+      dispatchBusy({ isBusy: true });
+      try {
+        const conf = getConfiguration();
+        const data = await new MenuApi(conf).apiMenuAllListDataGet();
+        return data.data;
+      } finally {
+        dispatchBusy({ isBusy: false });
+      }
+    },
+    {
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 60,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      enabled: !!localStorage.getItem("accessToken"),
+    }
+  );
+
+  // ── Effects ───────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!userDataQuery) return;
+    setUserData(userDataQuery.ticketPermission);
+    setLoginMail(userDataQuery.userDetail.email);
+    getApproveDetail(userDataQuery.ticketPermission.id);
+  }, [userDataQuery]);
+
+  useEffect(() => {
+    if (topMenuItemsQuery) {
+      setTopMenuItems(topMenuItemsQuery as any[]);
+    }
+  }, [topMenuItemsQuery]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const getApproveDetail = async (_userId: any) => {
+    const conf = getConfiguration();
+    const result =
+      await new ApproveItemsApi(conf).apiApproveItemsGetPendingCountGetPendingCountGet();
+    setWaitingCount(result.data);
+  };
+
+  const handleChangePassword = () => setIsDeleteModalOpen(true);
+
+  const handleDeleteCloseModal = () => {
+    setNewPw("");
+    setNewPwConfirm("");
+    setPasswordError("");
+    setPswTrue(true);
+    setIsDeleteModalOpen(false);
+  };
+
+  const validatePassword = (password: string): string => {
+    if (password.length < 6)
+      return "Parola en az 6 karakter uzunluğunda olmalıdır";
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password))
+      return "Parola en az bir özel karakter içermelidir";
+    if (!/\d/.test(password)) return "Parola en az bir rakam içermelidir";
+    if (!/[A-Z]/.test(password))
+      return "Parola en az bir büyük harf (A-Z) içermelidir";
+    return "";
+  };
+
+  const handlePasswordChange = (pw: string) => {
+    setNewPw(pw);
+    setPasswordError(validatePassword(pw));
+  };
+
+  const handleConfirmPasswordChange = (pw: string) => {
+    setNewPwConfirm(pw);
+    const error = validatePassword(pw);
+    if (error) {
+      setPasswordError(error);
+      setPswTrue(true);
+    } else if (newPw && pw !== newPw) {
+      setPasswordError("Şifreler eşleşmiyor..!");
+      setPswTrue(true);
+    } else {
+      setPasswordError("");
+      setPswTrue(false);
+    }
+  };
+
+  const changePassword = async () => {
+    try {
+      dispatchBusy({ isBusy: true });
+      if (
+        validatePassword(newPw) ||
+        validatePassword(newPwConfirm) ||
+        newPw !== newPwConfirm
+      ) {
+        dispatchAlert({
+          message: "Şifre geçerli değil. Lütfen kontrol edin.",
+          type: MessageBoxType.Error,
+        });
+        return;
+      }
+      const conf = getConfiguration();
+      await new UserApi(conf).apiUserResetPassWordGet(loginMail, newPw);
+      dispatchAlert({
+        message: "Şifre başarıyla güncellendi",
+        type: MessageBoxType.Success,
+      });
+      handleDeleteCloseModal();
+    } catch (error) {
+      dispatchAlert({ message: `Hata: ${error}`, type: MessageBoxType.Error });
+      handleDeleteCloseModal();
+    } finally {
+      dispatchBusy({ isBusy: false });
+    }
+  };
+
+  const handleNotificationClick = () => {
+    if (waitingCount > 0) navigate("/approve");
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  return (
+    <div className="sticky top-0 z-50 w-full">
+      {/* ── Top Shell Bar ── */}
+      <header
+        className={cn(
+          "flex items-center justify-between border-b px-4 py-2",
+          "shadow-[0_1px_4px_rgba(15,23,42,0.06)]",
+          darkMode
+            ? "border-slate-700 bg-slate-900"
+            : "border-slate-100 bg-white"
+        )}
+      >
+        {/* Left: Logo + app title */}
+        <div className="flex items-center gap-3">
+          <img
+            src={saplogo}
+            alt="SAP Logo"
+            className="h-7 w-auto"
+            loading="lazy"
+          />
+          {userData?.name && (
+            <span
+              className={cn(
+                "hidden text-sm font-semibold sm:block",
+                darkMode ? "text-slate-200" : "text-slate-700"
+              )}
+            >
+              {userData.name}
+            </span>
+          )}
+        </div>
+
+        {/* Right: Notifications + Profile */}
+        <div className="flex items-center gap-1.5">
+          <NotificationSection
+            count={waitingCount}
+            showEmpty={showNoNotification}
+            onShowEmpty={setShowNoNotification}
+            onGoToApprove={handleNotificationClick}
+          />
+          <ProfileMenu
+            photo={userDataQuery?.userDetail?.photo}
+            userName={userData?.name}
+            onChangePassword={handleChangePassword}
+          />
+        </div>
+      </header>
+
+      {/* ── Menu Bar ── */}
+      <nav
+        className={cn(
+          "border-b",
+          darkMode
+            ? "border-slate-700 bg-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.2)]"
+            : "border-slate-100 bg-white shadow-[0_4px_12px_rgba(15,23,42,0.04)]"
+        )}
+        aria-label="Ana menü"
+      >
+        {isDesktop ? (
+          <div
+            className={cn(
+              "flex gap-1 overflow-x-auto px-4 py-1.5",
+              "[scrollbar-width:thin]",
+              "[&::-webkit-scrollbar]:h-1",
+              "[&::-webkit-scrollbar-thumb]:rounded-full",
+              "[&::-webkit-scrollbar-thumb]:bg-slate-200"
+            )}
+          >
+            {topMenuItems.map((item, idx) => (
+              <DesktopMenuItem
+                key={item.id}
+                item={item}
+                pathname={pathname}
+                parentIndex={idx}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between px-4 py-2">
+            <span
+              className={cn(
+                "text-sm font-semibold",
+                darkMode ? "text-slate-300" : "text-slate-600"
+              )}
+            >
+              {userData?.name ?? ""}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsTopMenuDrawerOpen(true)}
+              className="h-8 w-8"
+              aria-label="Menüyü aç"
+              aria-expanded={isTopMenuDrawerOpen}
+            >
+              <MenuIcon className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+        )}
+      </nav>
+
+      {/* ── Mobile Sheet ── */}
+      <MobileMenuSheet
+        open={isTopMenuDrawerOpen}
+        onClose={() => setIsTopMenuDrawerOpen(false)}
+        items={topMenuItems}
+        pathname={pathname}
+        onNavigate={navigate}
+      />
+
+      {/* ── Password Dialog ── */}
+      <ChangePasswordDialog
+        open={isDeleteModalOpen}
+        onClose={handleDeleteCloseModal}
+        newPw={newPw}
+        newPwConfirm={newPwConfirm}
+        passwordError={passwordError}
+        pswDisabled={pswTrue}
+        onNewPwChange={handlePasswordChange}
+        onConfirmPwChange={handleConfirmPasswordChange}
+        onSubmit={changePassword}
+      />
+    </div>
+  );
+}
+
+DashboardNavbar.defaultProps = {
+  absolute: false,
+  light: false,
+  isMini: false,
+};
+
+export default DashboardNavbar;

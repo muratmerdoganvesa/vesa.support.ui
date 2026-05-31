@@ -1,0 +1,298 @@
+Dokumantasyon Modulu Backend Plan
+
+Bu frontend MVP'yi gercek veriye baglamak icin backend tarafinda en az su yapi yeterli olur.
+En temiz yaklasim: departments, libraries, documents/pages, templates, favorites, authors ekseninde ilerlemek.
+
+Onerilen Endpointler
+
+1. GET /api/documentation/dashboard
+Amac: dashboard icin tek cagrida ozet kartlari, son guncellenenler, favoriler, one cikanlar ve departman kartlarini dondurmek.
+
+2. GET /api/documentation/sidebar
+Amac: sol sidebar icin sections, libraries, favorites, templates ozetini vermek.
+
+3. GET /api/documentation/departments
+Amac: tum departmanlari listelemek.
+
+4. GET /api/documentation/departments/{departmentId}/libraries
+Amac: secili departmanin altindaki library listesini vermek.
+
+5. GET /api/documentation/libraries
+Amac: filtreli library listesi.
+Query onerisi: ?departmentId=&search=&favoriteOnly=&page=1&pageSize=20
+
+6. GET /api/documentation/libraries/{libraryId}
+Amac: library header bilgisi ve owner bilgisi.
+
+7. GET /api/documentation/libraries/{libraryId}/pages
+Amac: library icindeki sayfalari listelemek.
+Query onerisi: ?search=&status=&page=1&pageSize=20
+
+8. GET /api/documentation/pages/{pageId}
+Amac: page detail viewer ekrani.
+Bu endpoint zengin icerik bloklarini donmeli.
+
+9. GET /api/documentation/pages/{pageId}/history
+Amac: son duzenlemeler veya versiyon gecmisi.
+Ilk fazda opsiyonel.
+
+10. GET /api/documentation/templates
+Amac: template listesi.
+
+11. GET /api/documentation/templates/{templateId}
+Amac: template detay ekrani veya preview.
+
+12. GET /api/documentation/authors/{authorId}
+Amac: yazar karti detayini bagimsiz cekmek istersen.
+
+13. POST /api/documentation/favorites/libraries/{libraryId}
+Amac: library favoriye ekleme.
+
+14. DELETE /api/documentation/favorites/libraries/{libraryId}
+Amac: library favoriden cikarma.
+
+15. GET /api/documentation/search
+Amac: global arama.
+Query onerisi: ?q=onboarding&type=all|library|page|template
+
+16. POST /api/documentation/pages
+Amac: ileride create.
+
+17. PUT /api/documentation/pages/{pageId}
+Amac: ileride update.
+
+18. DELETE /api/documentation/pages/{pageId}
+Amac: ileride delete veya soft delete.
+
+Dashboard Icin Tek DTO
+
+DocumentationDashboardDto
+- recentPages: PageListItemDto[]
+- favoriteLibraries: LibraryListItemDto[]
+- featuredPages: PageListItemDto[]
+- departments: DepartmentWithLibrariesDto[]
+- summary: DocumentationSummaryDto
+
+DocumentationSummaryDto
+- recentPageCount: number
+- favoriteLibraryCount: number
+- featuredDocumentCount: number
+
+Temel DTO Onerileri
+
+DepartmentDto
+- id: Guid
+- name: string
+- description: string
+- leadUserId: Guid?
+- leadName: string?
+- colorCode: string
+- isActive: bool
+
+DepartmentWithLibrariesDto
+- id: Guid
+- name: string
+- description: string
+- leadName: string
+- colorCode: string
+- libraries: LibraryListItemDto[]
+
+LibraryListItemDto
+- id: Guid
+- departmentId: Guid
+- name: string
+- description: string
+- ownerUserId: Guid?
+- ownerName: string
+- icon: string
+- pageCount: int
+- isFavorite: bool
+- updatedAt: DateTime
+
+LibraryDetailDto
+- id: Guid
+- departmentId: Guid
+- departmentName: string
+- name: string
+- description: string
+- owner: AuthorSummaryDto
+- pages: PageListItemDto[]
+- createdAt: DateTime
+- updatedAt: DateTime
+
+PageListItemDto
+- id: Guid
+- libraryId: Guid
+- title: string
+- summary: string
+- status: string
+- updatedAt: DateTime
+- updatedByName: string
+
+PageDetailDto
+- id: Guid
+- libraryId: Guid
+- libraryName: string
+- title: string
+- subtitle: string
+- slug: string
+- status: string
+- tags: string[]
+- readTimeMinutes: int
+- author: AuthorSummaryDto
+- contentBlocks: PageContentBlockDto[]
+- updatedAt: DateTime
+- createdAt: DateTime
+
+AuthorSummaryDto
+- id: Guid
+- fullName: string
+- avatarUrl: string?
+- department: string
+- role: string
+
+TemplateDto
+- id: Guid
+- title: string
+- description: string
+- category: string
+- audience: string
+- icon: string?
+- isActive: bool
+
+Zengin Icerik Icin Blok DTO Onerisi
+
+Viewer ekrani icin en esnek model bu olur:
+
+PageContentBlockDto
+- id: Guid
+- type: string
+- orderNo: int
+- payload: json
+
+type ornekleri:
+- heading
+- paragraph
+- bullet_list
+- checklist
+- code_block
+- link_list
+- table
+- accordion
+
+payload ornek mantigi:
+- heading: { "level": 2, "text": "Neden Bu Modulu Ekliyoruz?" }
+- paragraph: { "text": "..." }
+- code_block: { "language": "tsx", "content": "..." }
+- table: { "headers": ["Alan","Durum"], "rows": [["Dashboard","Ready"]] }
+
+Bu yaklasim frontend'i cok rahat buyutur.
+
+Tablo Onerileri
+
+1. doc_departments
+- id
+- name
+- description
+- lead_user_id
+- color_code
+- sort_order
+- is_active
+- created_at
+- updated_at
+
+2. doc_libraries
+- id
+- department_id
+- name
+- description
+- owner_user_id
+- icon
+- slug
+- is_active
+- is_featured
+- created_at
+- updated_at
+
+3. doc_pages
+- id
+- library_id
+- title
+- subtitle
+- summary
+- slug
+- status
+- read_time_minutes
+- created_by
+- updated_by
+- published_at
+- created_at
+- updated_at
+- is_deleted
+
+4. doc_page_blocks
+- id
+- page_id
+- block_type
+- order_no
+- payload_json
+- created_at
+- updated_at
+
+5. doc_templates
+- id
+- name
+- title
+- description
+- category
+- audience
+- icon
+- schema_json
+- is_active
+- created_at
+- updated_at
+
+6. doc_favorite_libraries
+- id
+- user_id
+- library_id
+- created_at
+
+7. doc_page_tags
+- id
+- page_id
+- tag_name
+
+8. doc_page_versions
+- id
+- page_id
+- version_no
+- snapshot_json
+- changed_by
+- changed_at
+
+Iliski Ozeti
+
+- Bir department cok library icerir.
+- Bir library cok page icerir.
+- Bir page cok block icerir.
+- Bir user cok favorite library kaydi olusturabilir.
+- Bir page cok version icerebilir.
+
+Ilk Faz Icin Minimum Backend
+
+Sadece bunlar bile yeter:
+
+1. GET /api/documentation/dashboard
+2. GET /api/documentation/libraries/{libraryId}
+3. GET /api/documentation/pages/{pageId}
+4. GET /api/documentation/templates
+5. POST/DELETE /api/documentation/favorites/libraries/{libraryId}
+
+Istenirse sonraki adimda bunun .NET Web API odakli:
+- controller listesi
+- request/response class ornekleri
+- entity class taslagi
+- EF Core migration plani
+
+olarak da detaylandirilabilir.

@@ -1,0 +1,99 @@
+/* Gantt chart custom styles */
+.gantt-chart-container {
+  height: 600px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+/* Syncfusion Specific Styles */
+.e-gantt {
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.e-gantt .e-toolbar {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.e-gantt .e-toolbar .e-toolbar-items {
+  padding: 4px;
+}
+
+.e-gantt .e-toolbar .e-tbar-btn {
+  margin: 0 2px;
+}
+
+.e-gantt .e-taskbar {
+  border-radius: 3px;
+}
+
+.e-gantt .e-taskbar.e-gantt-parent-taskbar {
+  background-color: #1a73e8;
+}
+
+.e-gantt .e-taskbar.e-gantt-child-taskbar {
+  background-color: #49a3f1;
+}
+
+.e-gantt .e-taskbar-progress {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.e-gantt .e-gantt-chart .e-weekend-header-cell,
+.e-gantt .e-gantt-chart .e-weekend-cell {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.e-gantt .e-timeline-single-line {
+  border-right: 1px solid #e0e0e0;
+}
+
+.e-gantt .e-timeline-cell-header {
+  font-weight: 500;
+}
+
+.e-gantt .e-timeline-day-header-cell {
+  text-align: center;
+}
+
+.e-gantt .e-gantt-tree-grid .e-treegrid {
+  border-right: 1px solid #e0e0e0;
+}
+
+.e-gantt .e-row:nth-child(odd) {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.e-gantt .e-altrow {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.e-gantt .e-rowcell {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.e-gantt .e-today-line {
+  background-color: #ff5252;
+}
+
+.e-gantt .e-today-background {
+  background-color: rgba(255, 82, 82, 0.1);
+}
+
+.e-gantt .e-connector-line {
+  stroke: #78909c;
+  stroke-width: 1.5;
+}
+
+.e-gantt .e-connector-arrow {
+  fill: #78909c;
+}
+
+/* Fix for PDF export */
+.e-gantt-export {
+  visibility: visible !important;
+}

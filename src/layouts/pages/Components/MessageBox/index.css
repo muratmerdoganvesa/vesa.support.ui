@@ -1,0 +1,8 @@
+.ui5-messageBox-footer .ui5-button:last-child {
+    background-color: var(--sapNegativeColor) !important;
+    color: white !important;
+  }
+  
+  .ui5-messageBox-footer .ui5-button:first-child {
+    border: 1px solid var(--sapButton_BorderColor) !important;
+  }

@@ -1,0 +1,7 @@
+{
+    "welcome": "Merhaba",
+    "description": {
+        "part1": "Bu bir test uygulamasıdır.",
+        "part2": "Bu uygulama, React ve i18next kullanılarak oluşturulmuştur."
+    }
+}

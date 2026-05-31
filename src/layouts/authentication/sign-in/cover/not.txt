@@ -1,0 +1,32 @@
+    // instance.loginPopup({
+    //   scopes: ["api://28116fc8-fd64-4ccb-ab4d-96d2f3653846/access_as_user"], // Uygulama (İstemci) Kimliği
+    // }).then(response => {
+
+    //   localStorage.removeItem("accessToken");
+    //   localStorage.setItem("accessToken", response.accessToken);
+    //   navigate("/SystemUserDefination")
+    //   console.log("Access Token:", response.accessToken);
+    //   // Access token'ı saklama
+
+    // }).catch(error => {
+    //   console.error("Login failed:", error);
+    // });
+
+
+
+
+
+
+    instance.loginPopup({
+      scopes: ["api://1a4e7070-9c88-4097-9805-caf72e245e79/access_as_user"], // Uygulama (İstemci) Kimliği
+    }).then((response: { accessToken: string; }) => {
+
+      localStorage.removeItem("accessToken");
+      localStorage.setItem("accessToken", response.accessToken);
+      navigate("/SystemUserDefination")
+      console.log("Access Token:", response.accessToken);
+      // Access token'ı saklama
+
+    }).catch((error: any) => {
+      console.error("Login failed:", error);
+    });

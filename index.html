@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1A73E8" />
+    <title>Vesa Support</title>
+
+    <link rel="shortcut icon" href="/vesalogoimages.png" />
+    <link rel="apple-touch-icon" sizes="76x76" href="/vesalogoimages.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Preconnect hints — must come before any external resource requests -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.form.io" />
+    <link rel="preconnect" href="https://cdn.svar.dev" />
+    <link rel="preconnect" href="https://rsms.me" />
+
+    <!-- FormIO CSS (FormManagement); istenirse ileride yalnizca ilgili route'ta yuklenebilir -->
+    <link
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://cdn.form.io/formiojs/formio.full.min.css"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://cdn.form.io/formiojs/formio.full.min.css" />
+    </noscript>
+
+    <!-- Svar icon fonts (wx-react-gantt vb.) — non-blocking -->
+    <link
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://cdn.svar.dev/fonts/wxi/wx-icons.css"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://cdn.svar.dev/fonts/wxi/wx-icons.css" />
+    </noscript>
+
+    <!-- Inter Variable font — non-blocking -->
+    <link
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://rsms.me/inter/inter.css"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    </noscript>
+
+    <!-- Google Fonts: Roboto — non-blocking -->
+    <link
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" />
+    </noscript>
+
+    <!-- Google Fonts: Material Icons — non-blocking -->
+    <link
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp" />
+    </noscript>
+
+    <script async defer src="https://buttons.github.io/buttons.js"></script>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
