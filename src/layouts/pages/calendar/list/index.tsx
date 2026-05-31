@@ -412,13 +412,27 @@ function CalendarList() {
 
     /** Single task pill */
     const TaskPill = ({ task, color }: { task: any; color: string }) => (
-      <div
-        className="flex cursor-pointer items-center justify-between gap-1 rounded-md px-2 py-1 text-xs"
-        style={{ color: "#fff", backgroundColor: color }}
-      >
-        <span className="truncate">{`${task.name} - ${task.customerRef?.name || ""}`}</span>
-        {task.isAvailable ? <AvailableBadge /> : <UnavailableBadge />}
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="flex cursor-pointer items-center justify-between gap-1 rounded-md px-2 py-1 text-xs"
+              style={{ color: "#fff", backgroundColor: color }}
+            >
+              <span className="truncate">{`${task.name} - ${task.customerRef?.name || ""}`}</span>
+              {task.isAvailable ? <AvailableBadge /> : <UnavailableBadge />}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent
+            side="top"
+            className="max-w-[300px] rounded-lg border border-slate-200 bg-white p-2 shadow-lg"
+          >
+            <p className="break-words text-xs font-medium text-slate-700">
+              {`${task.name} - ${task.customerRef?.name || ""}`}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
 
     const holidayBadge = holiday && (
@@ -509,7 +523,7 @@ function CalendarList() {
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs"
                     style={{ color: "#fff", backgroundColor: color }}
                   >
-                    <span className="truncate font-medium">
+                    <span className="break-words font-medium">
                       {`${task.name} - ${task.customerRef?.name || ""}`}
                     </span>
                     {task.isAvailable ? <AvailableBadge /> : <UnavailableBadge />}
