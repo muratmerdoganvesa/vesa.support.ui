@@ -6,7 +6,9 @@ import { KANBAN_COLUMNS, TYPE_OPTIONS, STATUS_OPTIONS, PRIORITY_OPTIONS } from "
 import KanbanBoard from "./components/KanbanBoard";
 import AllProjectsBoard from "./components/AllProjectsBoard";
 import ProjectFilterDialog from "./components/ProjectFilterDialog";
+import PeopleStatsView from "./components/PeopleStatsView";
 import { useProjectCatalog } from "./hooks/useProjectCatalog";
+import { buildPersonStats } from "./utils/buildPersonStats";
 
 import {
   KanbanApi,
@@ -263,7 +265,7 @@ function KanbanPage() {
   const [selectedRadio, setSelectedRadio] = useState<number>(2);
   const [hasPerm, setHasPerm] = useState(false);
   const [isManager, setIsManager] = useState(false);
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [viewMode, setViewMode] = useState<"kanban" | "list" | "people">("kanban");
   const [viewContext] = useState<ViewContext>("all-projects");
   const [currentProjectFilter, setCurrentProjectFilter] = useState<string>("All");
   const [isMobile, setIsMobile] = useState(false);
@@ -714,6 +716,17 @@ function KanbanPage() {
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [allData]);
 
+  const personStats = useMemo(() => buildPersonStats(filteredData), [filteredData]);
+
+  const handlePersonClick = useCallback(
+    (userId: string) => {
+      setCurrentAssigneeFilter(userId);
+      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter);
+      setViewMode("kanban");
+    },
+    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter]
+  );
+
   // ── Project catalog (for filter dialog) ──────────────────────────────────
   const { projects: catalogProjects, companies: catalogCompanies, loading: catalogLoading, taskStats, noProjectStats } = useProjectCatalog(allData);
 
@@ -1138,6 +1151,19 @@ function KanbanPage() {
                         <List className="w-3.5 h-3.5" />
                         Liste
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("people")}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 transition-colors font-medium border-l border-slate-200",
+                          viewMode === "people"
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-600 hover:bg-slate-50"
+                        )}
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        Kişiler
+                      </button>
                     </div>
 
                     <Button
@@ -1160,6 +1186,8 @@ function KanbanPage() {
                 >
                   {viewMode === "list" ? (
                     <ListView data={filteredData} showProjectName={viewContext !== "no-project"} />
+                  ) : viewMode === "people" ? (
+                    <PeopleStatsView stats={personStats} onPersonClick={handlePersonClick} />
                   ) : viewContext === "all-projects" ? (
                     filteredData.length === 0 ? (
                       <p className="text-center text-slate-400 text-sm py-16">Görev bulunamadı</p>
