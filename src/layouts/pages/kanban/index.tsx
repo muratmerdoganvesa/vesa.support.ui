@@ -742,6 +742,17 @@ function KanbanPage() {
     [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter]
   );
 
+  const personStats = useMemo(() => buildPersonStats(filteredData), [filteredData]);
+
+  const handlePersonClick = useCallback(
+    (userId: string) => {
+      setCurrentAssigneeFilter(userId);
+      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter);
+      setViewMode("kanban");
+    },
+    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter]
+  );
+
   // ── Project catalog (for filter dialog) ──────────────────────────────────
   const { projects: catalogProjects, companies: catalogCompanies, loading: catalogLoading, taskStats, noProjectStats } = useProjectCatalog(allData);
 
