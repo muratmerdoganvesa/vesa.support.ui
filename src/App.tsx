@@ -317,7 +317,7 @@ export default function App() {
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
 
           {/* Private Routes */}
-           <Route element={<PrivateRoute />}> 
+           {/* <Route element={<PrivateRoute />}>  */}
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
             
             {/* <Route path="/documentation" element={<DocumentationModule />} />
@@ -388,7 +388,7 @@ export default function App() {
             <Route path="/projectmanagement" element={<MainScreen />} />
             <Route path="/projectmanagement/chart" element={<ProjectChart />} />
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
-          </Route> 
+          {/* </Route>  */}
 
           {/* <Route path="/mmessages" element={<ChatPage />} /> */}
           {/* </Route> */}
