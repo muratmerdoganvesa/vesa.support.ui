@@ -234,6 +234,7 @@ const DEFAULT_FORM = {
   Description: "",
   Tags: "",
   RankId: "1",
+  projectId: "",
 };
 
 // ─── Selection step type ──────────────────────────────────────────────────────
@@ -386,12 +387,21 @@ function KanbanPage() {
     };
   }, [filteredData]);
 
+  // ── allData pre-filtered by the active project filter (used for sidebar counts) ──
+
+  const sidebarBaseData = useMemo(() => {
+    if (currentProjectFilter === "All") return allData;
+    if (currentProjectFilter === "__no_project__")
+      return allData.filter((d) => !d.projectId);
+    return allData.filter((d) => d.projectId === currentProjectFilter);
+  }, [allData, currentProjectFilter]);
+
   // ── Unique types from loaded data ─────────────────────────────────────────
 
   const uniqueTypes = useMemo(() => {
-    const types = new Set(allData.map((d) => d.Type).filter(Boolean));
+    const types = new Set(sidebarBaseData.map((d) => d.Type).filter(Boolean));
     return Array.from(types);
-  }, [allData]);
+  }, [sidebarBaseData]);
 
   // ── Data fetchers ─────────────────────────────────────────────────────────
 
@@ -489,7 +499,9 @@ function KanbanPage() {
         description: card.Description,
         summary: card.Summary,
         creatorId: card.creatorId,
-        projectId: card.projectId ?? selectedTicketProject?.id ?? null,
+        projectId: card.Type === "Proje Planlama"
+          ? (card.projectId || null)
+          : selectedTicketProject?.id ?? null,
       };
       await api.apiKanbanPut(fixedUpdateCard);
       await fetchedKanbanData(false, selectedTicketProject?.id ?? null);
@@ -513,7 +525,9 @@ function KanbanPage() {
         type: card.Type,
         description: card.Description,
         summary: card.Summary,
-        projectId: selectedTicketProject?.id ?? null,
+        projectId: card.Type === "Proje Planlama"
+          ? (card.projectId || null)
+          : selectedTicketProject?.id ?? null,
       };
       await api.apiKanbanPost(fixedCard);
       await fetchedKanbanData(false, selectedTicketProject?.id ?? null);
@@ -546,6 +560,7 @@ function KanbanPage() {
       Description: card.Description || "",
       Tags: card.Tags || "",
       RankId: String(card.RankId ?? 1),
+      projectId: card.projectId ?? "",
     });
     setEditCardId(card.Id || "");
     setEditCardCreatorId(card.creatorId || "");
@@ -710,11 +725,22 @@ function KanbanPage() {
 
   const uniqueAssignees = useMemo(() => {
     const map = new Map<string, string>();
-    for (const d of allData) {
+    for (const d of sidebarBaseData) {
       if (d.AssigneeId && d.Assignee) map.set(d.AssigneeId, d.Assignee);
     }
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [allData]);
+  }, [sidebarBaseData]);
+
+  const personStats = useMemo(() => buildPersonStats(filteredData), [filteredData]);
+
+  const handlePersonClick = useCallback(
+    (userId: string) => {
+      setCurrentAssigneeFilter(userId);
+      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter);
+      setViewMode("kanban");
+    },
+    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter]
+  );
 
   const personStats = useMemo(() => buildPersonStats(filteredData), [filteredData]);
 
@@ -803,8 +829,8 @@ function KanbanPage() {
                         const color = TYPE_COLORS[type];
                         const isActive = currentFilter === type;
                         const typeCount = type === "All"
-                          ? allData.length
-                          : allData.filter((d) => d.Type === type).length;
+                          ? sidebarBaseData.length
+                          : sidebarBaseData.filter((d) => d.Type === type).length;
                         return (
                           <button
                             key={type}
@@ -849,8 +875,8 @@ function KanbanPage() {
                         const color = PRIORITY_COLORS[priority];
                         const isActive = currentPriorityFilter === priority;
                         const pCount = priority === "All"
-                          ? allData.length
-                          : allData.filter((d) => d.Priority === priority).length;
+                          ? sidebarBaseData.length
+                          : sidebarBaseData.filter((d) => d.Priority === priority).length;
                         return (
                           <button
                             key={priority}
@@ -944,7 +970,7 @@ function KanbanPage() {
                             "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
                             currentAssigneeFilter === "All" ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
                           )}>
-                            {allData.length}
+                            {sidebarBaseData.length}
                           </span>
                         </button>
 
@@ -960,7 +986,7 @@ function KanbanPage() {
                               {visible.map(({ id, name }) => {
                                 const isActive = currentAssigneeFilter === id;
                                 const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-                                const aCount = allData.filter((d) => d.AssigneeId === id).length;
+                                const aCount = sidebarBaseData.filter((d) => d.AssigneeId === id).length;
                                 return (
                                   <button
                                     key={id}
@@ -1279,7 +1305,14 @@ function KanbanPage() {
               ) : (
                 <select
                   value={dialogForm.Type}
-                  onChange={(e) => setDialogForm((f) => ({ ...f, Type: e.target.value }))}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setDialogForm((f) => ({
+                      ...f,
+                      Type: newType,
+                      projectId: newType === "Proje Planlama" ? f.projectId : "",
+                    }));
+                  }}
                   className={cn(
                     "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
                     dialogErrors.Type ? "border-red-400" : "border-slate-300"
@@ -1292,6 +1325,44 @@ function KanbanPage() {
               )}
               {dialogErrors.Type && <span className="text-xs text-red-500">{dialogErrors.Type}</span>}
             </div>
+
+            {/* Proje — visible only when Type is "Proje Planlama" */}
+            {dialogForm.Type === "Proje Planlama" && (
+              <div className="col-span-2 flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                  <Folder className="w-3.5 h-3.5 text-indigo-500" aria-hidden />
+                  Proje
+                  {catalogLoading && (
+                    <Loader2 className="w-3 h-3 animate-spin text-indigo-400 ml-1" aria-hidden />
+                  )}
+                </label>
+                <div className="relative">
+                  <select
+                    value={dialogForm.projectId}
+                    onChange={(e) => setDialogForm((f) => ({ ...f, projectId: e.target.value }))}
+                    disabled={catalogLoading}
+                    className={cn(
+                      "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-opacity",
+                      catalogLoading
+                        ? "border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
+                        : "border-slate-300"
+                    )}
+                  >
+                    <option value="">
+                      {catalogLoading ? "Projeler yükleniyor..." : "Proje seçin (opsiyonel)"}
+                    </option>
+                    {!catalogLoading && catalogProjects.map((p) => (
+                      <option key={p.id} value={p.id ?? ""}>{getProjectLabel(p)}</option>
+                    ))}
+                  </select>
+                  {catalogLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-400" aria-hidden />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Priority */}
             <div className="col-span-2 flex flex-col gap-1">
