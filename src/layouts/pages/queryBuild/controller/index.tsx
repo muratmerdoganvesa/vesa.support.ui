@@ -57,7 +57,7 @@ const UserData = async (isEmail?: boolean) => {
 
 const TeamData = async () => {
   try {
-    let response = (await (await fetchTeamData()).apiTicketTeamWithoutTeamGet()).data;
+    let response = (await (await fetchTeamData()).apiTicketTeamWithoutTeamGet(false)).data;
 
     return {
       name: "teamId",

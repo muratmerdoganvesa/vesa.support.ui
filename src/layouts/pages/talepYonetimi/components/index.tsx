@@ -644,7 +644,7 @@ function FilterTableMethod({
       setCompanyData(data2.data);
 
       const api3 = new TicketTeamApi(conf);
-      const data3 = await api3.apiTicketTeamWithoutTeamGet();
+      const data3 = await api3.apiTicketTeamWithoutTeamGet(false);
       setTeamData(data3.data);
 
       const api4 = new TicketApi(conf);

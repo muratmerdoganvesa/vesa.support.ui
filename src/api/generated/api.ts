@@ -34184,6 +34184,199 @@ export class KanbanApi extends BaseAPI {
 
 
 /**
+ * MailApi - axios parameter creator
+ * @export
+ */
+export const MailApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} [firstName] 
+         * @param {string} [lastName] 
+         * @param {string} [email] 
+         * @param {string} [phone] 
+         * @param {string} [title] 
+         * @param {string} [contentType] 
+         * @param {string} [contentDisposition] 
+         * @param {{ [key: string]: Array<string>; }} [headers] 
+         * @param {number} [length] 
+         * @param {string} [name] 
+         * @param {string} [fileName] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiMailCareerApplicationPost: async (firstName?: string, lastName?: string, email?: string, phone?: string, title?: string, contentType?: string, contentDisposition?: string, headers?: { [key: string]: Array<string>; }, length?: number, name?: string, fileName?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/Mail/career-application`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+            const localVarFormParams = new ((configuration && configuration.formDataCtor) || FormData)();
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+            if (firstName !== undefined) { 
+                localVarFormParams.append('firstName', firstName as any);
+            }
+    
+            if (lastName !== undefined) { 
+                localVarFormParams.append('lastName', lastName as any);
+            }
+    
+            if (email !== undefined) { 
+                localVarFormParams.append('email', email as any);
+            }
+    
+            if (phone !== undefined) { 
+                localVarFormParams.append('phone', phone as any);
+            }
+    
+            if (title !== undefined) { 
+                localVarFormParams.append('title', title as any);
+            }
+    
+            if (contentType !== undefined) { 
+                localVarFormParams.append('ContentType', contentType as any);
+            }
+    
+            if (contentDisposition !== undefined) { 
+                localVarFormParams.append('ContentDisposition', contentDisposition as any);
+            }
+    
+            if (headers !== undefined) { 
+                localVarFormParams.append('Headers', new Blob([JSON.stringify(headers)], { type: "application/json", }));
+            }
+    
+            if (length !== undefined) { 
+                localVarFormParams.append('Length', length as any);
+            }
+    
+            if (name !== undefined) { 
+                localVarFormParams.append('Name', name as any);
+            }
+    
+            if (fileName !== undefined) { 
+                localVarFormParams.append('FileName', fileName as any);
+            }
+    
+    
+            localVarHeaderParameter['Content-Type'] = 'multipart/form-data';
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = localVarFormParams;
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * MailApi - functional programming interface
+ * @export
+ */
+export const MailApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = MailApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} [firstName] 
+         * @param {string} [lastName] 
+         * @param {string} [email] 
+         * @param {string} [phone] 
+         * @param {string} [title] 
+         * @param {string} [contentType] 
+         * @param {string} [contentDisposition] 
+         * @param {{ [key: string]: Array<string>; }} [headers] 
+         * @param {number} [length] 
+         * @param {string} [name] 
+         * @param {string} [fileName] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiMailCareerApplicationPost(firstName?: string, lastName?: string, email?: string, phone?: string, title?: string, contentType?: string, contentDisposition?: string, headers?: { [key: string]: Array<string>; }, length?: number, name?: string, fileName?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiMailCareerApplicationPost(firstName, lastName, email, phone, title, contentType, contentDisposition, headers, length, name, fileName, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MailApi.apiMailCareerApplicationPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * MailApi - factory interface
+ * @export
+ */
+export const MailApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = MailApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} [firstName] 
+         * @param {string} [lastName] 
+         * @param {string} [email] 
+         * @param {string} [phone] 
+         * @param {string} [title] 
+         * @param {string} [contentType] 
+         * @param {string} [contentDisposition] 
+         * @param {{ [key: string]: Array<string>; }} [headers] 
+         * @param {number} [length] 
+         * @param {string} [name] 
+         * @param {string} [fileName] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiMailCareerApplicationPost(firstName?: string, lastName?: string, email?: string, phone?: string, title?: string, contentType?: string, contentDisposition?: string, headers?: { [key: string]: Array<string>; }, length?: number, name?: string, fileName?: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiMailCareerApplicationPost(firstName, lastName, email, phone, title, contentType, contentDisposition, headers, length, name, fileName, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * MailApi - object-oriented interface
+ * @export
+ * @class MailApi
+ * @extends {BaseAPI}
+ */
+export class MailApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} [firstName] 
+     * @param {string} [lastName] 
+     * @param {string} [email] 
+     * @param {string} [phone] 
+     * @param {string} [title] 
+     * @param {string} [contentType] 
+     * @param {string} [contentDisposition] 
+     * @param {{ [key: string]: Array<string>; }} [headers] 
+     * @param {number} [length] 
+     * @param {string} [name] 
+     * @param {string} [fileName] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MailApi
+     */
+    public apiMailCareerApplicationPost(firstName?: string, lastName?: string, email?: string, phone?: string, title?: string, contentType?: string, contentDisposition?: string, headers?: { [key: string]: Array<string>; }, length?: number, name?: string, fileName?: string, options?: RawAxiosRequestConfig) {
+        return MailApiFp(this.configuration).apiMailCareerApplicationPost(firstName, lastName, email, phone, title, contentType, contentDisposition, headers, length, name, fileName, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
  * MenuApi - axios parameter creator
  * @export
  */
@@ -34196,39 +34389,6 @@ export const MenuApiAxiosParamCreator = function (configuration?: Configuration)
          */
         apiMenuAllListDataGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/Menu/AllListData`;
-            // use dummy base URL string because the URL constructor only accepts absolute URLs.
-            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
-            let baseOptions;
-            if (configuration) {
-                baseOptions = configuration.baseOptions;
-            }
-
-            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
-            const localVarHeaderParameter = {} as any;
-            const localVarQueryParameter = {} as any;
-
-            // authentication Bearer required
-            // http bearer authentication required
-            await setBearerAuthToObject(localVarHeaderParameter, configuration)
-
-
-    
-            setSearchParams(localVarUrlObj, localVarQueryParameter);
-            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
-            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
-
-            return {
-                url: toPathString(localVarUrlObj),
-                options: localVarRequestOptions,
-            };
-        },
-        /**
-         * Kök menüler (ParentMenuId null).
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        apiMenuRootMenusListGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-            const localVarPath = `/api/Menu/RootMenusList`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
             let baseOptions;
@@ -34469,6 +34629,39 @@ export const MenuApiAxiosParamCreator = function (configuration?: Configuration)
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiMenuRootMenusListGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/Menu/RootMenusList`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -34488,17 +34681,6 @@ export const MenuApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiMenuAllListDataGet(options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['MenuApi.apiMenuAllListDataGet']?.[localVarOperationServerIndex]?.url;
-            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
-        },
-        /**
-         * Kök menüler (ParentMenuId null).
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        async apiMenuRootMenusListGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<MenuListDto>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiMenuRootMenusListGet(options);
-            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
-            const localVarOperationServerBasePath = operationServerMap['MenuApi.apiMenuRootMenusListGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -34571,6 +34753,17 @@ export const MenuApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['MenuApi.apiMenuPut']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiMenuRootMenusListGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<MenuListDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiMenuRootMenusListGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['MenuApi.apiMenuRootMenusListGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -34588,14 +34781,6 @@ export const MenuApiFactory = function (configuration?: Configuration, basePath?
          */
         apiMenuAllListDataGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<MenuListDto>> {
             return localVarFp.apiMenuAllListDataGet(options).then((request) => request(axios, basePath));
-        },
-        /**
-         * Kök menüler (ParentMenuId null).
-         * @param {*} [options] Override http request option.
-         * @throws {RequiredError}
-         */
-        apiMenuRootMenusListGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<MenuListDto>> {
-            return localVarFp.apiMenuRootMenusListGet(options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -34649,6 +34834,14 @@ export const MenuApiFactory = function (configuration?: Configuration, basePath?
         apiMenuPut(menuUpdateDto?: MenuUpdateDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.apiMenuPut(menuUpdateDto, options).then((request) => request(axios, basePath));
         },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiMenuRootMenusListGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<MenuListDto>> {
+            return localVarFp.apiMenuRootMenusListGet(options).then((request) => request(axios, basePath));
+        },
     };
 };
 
@@ -34667,16 +34860,6 @@ export class MenuApi extends BaseAPI {
      */
     public apiMenuAllListDataGet(options?: RawAxiosRequestConfig) {
         return MenuApiFp(this.configuration).apiMenuAllListDataGet(options).then((request) => request(this.axios, this.basePath));
-    }
-
-    /**
-     * Kök menüler (ParentMenuId null).
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     * @memberof MenuApi
-     */
-    public apiMenuRootMenusListGet(options?: RawAxiosRequestConfig) {
-        return MenuApiFp(this.configuration).apiMenuRootMenusListGet(options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -34741,6 +34924,16 @@ export class MenuApi extends BaseAPI {
      */
     public apiMenuPut(menuUpdateDto?: MenuUpdateDto, options?: RawAxiosRequestConfig) {
         return MenuApiFp(this.configuration).apiMenuPut(menuUpdateDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof MenuApi
+     */
+    public apiMenuRootMenusListGet(options?: RawAxiosRequestConfig) {
+        return MenuApiFp(this.configuration).apiMenuRootMenusListGet(options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -51693,10 +51886,11 @@ export const TicketTeamApiAxiosParamCreator = function (configuration?: Configur
         },
         /**
          * 
+         * @param {boolean} [excludeManagerPhoto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketTeamWithoutTeamGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTicketTeamWithoutTeamGet: async (excludeManagerPhoto?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/TicketTeam/without-team`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -51712,6 +51906,10 @@ export const TicketTeamApiAxiosParamCreator = function (configuration?: Configur
             // authentication Bearer required
             // http bearer authentication required
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (excludeManagerPhoto !== undefined) {
+                localVarQueryParameter['excludeManagerPhoto'] = excludeManagerPhoto;
+            }
 
 
     
@@ -51795,11 +51993,12 @@ export const TicketTeamApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @param {boolean} [excludeManagerPhoto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTicketTeamWithoutTeamGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<TicketTeamListDto>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketTeamWithoutTeamGet(options);
+        async apiTicketTeamWithoutTeamGet(excludeManagerPhoto?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<TicketTeamListDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketTeamWithoutTeamGet(excludeManagerPhoto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['TicketTeamApi.apiTicketTeamWithoutTeamGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -51860,11 +52059,12 @@ export const TicketTeamApiFactory = function (configuration?: Configuration, bas
         },
         /**
          * 
+         * @param {boolean} [excludeManagerPhoto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketTeamWithoutTeamGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketTeamListDto>> {
-            return localVarFp.apiTicketTeamWithoutTeamGet(options).then((request) => request(axios, basePath));
+        apiTicketTeamWithoutTeamGet(excludeManagerPhoto?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketTeamListDto>> {
+            return localVarFp.apiTicketTeamWithoutTeamGet(excludeManagerPhoto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -51932,12 +52132,13 @@ export class TicketTeamApi extends BaseAPI {
 
     /**
      * 
+     * @param {boolean} [excludeManagerPhoto] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof TicketTeamApi
      */
-    public apiTicketTeamWithoutTeamGet(options?: RawAxiosRequestConfig) {
-        return TicketTeamApiFp(this.configuration).apiTicketTeamWithoutTeamGet(options).then((request) => request(this.axios, this.basePath));
+    public apiTicketTeamWithoutTeamGet(excludeManagerPhoto?: boolean, options?: RawAxiosRequestConfig) {
+        return TicketTeamApiFp(this.configuration).apiTicketTeamWithoutTeamGet(excludeManagerPhoto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
