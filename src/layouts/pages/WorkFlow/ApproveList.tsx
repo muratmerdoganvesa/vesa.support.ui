@@ -78,7 +78,7 @@ const getInitials = (name?: string | null): string => {
     .toUpperCase();
 };
 
-// ─── Sidebar nav items ────────────────────────────────────────────────────────
+// ─── Status filter tabs (same statuses as former sidebar) ─────────────────────
 
 interface SideNavItem {
   label: string;
@@ -564,7 +564,7 @@ function ApproveList() {
     }
   };
 
-  // ── Sidebar items ────────────────────────────────────────────────────────────
+  // ── Status filter definitions ────────────────────────────────────────────────
 
   const sideNavItems: SideNavItem[] = [
     {
@@ -685,27 +685,31 @@ function ApproveList() {
       <DashboardLayout>
         <DashboardNavbar />
 
-        <div className="flex gap-4 mt-2 mx-1" style={{ minHeight: "calc(100vh - 120px)" }}>
-
-          {/* ── Sidebar ── */}
-          <aside className="w-52 shrink-0">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-full">
-              {/* Sidebar header */}
-              <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center shrink-0">
-                  <Workflow className="w-3.5 h-3.5 text-white" />
+        <div
+          className="flex flex-col gap-3 mt-2 mx-1 w-full min-w-0 max-w-full"
+          style={{ minHeight: "calc(100vh - 120px)" }}
+        >
+          {/* ── Horizontal filter bar (replaces left sidebar) ── */}
+          <div className="w-full min-w-0 shrink-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="px-3 py-2.5 sm:px-4 sm:py-3 border-b border-slate-100 bg-slate-50/60 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-violet-600 flex items-center justify-center shrink-0">
+                  <Workflow className="w-4 h-4 text-white" aria-hidden />
                 </div>
                 <span className="text-sm font-semibold text-slate-700">Onay Kutusu</span>
               </div>
-
-              {/* Nav items */}
-              <nav className="p-2 space-y-0.5">
+              <nav
+                className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end sm:min-w-0"
+                role="group"
+                aria-label="Onay durumu filtreleri"
+              >
                 {sideNavItems.map((item) => {
                   const isActive = selectedStatus === item.status;
                   return (
                     <button
                       key={item.label}
                       type="button"
+                      aria-pressed={isActive}
                       onClick={() =>
                         getApproveDetail(
                           item.status,
@@ -716,20 +720,23 @@ function ApproveList() {
                         )
                       }
                       className={cn(
-                        "w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-all text-left",
+                        "inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border min-h-[40px] flex-1 basis-[calc(50%-0.25rem)] min-w-0 max-w-full sm:flex-initial sm:basis-auto sm:max-w-none",
                         isActive
-                          ? "bg-violet-50 text-violet-700 font-semibold border border-violet-100"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                          ? "bg-violet-50 text-violet-700 font-semibold border-violet-200 shadow-sm"
+                          : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50 hover:text-slate-800"
                       )}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className={cn(isActive ? "text-violet-600" : "text-slate-400")}>
-                          {item.icon}
-                        </span>
-                        <span>{item.label}</span>
-                      </div>
+                      <span className={cn("shrink-0", isActive ? "text-violet-600" : "text-slate-400")}>
+                        {item.icon}
+                      </span>
+                      <span className="whitespace-nowrap">{item.label}</span>
                       {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                        <span className={cn("text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center", item.badgeColor)}>
+                        <span
+                          className={cn(
+                            "text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
+                            item.badgeColor
+                          )}
+                        >
                           {item.badgeCount}
                         </span>
                       )}
@@ -738,16 +745,16 @@ function ApproveList() {
                 })}
               </nav>
             </div>
-          </aside>
+          </div>
 
-          {/* ── Main Content ── */}
-          <div className="flex-1 min-w-0 flex flex-col gap-3">
+          {/* ── Main content: full width list ── */}
+          <div className="w-full min-w-0 flex flex-col gap-3 flex-1">
 
             {/* Table card */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden w-full min-w-0">
 
               {/* Table header */}
-              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 bg-slate-50/40">
+              <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/40">
                 <div className="flex items-center gap-2.5">
                   <h2 className="text-sm font-semibold text-slate-700">{statusText || "Onaylar"}</h2>
                   {approveDataCount > 0 && (
@@ -783,13 +790,13 @@ function ApproveList() {
                 )}
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto flex-1">
-                <table className="min-w-full divide-y divide-slate-100">
+              {/* Table: tek yatay scroll, thead/tbody sütunları aynı tabloda hizalı */}
+              <div className="overflow-x-auto w-full min-w-0 overscroll-x-contain">
+                <table className="min-w-max mx-auto border-collapse text-left text-sm">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-200">
                       {/* Checkbox */}
-                      <th className="w-10 px-3 py-3 text-left">
+                      <th className="w-10 px-3 py-3 align-middle">
                         <input
                           type="checkbox"
                           checked={gridData.length > 0 && selectedRows.length === gridData.length}
@@ -798,47 +805,47 @@ function ApproveList() {
                           aria-label="Tümünü seç"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         İşlemler
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         <div className="flex items-center gap-1.5">
-                          <FileText className="w-3.5 h-3.5 text-violet-400" />
+                          <FileText className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                           Onay No
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 align-middle min-w-[16rem]">
                         Detay
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           Talep Eden
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
+                          <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           Beklenen
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
-                        İşlem Yapan Kullanıcı
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
+                        İşlem Yapan
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                          Onaya Gönderilen Tarih
+                          <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          Onaya Gönderilen
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           İşlem Tarihi
                         </div>
                       </th>
                       {showNoteColumn && (
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
+                        <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 align-middle min-w-[12rem]">
                           {selectedStatus === 1 ? "Onay Açıklaması" : "Red Açıklaması"}
                         </th>
                       )}
@@ -866,6 +873,31 @@ function ApproveList() {
                       gridData.map((row, rowIdx) => {
                         const rowObj = { original: row };
                         const rowSelected = isRowSelected(row);
+                        const createUserRaw = (row as any).workFlowItem?.workflowHead?.createUser;
+                        const createUserStr =
+                          createUserRaw != null && createUserRaw !== ""
+                            ? String(createUserRaw)
+                            : "-";
+                        const approveUserRaw = (row as any).approveUserNameSurname;
+                        const approveUserStr =
+                          approveUserRaw != null && approveUserRaw !== ""
+                            ? String(approveUserRaw)
+                            : "-";
+                        const approvedByRaw = (row as any).approvedUser_RuntimeNameSurname;
+                        const approvedByStr =
+                          approvedByRaw != null && approvedByRaw !== ""
+                            ? String(approvedByRaw)
+                            : "-";
+                        const detailRaw = (row as any).workFlowItem?.workflowHead?.workFlowInfo;
+                        const detailStr =
+                          detailRaw != null && String(detailRaw).trim() !== ""
+                            ? String(detailRaw)
+                            : "-";
+                        const noteRaw = (row as any).approvedUser_RuntimeNote;
+                        const noteStr =
+                          noteRaw != null && String(noteRaw).trim() !== ""
+                            ? String(noteRaw)
+                            : "-";
 
                         return (
                           <tr
@@ -876,7 +908,7 @@ function ApproveList() {
                             )}
                           >
                             {/* Checkbox */}
-                            <td className="w-10 px-3 py-3">
+                            <td className="w-10 px-3 py-3 align-middle">
                               <input
                                 type="checkbox"
                                 checked={rowSelected}
@@ -887,7 +919,7 @@ function ApproveList() {
                             </td>
 
                             {/* Actions */}
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
                               <div className="flex items-center gap-1">
                                 {statusText === "Bekleyenler" && (
                                   <>
@@ -938,47 +970,41 @@ function ApproveList() {
                             </td>
 
                             {/* Onay No */}
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
                               <span className="text-xs font-mono font-semibold text-violet-700 bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
                                 {(row as any).workFlowItem?.workflowHead?.uniqNumber ?? "-"}
                               </span>
                             </td>
 
-                            {/* Detay */}
-                            <td className="px-4 py-3 max-w-[200px]">
-                              <p className="text-xs text-slate-700 line-clamp-2 wrap-break-word">
-                                {(row as any).workFlowItem?.workflowHead?.workFlowInfo ?? "-"}
+                            {/* Detay — tam metin, satır kırar; tablo genişler, yatay kaydır */}
+                            <td className="px-3 py-3 align-top min-w-[16rem] max-w-md">
+                              <p className="text-xs text-slate-700 break-words leading-relaxed whitespace-normal">
+                                {detailStr}
                               </p>
                             </td>
 
                             {/* Talep Eden */}
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-xs shrink-0">
                                   {getInitials((row as any).workFlowItem?.workflowHead?.createUser)}
                                 </div>
-                                <span className="text-sm text-slate-700">
-                                  {(row as any).workFlowItem?.workflowHead?.createUser ?? "-"}
-                                </span>
+                                <span className="text-xs text-slate-700">{createUserStr}</span>
                               </div>
                             </td>
 
                             {/* Beklenen */}
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-sm text-slate-700">
-                                {(row as any).approveUserNameSurname ?? "-"}
-                              </span>
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
+                              <span className="text-xs text-slate-700">{approveUserStr}</span>
                             </td>
 
                             {/* İşlem Yapan Kullanıcı */}
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-sm text-slate-700">
-                                {(row as any).approvedUser_RuntimeNameSurname ?? "-"}
-                              </span>
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
+                              <span className="text-xs text-slate-700">{approvedByStr}</span>
                             </td>
 
                             {/* Onaya Gönderilen Tarih */}
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
                               <span className="text-xs text-slate-500">
                                 {formatTableDate(
                                   (row as any).workFlowItem?.workflowHead?.createdDate
@@ -987,7 +1013,7 @@ function ApproveList() {
                             </td>
 
                             {/* İşlem Tarihi */}
-                            <td className="px-4 py-3 whitespace-nowrap">
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
                               <span className="text-xs text-slate-500">
                                 {formatTableDate((row as any).updatedDate)}
                               </span>
@@ -995,9 +1021,9 @@ function ApproveList() {
 
                             {/* Onay/Red Açıklaması (conditional) */}
                             {showNoteColumn && (
-                              <td className="px-4 py-3 max-w-[160px]">
-                                <p className="text-xs text-slate-600 line-clamp-2 wrap-break-word">
-                                  {(row as any).approvedUser_RuntimeNote ?? "-"}
+                              <td className="px-3 py-3 align-top min-w-[12rem] max-w-md">
+                                <p className="text-xs text-slate-600 break-words leading-relaxed whitespace-normal">
+                                  {noteStr}
                                 </p>
                               </td>
                             )}
