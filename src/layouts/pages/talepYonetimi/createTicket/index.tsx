@@ -813,7 +813,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
       dispatchBusy({ isBusy: true });
       const conf = getConfiguration();
       const api = new TicketTeamApi(conf);
-      const data = await api.apiTicketTeamWithoutTeamGet();
+      const data = await api.apiTicketTeamWithoutTeamGet(false);
       setTeamData(data.data);
       dispatchBusy({ isBusy: false });
     } catch (error) {

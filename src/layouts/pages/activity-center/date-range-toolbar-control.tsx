@@ -120,7 +120,7 @@ const DateRangeToolbarControl = ({
               mode="range"
               locale={tr}
               defaultMonth={from}
-              selected={draft}
+              selected={draft as { from: Date; to?: Date } | undefined}
               onSelect={handleCalendarSelect}
               numberOfMonths={1}
             />
