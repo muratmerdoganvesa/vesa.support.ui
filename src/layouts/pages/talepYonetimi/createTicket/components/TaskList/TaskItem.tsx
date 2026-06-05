@@ -1,6 +1,10 @@
 import { useRef, useState } from "react";
-import { GripVertical, Trash2, AlignLeft } from "lucide-react";
+import { GripVertical, Trash2, AlignLeft, CalendarDays, X } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { tr } from "date-fns/locale";
 import { cn } from "lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
+import { Calendar } from "components/ui/calendar";
 import UserSearchCombobox, { getUserDisplayName } from "../UserSearchCombobox";
 import { TicketTaskInput, TASK_STATUS_CONFIG, TaskStatus } from "../../types/ticketTask.types";
 import { TicketTaskListDto, TicketTaskUpdateDto } from "api/generated";
@@ -15,6 +19,7 @@ interface CreateModeProps {
   onTitleChange: (clientId: string, title: string) => void;
   onDescriptionChange: (clientId: string, description: string) => void;
   onAssigneeChange: (clientId: string, user: UserAppDto | null) => void;
+  onDueDateChange: (clientId: string, dueDate: string | null) => void;
   userSearchResults: UserAppDto[];
   onUserSearch: (q: string) => void;
   assignDisabled?: boolean;
@@ -87,6 +92,83 @@ const AssigneeAvatar = ({ name }: { name: string }) => {
     >
       {initials}
     </span>
+  );
+};
+
+// ─── Due date picker ──────────────────────────────────────────────────────────
+
+interface DueDatePickerProps {
+  value: string | null | undefined;
+  onChange: (isoDate: string | null) => void;
+  disabled?: boolean;
+}
+
+const DueDatePicker = ({ value, onChange, disabled }: DueDatePickerProps) => {
+  const [open, setOpen] = useState(false);
+
+  const selectedDate = value ? parseISO(value) : undefined;
+
+  const isOverdue =
+    selectedDate != null && selectedDate < new Date(new Date().setHours(0, 0, 0, 0));
+
+  const handleDaySelect = (day: Date | undefined) => {
+    onChange(day ? day.toISOString() : null);
+    setOpen(false);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(null);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={disabled ? undefined : setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={selectedDate ? `Son tarih: ${format(selectedDate, "dd.MM.yyyy", { locale: tr })}` : "Son tarih seç"}
+          className={cn(
+            "inline-flex items-center gap-1 h-7 px-2 rounded-lg border text-[11px] font-medium transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300",
+            disabled && "pointer-events-none opacity-50",
+            selectedDate
+              ? isOverdue
+                ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              : "border-slate-200 bg-white text-slate-400 hover:border-indigo-300 hover:text-indigo-500",
+          )}
+        >
+          <CalendarDays className="w-3 h-3 shrink-0" />
+          {selectedDate ? (
+            <>
+              <span>{format(selectedDate, "dd.MM.yy", { locale: tr })}</span>
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Tarihi temizle"
+                onClick={handleClear}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleClear(e as unknown as React.MouseEvent); }}
+                className="ml-0.5 rounded-sm hover:text-rose-500 transition-colors"
+              >
+                <X className="w-2.5 h-2.5" />
+              </span>
+            </>
+          ) : (
+            <span>Son tarih</span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start" side="bottom">
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={handleDaySelect}
+          locale={tr}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -178,6 +260,29 @@ const TaskItem = (props: TaskItemProps) => {
     }
   };
 
+  // ── Due date ─────────────────────────────────────────────────────────────
+  const createTask = mode === "create" ? (task as TicketTaskInput) : null;
+  const editTask   = mode === "edit"   ? (task as TicketTaskListDto) : null;
+
+  const dueDateValue =
+    mode === "create"
+      ? (task as TicketTaskInput).dueDate ?? null
+      : ((task as TicketTaskListDto) as unknown as { dueDate?: string | null }).dueDate ?? null;
+
+  const handleDueDateChange = (isoDate: string | null) => {
+    if (mode === "create") {
+      (props as CreateModeProps).onDueDateChange(
+        (task as TicketTaskInput).clientId,
+        isoDate,
+      );
+    } else {
+      (props as EditModeProps).onPatch(
+        (task as TicketTaskListDto).id!,
+        { dueDate: isoDate } as unknown as TicketTaskUpdateDto,
+      );
+    }
+  };
+
   // ── Delete ───────────────────────────────────────────────────────────────
   const handleDeleteClick = () => {
     if (mode === "create") {
@@ -186,9 +291,6 @@ const TaskItem = (props: TaskItemProps) => {
       onDelete((task as TicketTaskListDto).id!);
     }
   };
-
-  const createTask = mode === "create" ? (task as TicketTaskInput) : null;
-  const editTask   = mode === "edit"   ? (task as TicketTaskListDto) : null;
 
   const createAssigneeValue =
     createTask?.assigneeId != null
@@ -225,7 +327,7 @@ const TaskItem = (props: TaskItemProps) => {
       )}
     >
       {/* ── Main row ── */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
 
         {/* Left: drag handle (create) / order pill (edit) */}
         <div className="shrink-0">
@@ -309,6 +411,15 @@ const TaskItem = (props: TaskItemProps) => {
               />
             )}
           </div>
+        </div>
+
+        {/* Due date picker */}
+        <div className="shrink-0">
+          <DueDatePicker
+            value={dueDateValue}
+            onChange={handleDueDateChange}
+            disabled={mode === "create" ? (props as CreateModeProps).assignDisabled : (props as EditModeProps).assignDisabled}
+          />
         </div>
 
         {/* Status badge + Kanban dot + delete */}

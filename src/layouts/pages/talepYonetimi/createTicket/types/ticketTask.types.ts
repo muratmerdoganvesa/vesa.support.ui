@@ -11,6 +11,8 @@ export interface TicketTaskInput {
   assigneeId: string | null;
   /** Seçicide göstermek için (opsiyonel, arama sonucundan doldurulur) */
   assigneeLabel?: string;
+  /** ISO-8601 tarih string — Kanban kartı üzerindeki son tarihe iletilir */
+  dueDate?: string | null;
 }
 
 export const TASK_STATUS_CONFIG = {

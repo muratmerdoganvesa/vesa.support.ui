@@ -192,3 +192,23 @@
     @apply font-sans;
     }
 }
+
+/* ── @n8n/chat widget — Sheet panel ile çakışmasın ──────────────────────────── */
+
+/* Launcher butonu ve chat penceresi Sheet overlay'in (z-1100) altında kalır */
+.n8n-chat,
+.chat-window-toggle,
+.chat-window-wrapper {
+  z-index: 1000 !important;
+}
+
+/* Sheet/Slide-over panel açıkken launcher'ı gizle (üst üste binmesin) */
+body:has([data-slot="sheet-content"][data-state="open"]) .chat-window-toggle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.15s ease;
+}
+
+body:has([data-slot="sheet-content"][data-state="open"]) .chat-window-wrapper {
+  display: none !important;
+}

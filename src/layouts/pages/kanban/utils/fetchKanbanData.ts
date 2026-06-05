@@ -16,6 +16,7 @@ export interface KanbanTasksListDtoFixed  {
     projectId?: string | null;
     createdDate?: string | null;
     projectName?: string | null;
+    dueDate?: string | null;
 }
 
 const fetchKanbanDataForAll = async (): Promise<KanbanTasksListDtoFixed[]> => {

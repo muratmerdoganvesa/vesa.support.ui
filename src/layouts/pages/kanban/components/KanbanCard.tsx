@@ -1,6 +1,7 @@
 import React from "react";
-import { Folder, Ticket } from "lucide-react";
+import { AlertTriangle, CalendarClock, Folder, Ticket } from "lucide-react";
 import { cn } from "lib/utils";
+import { getDueDateStatus, formatDueDate, DueDateStatus } from "../utils/dueDateHelpers";
 
 // KanbanCard receives the full data object from Syncfusion (field names are PascalCase)
 interface KanbanCardData {
@@ -16,6 +17,7 @@ interface KanbanCardData {
   RankId?: string | number;
   creatorId?: string;
   projectName?: string | null;
+  dueDate?: string | null;
 }
 
 interface KanbanCardProps {
@@ -30,6 +32,14 @@ const PRIORITY_BORDER: Record<string, string> = {
   High:              "border-l-amber-400",
   Critical:          "border-l-red-500",
   "Release Breaker": "border-l-rose-600",
+};
+
+const DUE_DATE_STYLES: Record<DueDateStatus, { badge: string; icon?: boolean }> = {
+  none:     { badge: "" },
+  ok:       { badge: "text-slate-400" },
+  dueSoon:  { badge: "text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-0.5" },
+  dueToday: { badge: "text-orange-600 bg-orange-50 border border-orange-200 rounded-md px-1.5 py-0.5", icon: true },
+  overdue:  { badge: "text-red-600 bg-red-50 border border-red-200 rounded-md px-1.5 py-0.5", icon: true },
 };
 
 // ─── Priority config ──────────────────────────────────────────────────────────
@@ -73,8 +83,10 @@ const avatarColor = (name: string) =>
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
-  const priority = PRIORITY_CONFIG[data.Priority ?? ""] ?? DEFAULT_PRIORITY;
-  const type     = TYPE_CONFIG[data.Type ?? ""];
+  const priority      = PRIORITY_CONFIG[data.Priority ?? ""] ?? DEFAULT_PRIORITY;
+  const type          = TYPE_CONFIG[data.Type ?? ""];
+  const dueDateStatus = getDueDateStatus({ dueDate: data.dueDate, Status: data.Status });
+  const dueDateStyle  = DUE_DATE_STYLES[dueDateStatus];
 
   const tags = (data.Tags ?? "")
     .split(",")
@@ -88,8 +100,13 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
 
+  const isCardOverdue = dueDateStatus === "overdue";
+
   return (
-    <div className={cn("group p-3.5 bg-white border-l-[3px]", PRIORITY_BORDER[data.Priority ?? ""] ?? "border-l-slate-200")}>
+    <div className={cn(
+      "group p-3.5 bg-white border-l-[3px]",
+      isCardOverdue ? "border-l-red-500 bg-red-50/30" : (PRIORITY_BORDER[data.Priority ?? ""] ?? "border-l-slate-200"),
+    )}>
 
       {/* ── Header row: summary + priority badge ── */}
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -134,6 +151,21 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
           <Folder className="w-3 h-3 text-slate-400 shrink-0" />
           <span className="text-[11px] text-slate-500 font-medium truncate">
             {data.projectName}
+          </span>
+        </div>
+      )}
+
+      {/* ── Due date row ── */}
+      {data.dueDate && (
+        <div className="mb-2">
+          <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold", dueDateStyle.badge)}>
+            {dueDateStyle.icon
+              ? <AlertTriangle className="w-2.5 h-2.5 shrink-0" aria-hidden />
+              : <CalendarClock className="w-2.5 h-2.5 shrink-0" aria-hidden />
+            }
+            {dueDateStatus === "overdue"  && "Gecikmiş · "}
+            {dueDateStatus === "dueToday" && "Bugün · "}
+            {formatDueDate(data.dueDate)}
           </span>
         </div>
       )}

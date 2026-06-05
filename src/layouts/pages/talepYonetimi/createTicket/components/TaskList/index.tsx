@@ -33,6 +33,7 @@ const SortableTaskItem = ({
   onTitleChange,
   onDescriptionChange,
   onAssigneeChange,
+  onDueDateChange,
   onDelete,
   userSearchResults,
   onUserSearch,
@@ -42,6 +43,7 @@ const SortableTaskItem = ({
   onTitleChange: (clientId: string, title: string) => void;
   onDescriptionChange: (clientId: string, description: string) => void;
   onAssigneeChange: (clientId: string, user: UserAppDto | null) => void;
+  onDueDateChange: (clientId: string, dueDate: string | null) => void;
   onDelete: (clientId: string) => void;
   userSearchResults: UserAppDto[];
   onUserSearch: (q: string) => void;
@@ -66,6 +68,7 @@ const SortableTaskItem = ({
         onTitleChange={onTitleChange}
         onDescriptionChange={onDescriptionChange}
         onAssigneeChange={onAssigneeChange}
+        onDueDateChange={onDueDateChange}
         onDelete={onDelete}
         userSearchResults={userSearchResults}
         onUserSearch={onUserSearch}
@@ -153,6 +156,10 @@ const CreateTaskList = ({
           : t
       )
     );
+  };
+
+  const handleDueDateChange = (clientId: string, dueDate: string | null) => {
+    onChange(tasks.map((t) => (t.clientId === clientId ? { ...t, dueDate } : t)));
   };
 
   const handleDelete = (clientId: string) => {
@@ -258,6 +265,7 @@ const CreateTaskList = ({
                   onTitleChange={handleTitleChange}
                   onDescriptionChange={handleDescriptionChange}
                   onAssigneeChange={handleAssigneeChange}
+                  onDueDateChange={handleDueDateChange}
                   onDelete={handleDelete}
                   userSearchResults={userSearchResults}
                   onUserSearch={onUserSearch}
