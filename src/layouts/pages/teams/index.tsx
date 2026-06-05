@@ -96,7 +96,7 @@ function Departmens() {
       dispatchBusy({ isBusy: true });
       var conf = getConfiguration();
       var api = new TicketTeamApi(conf);
-      var data = await api.apiTicketTeamWithoutTeamGet();
+      var data = await api.apiTicketTeamWithoutTeamGet(false);
       console.log("data", data.data);
       setDepartmanData(data.data as any);
     } catch (error) {

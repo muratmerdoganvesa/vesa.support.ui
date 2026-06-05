@@ -51910,10 +51910,11 @@ export const TicketTeamApiAxiosParamCreator = function (configuration?: Configur
         },
         /**
          * 
+         * @param {boolean} [excludeManagerPhoto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketTeamWithoutTeamGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTicketTeamWithoutTeamGet: async (excludeManagerPhoto?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/TicketTeam/without-team`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -51929,6 +51930,10 @@ export const TicketTeamApiAxiosParamCreator = function (configuration?: Configur
             // authentication Bearer required
             // http bearer authentication required
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (excludeManagerPhoto !== undefined) {
+                localVarQueryParameter['excludeManagerPhoto'] = excludeManagerPhoto;
+            }
 
 
     
@@ -52012,11 +52017,12 @@ export const TicketTeamApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @param {boolean} [excludeManagerPhoto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTicketTeamWithoutTeamGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<TicketTeamListDto>>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketTeamWithoutTeamGet(options);
+        async apiTicketTeamWithoutTeamGet(excludeManagerPhoto?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<TicketTeamListDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketTeamWithoutTeamGet(excludeManagerPhoto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['TicketTeamApi.apiTicketTeamWithoutTeamGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -52077,11 +52083,12 @@ export const TicketTeamApiFactory = function (configuration?: Configuration, bas
         },
         /**
          * 
+         * @param {boolean} [excludeManagerPhoto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketTeamWithoutTeamGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketTeamListDto>> {
-            return localVarFp.apiTicketTeamWithoutTeamGet(options).then((request) => request(axios, basePath));
+        apiTicketTeamWithoutTeamGet(excludeManagerPhoto?: boolean, options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketTeamListDto>> {
+            return localVarFp.apiTicketTeamWithoutTeamGet(excludeManagerPhoto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -52149,12 +52156,13 @@ export class TicketTeamApi extends BaseAPI {
 
     /**
      * 
+     * @param {boolean} [excludeManagerPhoto] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof TicketTeamApi
      */
-    public apiTicketTeamWithoutTeamGet(options?: RawAxiosRequestConfig) {
-        return TicketTeamApiFp(this.configuration).apiTicketTeamWithoutTeamGet(options).then((request) => request(this.axios, this.basePath));
+    public apiTicketTeamWithoutTeamGet(excludeManagerPhoto?: boolean, options?: RawAxiosRequestConfig) {
+        return TicketTeamApiFp(this.configuration).apiTicketTeamWithoutTeamGet(excludeManagerPhoto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
