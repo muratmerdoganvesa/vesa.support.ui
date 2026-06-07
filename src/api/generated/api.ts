@@ -8053,6 +8053,12 @@ export interface Kanban {
      * @memberof Kanban
      */
     'ticketProject'?: TicketProjects;
+    /**
+     * 
+     * @type {string}
+     * @memberof Kanban
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
@@ -8157,6 +8163,12 @@ export interface KanbanTasksInsertDto {
      * @memberof KanbanTasksInsertDto
      */
     'projectId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof KanbanTasksInsertDto
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
@@ -8248,6 +8260,12 @@ export interface KanbanTasksListDto {
      * @memberof KanbanTasksListDto
      */
     'projectName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof KanbanTasksListDto
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
@@ -8321,6 +8339,12 @@ export interface KanbanTasksUpdateDto {
      * @memberof KanbanTasksUpdateDto
      */
     'projectId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof KanbanTasksUpdateDto
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
