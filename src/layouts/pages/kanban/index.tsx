@@ -7,8 +7,11 @@ import KanbanBoard from "./components/KanbanBoard";
 import AllProjectsBoard from "./components/AllProjectsBoard";
 import ProjectFilterDialog from "./components/ProjectFilterDialog";
 import PeopleStatsView from "./components/PeopleStatsView";
+// import KanbanCalendarView from "./components/KanbanCalendarView"; // takvim görünümü devre dışı
+import KanbanStatsDialog from "./components/KanbanStatsDialog";
 import { useProjectCatalog } from "./hooks/useProjectCatalog";
 import { buildPersonStats } from "./utils/buildPersonStats";
+import { isOverdue, isDueToday, isDueThisWeek, formatDueDate, getDueDateStatus } from "./utils/dueDateHelpers";
 
 import {
   KanbanApi,
@@ -34,26 +37,21 @@ import {
   Layers,
   Users,
   Tag,
-  Trash2,
-  Save,
   SlidersHorizontal,
   AlertTriangle,
   User,
   Folder,
   Check,
   ChevronDown,
-  Loader2,
-  Lock,
+  ChevronUp,
+  // CalendarDays, // takvim görünümü devre dışı
+  CalendarClock,
+  Clock,
+  BarChart2,
 } from "lucide-react";
 import { Button } from "components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "components/ui/dialog";
 import { cn } from "lib/utils";
+import KanbanTaskPanel from "./components/KanbanTaskPanel";
 
 
 // ─── Type colour map ──────────────────────────────────────────────────────────
@@ -84,140 +82,306 @@ const PRIORITY_COLORS: Record<string, string> = {
 const getProjectLabel = (p: TicketProjectsListDto) =>
   p.subProjectName ? `${p.name} - ${p.subProjectName}` : p.name ?? "";
 
-// ─── Stat card with mini progress bar ────────────────────────────────────────
-
-const StatCard = ({
-  value,
-  label,
-  color,
-  barColor,
-  total,
-}: {
-  value: number;
-  label: string;
-  color: string;
-  barColor: string;
-  total: number;
-}) => {
-  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-  return (
-    <div className="flex flex-col min-w-[52px] gap-0.5">
-      <span className={cn("text-xl font-bold leading-none tabular-nums", color)}>
-        {value}
-      </span>
-      <span className="text-[10px] text-slate-400 whitespace-nowrap">{label}</span>
-      <div className="mt-1 h-[3px] w-full rounded-full bg-slate-100 overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all duration-500", barColor)}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-};
 
 // ─── List-view table ──────────────────────────────────────────────────────────
+
+type ListSortCol =
+  | "Summary"
+  | "Type"
+  | "Priority"
+  | "Status"
+  | "Assignee"
+  | "dueDate"
+  | "createdDate"
+  | "projectName";
+
+type ListSortDir = "asc" | "desc";
+
+const LIST_PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+
+const PRIORITY_SORT_ORDER: Record<string, number> = {
+  "Release Breaker": 0,
+  Critical: 1,
+  High: 2,
+  Normal: 3,
+  Low: 4,
+};
 
 const ListView = ({
   data,
   showProjectName = false,
+  onRowClick,
 }: {
   data: KanbanTasksListDtoFixed[];
   showProjectName?: boolean;
+  onRowClick?: (row: KanbanTasksListDtoFixed) => void;
 }) => {
-  const colSpanCount = showProjectName ? 7 : 6;
+  const [sortCol, setSortCol] = useState<ListSortCol>("createdDate");
+  const [sortDir, setSortDir] = useState<ListSortDir>("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
+
+  useEffect(() => { setPage(1); }, [data]);
+
+  const handleSortCol = (col: ListSortCol) => {
+    if (sortCol === col) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
+
+  const sorted = useMemo(() => [...data].sort((a, b) => {
+    let cmp = 0;
+    switch (sortCol) {
+      case "Summary":     cmp = (a.Summary ?? "").localeCompare(b.Summary ?? "", "tr"); break;
+      case "Type":        cmp = (a.Type ?? "").localeCompare(b.Type ?? "", "tr"); break;
+      case "Priority":    cmp = (PRIORITY_SORT_ORDER[a.Priority] ?? 99) - (PRIORITY_SORT_ORDER[b.Priority] ?? 99); break;
+      case "Status":      cmp = (a.Status ?? "").localeCompare(b.Status ?? "", "tr"); break;
+      case "Assignee":    cmp = (a.Assignee ?? "").localeCompare(b.Assignee ?? "", "tr"); break;
+      case "projectName": cmp = (a.projectName ?? "").localeCompare(b.projectName ?? "", "tr"); break;
+      case "dueDate":     cmp = (a.dueDate ?? "").localeCompare(b.dueDate ?? ""); break;
+      case "createdDate": cmp = (a.createdDate ?? "").localeCompare(b.createdDate ?? ""); break;
+    }
+    return sortDir === "asc" ? cmp : -cmp;
+  }), [data, sortCol, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const colSpanCount = showProjectName ? 8 : 7;
+
+  const getSortIcon = (col: ListSortCol) => {
+    if (sortCol !== col)
+      return <ChevronDown className="w-3 h-3 opacity-20" aria-hidden />;
+    return sortDir === "asc"
+      ? <ChevronUp className="w-3 h-3 text-indigo-500" aria-hidden />
+      : <ChevronDown className="w-3 h-3 text-indigo-500" aria-hidden />;
+  };
+
+  const renderSortableTh = (col: ListSortCol, label: string) => (
+    <th
+      key={col}
+      className="px-4 py-3 text-left cursor-pointer select-none hover:text-indigo-600 transition-colors"
+      onClick={() => handleSortCol(col)}
+      aria-sort={sortCol === col ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <span className="inline-flex items-center gap-1 text-xs uppercase font-semibold tracking-wide">
+        {label}
+        {getSortIcon(col)}
+      </span>
+    </th>
+  );
+
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+    .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+      if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+      acc.push(p);
+      return acc;
+    }, []);
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500 font-semibold tracking-wide">
-            <th className="px-4 py-3 text-left">Özet</th>
-            {showProjectName && <th className="px-4 py-3 text-left">Proje</th>}
-            <th className="px-4 py-3 text-left">Tür</th>
-            <th className="px-4 py-3 text-left">Öncelik</th>
-            <th className="px-4 py-3 text-left">Durum</th>
-            <th className="px-4 py-3 text-left">Atanan</th>
-            <th className="px-4 py-3 text-left">Oluşturulma</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td colSpan={colSpanCount} className="px-4 py-10 text-center text-slate-400 text-xs">
-                Görev bulunamadı
-              </td>
+    <div className="flex flex-col gap-3">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500">
+              {renderSortableTh("Summary", "Özet")}
+              {showProjectName && renderSortableTh("projectName", "Proje")}
+              {renderSortableTh("Type", "Tür")}
+              {renderSortableTh("Priority", "Öncelik")}
+              {renderSortableTh("Status", "Durum")}
+              {renderSortableTh("Assignee", "Atanan")}
+              {renderSortableTh("dueDate", "Son Tarih")}
+              {renderSortableTh("createdDate", "Oluşturulma")}
             </tr>
-          ) : (
-            data.map((row) => (
-              <tr
-                key={row.Id}
-                className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
-              >
-                <td className="px-4 py-3 text-slate-700 font-medium max-w-xs truncate">
-                  {row.Summary}
-                </td>
-                {showProjectName && (
-                  <td className="px-4 py-3">
-                    {row.projectName ? (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 whitespace-nowrap">
-                        <Folder className="w-3 h-3 shrink-0" aria-hidden />
-                        {row.projectName}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300 text-xs">—</span>
-                    )}
-                  </td>
-                )}
-                <td className="px-4 py-3">
-                  <span
-                    className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{
-                      backgroundColor: `${TYPE_COLORS[row.Type] ?? "#94a3b8"}18`,
-                      color: TYPE_COLORS[row.Type] ?? "#64748b",
-                    }}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: TYPE_COLORS[row.Type] ?? "#94a3b8" }}
-                    />
-                    {row.Type}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-semibold"
-                    style={{ color: PRIORITY_COLORS[row.Priority] ?? "#64748b" }}
-                  >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: PRIORITY_COLORS[row.Priority] ?? "#94a3b8" }}
-                    />
-                    {row.Priority}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200">
-                    {row.Status}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-bold flex items-center justify-center shrink-0">
-                      {(row.Assignee ?? "?")[0]?.toUpperCase()}
-                    </div>
-                    <span className="text-slate-600 text-xs">{row.Assignee}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
-                  {row.createdDate
-                    ? new Date(row.createdDate).toLocaleDateString("tr-TR")
-                    : "—"}
+          </thead>
+          <tbody>
+            {paged.length === 0 ? (
+              <tr>
+                <td colSpan={colSpanCount} className="px-4 py-10 text-center text-slate-400 text-xs">
+                  Görev bulunamadı
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              paged.map((row) => {
+                const dueSt = getDueDateStatus(row);
+                const rowOverdue = dueSt === "overdue";
+                return (
+                  <tr
+                    key={row.Id}
+                    onClick={() => onRowClick?.(row)}
+                    onKeyDown={(e) => e.key === "Enter" && onRowClick?.(row)}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    role={onRowClick ? "button" : undefined}
+                    aria-label={onRowClick ? `${row.Summary} görevini düzenle` : undefined}
+                    className={cn(
+                      "border-b border-slate-100 transition-colors",
+                      rowOverdue && "bg-red-50/40",
+                      onRowClick && "hover:bg-slate-50 cursor-pointer focus-visible:outline-none focus-visible:bg-indigo-50/60",
+                    )}
+                  >
+                    <td className="px-4 py-3 text-slate-700 font-medium max-w-xs truncate">
+                      {row.Summary}
+                    </td>
+                    {showProjectName && (
+                      <td className="px-4 py-3">
+                        {row.projectName ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 whitespace-nowrap">
+                            <Folder className="w-3 h-3 shrink-0" aria-hidden />
+                            {row.projectName}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <span
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={{
+                          backgroundColor: `${TYPE_COLORS[row.Type] ?? "#94a3b8"}18`,
+                          color: TYPE_COLORS[row.Type] ?? "#64748b",
+                        }}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: TYPE_COLORS[row.Type] ?? "#94a3b8" }}
+                        />
+                        {row.Type}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-semibold"
+                        style={{ color: PRIORITY_COLORS[row.Priority] ?? "#64748b" }}
+                      >
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: PRIORITY_COLORS[row.Priority] ?? "#94a3b8" }}
+                        />
+                        {row.Priority}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200">
+                        {row.Status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-bold flex items-center justify-center shrink-0">
+                          {(row.Assignee ?? "?")[0]?.toUpperCase()}
+                        </div>
+                        <span className="text-slate-600 text-xs">{row.Assignee}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.dueDate ? (
+                        <span className={cn(
+                          "inline-flex items-center gap-1 text-xs font-semibold",
+                          dueSt === "overdue"  && "text-red-600",
+                          dueSt === "dueToday" && "text-orange-500",
+                          dueSt === "dueSoon"  && "text-amber-600",
+                          dueSt === "ok"       && "text-slate-500",
+                        )}>
+                          {(dueSt === "overdue" || dueSt === "dueToday") && (
+                            <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden />
+                          )}
+                          {formatDueDate(row.dueDate)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
+                      {row.createdDate
+                        ? new Date(row.createdDate).toLocaleDateString("tr-TR")
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Sayfalama */}
+      {sorted.length > 0 && (
+        <div className="flex items-center justify-between px-1 flex-wrap gap-2">
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>Sayfa başı:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              aria-label="Sayfa başı kayıt sayısı"
+              className="h-7 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            >
+              {LIST_PAGE_SIZE_OPTIONS.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <span className="text-slate-400 tabular-nums">
+              {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, sorted.length)} / {sorted.length} görev
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              disabled={page === 1}
+              aria-label="İlk sayfa"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >«</button>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              aria-label="Önceki sayfa"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >‹</button>
+
+            {pageNumbers.map((p, i) =>
+              p === "..." ? (
+                <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-slate-400 text-xs">…</span>
+              ) : (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPage(p as number)}
+                  aria-label={`Sayfa ${p}`}
+                  aria-current={page === p ? "page" : undefined}
+                  className={cn(
+                    "w-7 h-7 flex items-center justify-center rounded-md text-xs font-medium transition-colors border",
+                    page === p
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >{p}</button>
+              )
+            )}
+
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              aria-label="Sonraki sayfa"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >›</button>
+            <button
+              type="button"
+              onClick={() => setPage(totalPages)}
+              disabled={page === totalPages}
+              aria-label="Son sayfa"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-slate-200 text-slate-500 text-xs hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >»</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -235,6 +399,7 @@ const DEFAULT_FORM = {
   Tags: "",
   RankId: "1",
   projectId: "",
+  dueDate: "",
 };
 
 // ─── Selection step type ──────────────────────────────────────────────────────
@@ -269,6 +434,7 @@ function KanbanPage() {
   const [viewMode, setViewMode] = useState<"kanban" | "list" | "people">("kanban");
   const [viewContext] = useState<ViewContext>("all-projects");
   const [currentProjectFilter, setCurrentProjectFilter] = useState<string>("All");
+  const [currentDueDateFilter, setCurrentDueDateFilter] = useState<"All" | "overdue" | "today" | "thisWeek" | "noDueDate">("All");
   const [isMobile, setIsMobile] = useState(false);
 
   // ── Assignee search in sidebar ────────────────────────────────────────────
@@ -294,6 +460,9 @@ function KanbanPage() {
 
   // ── Mobile sidebar state ──────────────────────────────────────────────────
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Stats dialog state ────────────────────────────────────────────────────
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
 
   // ── Custom dialog state ───────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -375,6 +544,7 @@ function KanbanPage() {
     const criticalCount = filteredData.filter(
       (d) => d.Priority === "Critical" || d.Priority === "Release Breaker"
     ).length;
+    const overdueCount = filteredData.filter((d) => isOverdue(d)).length;
     return {
       toplam: total,
       backlog: count("Backlog"),
@@ -384,6 +554,7 @@ function KanbanPage() {
       done: doneCount,
       donePercent: total > 0 ? Math.round((doneCount / total) * 100) : 0,
       criticalCount,
+      overdueCount,
     };
   }, [filteredData]);
 
@@ -440,6 +611,7 @@ function KanbanPage() {
           projectId: item.projectId,
           createdDate: item.createdDate ?? null,
           projectName: item.projectName ?? null,
+          dueDate: item.dueDate ?? null,
         }));
         setAllData(fixedData);
         setFilteredData(fixedData);
@@ -499,6 +671,7 @@ function KanbanPage() {
         description: card.Description,
         summary: card.Summary,
         creatorId: card.creatorId,
+        dueDate: card.dueDate || null,
         projectId: card.Type === "Proje Planlama"
           ? (card.projectId || null)
           : selectedTicketProject?.id ?? null,
@@ -525,6 +698,7 @@ function KanbanPage() {
         type: card.Type,
         description: card.Description,
         summary: card.Summary,
+        dueDate: card.dueDate || null,
         projectId: card.Type === "Proje Planlama"
           ? (card.projectId || null)
           : selectedTicketProject?.id ?? null,
@@ -561,6 +735,7 @@ function KanbanPage() {
       Tags: card.Tags || "",
       RankId: String(card.RankId ?? 1),
       projectId: card.projectId ?? "",
+      dueDate: card.dueDate ? card.dueDate.split("T")[0] : "",
     });
     setEditCardId(card.Id || "");
     setEditCardCreatorId(card.creatorId || "");
@@ -607,7 +782,7 @@ function KanbanPage() {
   const handleProjectFilterApply = (filterId: string, project?: TicketProjectsListDto | null) => {
     setSelectedTicketProject(project ?? null);
     setCurrentProjectFilter(filterId);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, filterId);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, filterId, currentDueDateFilter);
   };
 
   // ── Board handlers ────────────────────────────────────────────────────────
@@ -625,29 +800,34 @@ function KanbanPage() {
   const handleFilterChange = useCallback(
     (filter: string) => {
       setCurrentFilter(filter);
-      applyFilters(filter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter);
+      applyFilters(filter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
     },
-    [searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter]
+    [searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter]
   );
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    applyFilters(currentFilter, term, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter);
+    applyFilters(currentFilter, term, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
   };
 
   const handlePriorityFilter = (priority: string) => {
     setCurrentPriorityFilter(priority);
-    applyFilters(currentFilter, searchTerm, priority, currentAssigneeFilter, currentProjectFilter);
+    applyFilters(currentFilter, searchTerm, priority, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
   };
 
   const handleAssigneeFilter = (assigneeId: string) => {
     setCurrentAssigneeFilter(assigneeId);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, assigneeId, currentProjectFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, assigneeId, currentProjectFilter, currentDueDateFilter);
   };
 
   const handleProjectFilter = (projectId: string) => {
     setCurrentProjectFilter(projectId);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, projectId);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, projectId, currentDueDateFilter);
+  };
+
+  const handleDueDateFilter = (dueDateFilter: "All" | "overdue" | "today" | "thisWeek" | "noDueDate") => {
+    setCurrentDueDateFilter(dueDateFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, dueDateFilter);
   };
 
   const applyFilters = (
@@ -656,6 +836,7 @@ function KanbanPage() {
     priority: string,
     assigneeId: string,
     projectFilter: string = "All",
+    dueDateFilter: "All" | "overdue" | "today" | "thisWeek" | "noDueDate" = "All",
   ) => {
     if (!allData || allData.length === 0) return;
     let filtered = allData;
@@ -672,6 +853,15 @@ function KanbanPage() {
       filtered = filtered.filter((item) => !item.projectId);
     } else if (projectFilter !== "All") {
       filtered = filtered.filter((item) => item.projectId === projectFilter);
+    }
+    if (dueDateFilter === "overdue") {
+      filtered = filtered.filter((item) => isOverdue(item));
+    } else if (dueDateFilter === "today") {
+      filtered = filtered.filter((item) => isDueToday(item));
+    } else if (dueDateFilter === "thisWeek") {
+      filtered = filtered.filter((item) => isDueThisWeek(item));
+    } else if (dueDateFilter === "noDueDate") {
+      filtered = filtered.filter((item) => !item.dueDate);
     }
     if (search.trim()) {
       const searchLower = search.toLowerCase();
@@ -699,8 +889,9 @@ function KanbanPage() {
   }, []);
 
   useEffect(() => {
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter);
-  }, [currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, allData, selectedRadio]);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, allData, selectedRadio]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -736,10 +927,10 @@ function KanbanPage() {
   const handlePersonClick = useCallback(
     (userId: string) => {
       setCurrentAssigneeFilter(userId);
-      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter);
+      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter, currentDueDateFilter);
       setViewMode("kanban");
     },
-    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter]
+    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter, currentDueDateFilter]
   );
 
 
@@ -778,7 +969,30 @@ function KanbanPage() {
            
 
                 {/* Filter sections */}
-                <div className="mt-1 flex-1 overflow-y-auto pt-4 space-y-5 px-2">
+                <div className="mt-1 flex-1 overflow-y-auto pt-3 space-y-5 px-2">
+
+                  {/* ARAMA */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Görev ara..."
+                      value={searchTerm}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      aria-label="Görevlerde ara"
+                      className="w-full h-8 pl-9 pr-8 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all bg-white"
+                    />
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => handleSearch("")}
+                        aria-label="Aramayı temizle"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
 
                   {/* EKİPLER */}
                   <div>
@@ -1043,6 +1257,58 @@ function KanbanPage() {
                     </div>
                   )}
 
+                  {/* SON TARİH */}
+                  <div>
+                    <div className="px-2 mb-1.5 flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <CalendarClock className="w-3 h-3" />
+                        Son Tarih
+                      </p>
+                      {currentDueDateFilter !== "All" && (
+                        <button
+                          type="button"
+                          onClick={() => handleDueDateFilter("All")}
+                          className="text-[10px] text-indigo-500 hover:text-indigo-700 font-semibold transition-colors"
+                          aria-label="Tarih filtresini temizle"
+                        >
+                          Temizle
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      {([
+                        { key: "All",       label: "Tümü",          icon: null,          count: sidebarBaseData.length },
+                        { key: "overdue",   label: "Gecikmiş",      icon: "red",         count: sidebarBaseData.filter((d) => isOverdue(d)).length },
+                        { key: "today",     label: "Bugün",         icon: "orange",      count: sidebarBaseData.filter((d) => isDueToday(d)).length },
+                        { key: "thisWeek",  label: "Bu Hafta",      icon: "amber",       count: sidebarBaseData.filter((d) => isDueThisWeek(d)).length },
+                        { key: "noDueDate", label: "Tarihsiz",      icon: "slate",       count: sidebarBaseData.filter((d) => !d.dueDate).length },
+                      ] as const).map(({ key, label, icon, count }) => {
+                        const isActive = currentDueDateFilter === key;
+                        const dotColor = icon === "red" ? "bg-red-400" : icon === "orange" ? "bg-orange-400" : icon === "amber" ? "bg-amber-400" : "bg-slate-300";
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => handleDueDateFilter(key as typeof currentDueDateFilter)}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left",
+                              isActive ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50"
+                            )}
+                          >
+                            <span className={cn("w-2 h-2 rounded-full shrink-0", dotColor)} />
+                            <span className="flex-1 truncate">{label}</span>
+                            <span className={cn(
+                              "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
+                              isActive ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
+                            )}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               </aside>
 
@@ -1092,53 +1358,53 @@ function KanbanPage() {
 
                     <span className="hidden sm:block w-px h-6 bg-slate-200 shrink-0" />
 
-                    <StatCard value={stats.toplam}      label="Toplam"      color="text-slate-700"   barColor="bg-slate-400"    total={stats.toplam} />
-                    <StatCard value={stats.backlog}     label="Backlog"     color="text-slate-500"   barColor="bg-slate-400"    total={stats.toplam} />
-                    <span className="hidden sm:block"><StatCard value={stats.realization} label="Realization" color="text-blue-600"    barColor="bg-blue-400"    total={stats.toplam} /></span>
-                    <span className="hidden sm:block"><StatCard value={stats.uat}         label="UAT"         color="text-violet-600" barColor="bg-violet-400"  total={stats.toplam} /></span>
-                    <span className="hidden md:block"><StatCard value={stats.preparation} label="Preparation" color="text-amber-600"  barColor="bg-amber-400"   total={stats.toplam} /></span>
-                    <StatCard value={stats.done}        label="Done"        color="text-emerald-600" barColor="bg-emerald-400"  total={stats.toplam} />
-
-                    <span className="hidden sm:block w-px h-8 bg-slate-200 shrink-0" />
-
-                    <div className="hidden sm:flex flex-col items-center min-w-[44px] gap-0.5">
-                      <span className="text-xl font-bold leading-none tabular-nums text-emerald-600">
-                        {stats.donePercent}
-                        <span className="text-sm font-semibold text-slate-400">%</span>
+                    {/* ── Mini stat chips ── */}
+                    <div className="hidden sm:flex items-center gap-2">
+                      <span className="flex flex-col items-center min-w-[36px]">
+                        <span className="text-base font-extrabold leading-none tabular-nums text-slate-700">{stats.toplam}</span>
+                        <span className="text-[10px] text-slate-400 mt-0.5">Toplam</span>
                       </span>
-                      <span className="text-[10px] text-slate-400 whitespace-nowrap">Tamamlandı</span>
+                      <span className="w-px h-6 bg-slate-100" />
+                      <span className="flex flex-col items-center min-w-[36px]">
+                        <span className="text-base font-extrabold leading-none tabular-nums text-emerald-600">{stats.donePercent}<span className="text-[10px] font-semibold text-slate-400">%</span></span>
+                        <span className="text-[10px] text-slate-400 mt-0.5">Tamam</span>
+                      </span>
                     </div>
 
-                    {stats.criticalCount > 0 && (
-                      <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 border border-red-100 text-red-600 text-xs font-semibold shrink-0 animate-pulse">
-                        <AlertTriangle className="w-3 h-3" />
-                        {stats.criticalCount} Kritik
-                      </span>
+                    {/* ── Stats dialog trigger ── */}
+                    <button
+                      type="button"
+                      onClick={() => setStatsDialogOpen(true)}
+                      aria-label="İstatistikleri göster"
+                      className="relative flex items-center gap-1.5 h-8 px-3 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:border-indigo-300 hover:text-indigo-600 transition-all text-xs font-semibold shadow-sm"
+                    >
+                      <BarChart2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">İstatistikler</span>
+                      {(stats.overdueCount > 0 || stats.criticalCount > 0) && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-pulse ring-2 ring-white" />
+                      )}
+                    </button>
+
+                    {stats.overdueCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDueDateFilter(currentDueDateFilter === "overdue" ? "All" : "overdue")}
+                        className={cn(
+                          "hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold shrink-0 transition-colors",
+                          currentDueDateFilter === "overdue"
+                            ? "bg-red-600 border-red-600 text-white"
+                            : "bg-red-50 border-red-100 text-red-600 hover:bg-red-100"
+                        )}
+                        aria-label="Gecikmiş görevleri filtrele"
+                      >
+                        <Clock className="w-3 h-3" />
+                        {stats.overdueCount} Gecikmiş
+                      </button>
                     )}
                   </div>
 
-                  {/* View toggle + Search + Add */}
+                  {/* View toggle + Add */}
                   <div className="flex items-center gap-2 shrink-0 ml-auto">
-
-                    <div className="relative hidden sm:block w-48 lg:w-56">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                      <input
-                        type="text"
-                        placeholder="Ara..."
-                        value={searchTerm}
-                        onChange={(e) => handleSearch(e.target.value)}
-                        className="w-full h-8 pl-9 pr-8 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all bg-white"
-                      />
-                      {searchTerm && (
-                        <button
-                          type="button"
-                          onClick={() => handleSearch("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
 
                     <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden text-xs">
                       <button
@@ -1180,6 +1446,21 @@ function KanbanPage() {
                         <Users className="w-3.5 h-3.5" />
                         Kişiler
                       </button>
+                      {/* Takvim görünümü şu an devre dışı
+                      <button
+                        type="button"
+                        onClick={() => setViewMode("calendar")}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 transition-colors font-medium border-l border-slate-200",
+                          viewMode === "calendar"
+                            ? "bg-slate-800 text-white"
+                            : "text-slate-600 hover:bg-slate-50"
+                        )}
+                      >
+                        <CalendarDays className="w-3.5 h-3.5" />
+                        Takvim
+                      </button>
+                      */}
                     </div>
 
                     <Button
@@ -1200,8 +1481,11 @@ function KanbanPage() {
                   className="p-4 overflow-y-auto flex-1"
                   style={boardAreaHeight > 0 ? { height: boardAreaHeight } : undefined}
                 >
-                  {viewMode === "list" ? (
-                    <ListView data={filteredData} showProjectName={viewContext !== "no-project"} />
+                  {/* Takvim görünümü şu an devre dışı
+                  {viewMode === "calendar" ? (
+                    <KanbanCalendarView tasks={filteredData} onTaskClick={handleCardClick} />
+                  ) : */ viewMode === "list" ? (
+                    <ListView data={filteredData} showProjectName={viewContext !== "no-project"} onRowClick={handleCardClick} />
                   ) : viewMode === "people" ? (
                     <PeopleStatsView stats={personStats} onPersonClick={handlePersonClick} />
                   ) : viewContext === "all-projects" ? (
@@ -1230,6 +1514,15 @@ function KanbanPage() {
         </div>
       </div>
 
+      {/* ── Stats Dialog ── */}
+      <KanbanStatsDialog
+        open={statsDialogOpen}
+        onOpenChange={setStatsDialogOpen}
+        stats={stats}
+        filteredData={filteredData}
+        personStats={personStats}
+      />
+
       {/* ── Project Filter Dialog ── */}
       <ProjectFilterDialog
         open={projectFilterOpen}
@@ -1244,239 +1537,22 @@ function KanbanPage() {
         onApply={handleProjectFilterApply}
       />
 
-      {/* ── Add / Edit dialog ── */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg w-full">
-          <DialogHeader>
-            <DialogTitle>
-              {dialogMode === "add" ? "Yeni Görev Ekle" : "Görevi Düzenle"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-4 py-2">
-
-            {/* Status */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">
-                Durum <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={dialogForm.Status}
-                onChange={(e) => setDialogForm((f) => ({ ...f, Status: e.target.value }))}
-                className={cn(
-                  "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
-                  dialogErrors.Status ? "border-red-400" : "border-slate-300"
-                )}
-              >
-                {STATUS_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-              {dialogErrors.Status && <span className="text-xs text-red-500">{dialogErrors.Status}</span>}
-            </div>
-
-            {/* Type */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">
-                Tür <span className="text-red-500">*</span>
-              </label>
-              {dialogMode === "edit" && dialogForm.Type === "Ticket" ? (
-                <div className="flex flex-col gap-1 w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 cursor-not-allowed select-none">
-                  <div className="flex items-center gap-2">
-                    <Lock className="w-3.5 h-3.5 shrink-0 text-sky-400" aria-hidden />
-                    <span
-                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ backgroundColor: `${TYPE_COLORS["Ticket"]}18`, color: TYPE_COLORS["Ticket"] }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: TYPE_COLORS["Ticket"] }} />
-                      Ticket
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-400 leading-tight">Ticket tarafından oluşturuldu</span>
-                </div>
-              ) : (
-                <select
-                  value={dialogForm.Type}
-                  onChange={(e) => {
-                    const newType = e.target.value;
-                    setDialogForm((f) => ({
-                      ...f,
-                      Type: newType,
-                      projectId: newType === "Proje Planlama" ? f.projectId : "",
-                    }));
-                  }}
-                  className={cn(
-                    "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
-                    dialogErrors.Type ? "border-red-400" : "border-slate-300"
-                  )}
-                >
-                  {TYPE_OPTIONS.filter((o) => o !== "Ticket").map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-              )}
-              {dialogErrors.Type && <span className="text-xs text-red-500">{dialogErrors.Type}</span>}
-            </div>
-
-            {/* Proje — visible only when Type is "Proje Planlama" */}
-            {dialogForm.Type === "Proje Planlama" && (
-              <div className="col-span-2 flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
-                  <Folder className="w-3.5 h-3.5 text-indigo-500" aria-hidden />
-                  Proje
-                  {catalogLoading && (
-                    <Loader2 className="w-3 h-3 animate-spin text-indigo-400 ml-1" aria-hidden />
-                  )}
-                </label>
-                <div className="relative">
-                  <select
-                    value={dialogForm.projectId}
-                    onChange={(e) => setDialogForm((f) => ({ ...f, projectId: e.target.value }))}
-                    disabled={catalogLoading}
-                    className={cn(
-                      "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-opacity",
-                      catalogLoading
-                        ? "border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
-                        : "border-slate-300"
-                    )}
-                  >
-                    <option value="">
-                      {catalogLoading ? "Projeler yükleniyor..." : "Proje seçin (opsiyonel)"}
-                    </option>
-                    {!catalogLoading && catalogProjects.map((p) => (
-                      <option key={p.id} value={p.id ?? ""}>{getProjectLabel(p)}</option>
-                    ))}
-                  </select>
-                  {catalogLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <Loader2 className="w-4 h-4 animate-spin text-indigo-400" aria-hidden />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Priority */}
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">
-                Öncelik <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={dialogForm.Priority}
-                onChange={(e) => setDialogForm((f) => ({ ...f, Priority: e.target.value }))}
-                className={cn(
-                  "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
-                  dialogErrors.Priority ? "border-red-400" : "border-slate-300"
-                )}
-              >
-                {PRIORITY_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-              </select>
-              {dialogErrors.Priority && <span className="text-xs text-red-500">{dialogErrors.Priority}</span>}
-            </div>
-
-            {/* Assignee */}
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">
-                Atanan <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={dialogForm.Assignee}
-                onChange={(e) => {
-                  const opt = e.target.selectedOptions[0];
-                  const id = opt?.getAttribute("data-id") ?? "";
-                  setDialogForm((f) => ({ ...f, Assignee: e.target.value, AssigneeId: id }));
-                  setDialogErrors((prev) => ({ ...prev, Assignee: "", AssigneeId: "" }));
-                }}
-                className={cn(
-                  "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
-                  dialogErrors.Assignee ? "border-red-400" : "border-slate-300"
-                )}
-              >
-                <option value="">Kişi seçin</option>
-                {assigneeData.map((u) => {
-                  const name = `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim();
-                  return <option key={u.id} value={name} data-id={u.id}>{name || "Bilinmeyen"}</option>;
-                })}
-              </select>
-              {dialogErrors.Assignee && <span className="text-xs text-red-500">{dialogErrors.Assignee}</span>}
-            </div>
-
-            {/* Summary */}
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">
-                Özet <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Görev özeti girin"
-                value={dialogForm.Summary}
-                onChange={(e) => {
-                  setDialogForm((f) => ({ ...f, Summary: e.target.value }));
-                  setDialogErrors((prev) => ({ ...prev, Summary: "" }));
-                }}
-                className={cn(
-                  "h-9 w-full rounded-md border bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300",
-                  dialogErrors.Summary ? "border-red-400" : "border-slate-300"
-                )}
-              />
-              {dialogErrors.Summary && <span className="text-xs text-red-500">{dialogErrors.Summary}</span>}
-            </div>
-
-            {/* Description */}
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">Açıklama</label>
-              <textarea
-                rows={3}
-                placeholder="Detaylı açıklama girin"
-                value={dialogForm.Description}
-                onChange={(e) => setDialogForm((f) => ({ ...f, Description: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-            </div>
-
-            {/* Tags */}
-            <div className="col-span-2 flex flex-col gap-1">
-              <label className="text-sm font-medium text-slate-700">Etiketler (virgülle ayırın)</label>
-              <input
-                type="text"
-                placeholder="örn. Frontend, Bug, Kritik"
-                value={dialogForm.Tags}
-                onChange={(e) => setDialogForm((f) => ({ ...f, Tags: e.target.value }))}
-                className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-            </div>
-
-          </div>
-
-          <DialogFooter className="flex items-center gap-2 pt-2">
-            {dialogMode === "edit" && (isAdminUser || currentUserId === editCardCreatorId) && (
-              <Button
-                type="button"
-                variant="destructive"
-                className="mr-auto h-8 px-3 text-xs gap-1.5"
-                onClick={handleDialogDelete}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Sil
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-8 px-3 text-xs"
-              onClick={() => setDialogOpen(false)}
-            >
-              İptal
-            </Button>
-            <Button
-              type="button"
-              className="h-8 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5"
-              onClick={handleDialogSave}
-            >
-              <Save className="w-3.5 h-3.5" />
-              Kaydet
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ── Task Slide-over Panel ── */}
+      <KanbanTaskPanel
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        mode={dialogMode}
+        form={dialogForm}
+        setForm={setDialogForm}
+        errors={dialogErrors}
+        setErrors={setDialogErrors}
+        assigneeData={assigneeData}
+        catalogProjects={catalogProjects}
+        catalogLoading={catalogLoading}
+        canDelete={dialogMode === "edit" && (isAdminUser || currentUserId === editCardCreatorId)}
+        onSave={handleDialogSave}
+        onDelete={handleDialogDelete}
+      />
 
     </DashboardLayout>
   );
