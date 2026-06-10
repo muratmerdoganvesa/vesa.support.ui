@@ -51,7 +51,7 @@ import {
 } from "lucide-react";
 import { Button } from "components/ui/button";
 import { cn } from "lib/utils";
-import KanbanTaskPanel from "./components/KanbanTaskPanel";
+import KanbanTaskDialog from "./components/KanbanTaskDialog";
 
 
 // ─── Type colour map ──────────────────────────────────────────────────────────
@@ -1537,8 +1537,8 @@ function KanbanPage() {
         onApply={handleProjectFilterApply}
       />
 
-      {/* ── Task Slide-over Panel ── */}
-      <KanbanTaskPanel
+      {/* ── Task Dialog ── */}
+      <KanbanTaskDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         mode={dialogMode}
