@@ -7,7 +7,8 @@ import {
   DragStartEvent,
   PointerSensor,
   TouchSensor,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -212,24 +213,39 @@ const KanbanBoard = ({
     }
   };
 
+  const handleDragCancel = () => {
+    setActiveCard(null);
+    targetStatusRef.current = null;
+    setLocalData(data);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCard(null);
+    targetStatusRef.current = null;
 
     const activeId = String(active.id);
     const originalCard = data.find((c) => c.Id === activeId);
     if (!originalCard) {
-      targetStatusRef.current = null;
+      setLocalData(data);
       return;
     }
 
-    const finalStatus = targetStatusRef.current;
-    targetStatusRef.current = null;
+    // Dropped outside any droppable — revert optimistic UI
+    if (!over) {
+      setLocalData(data);
+      return;
+    }
 
-    if (!finalStatus || finalStatus === originalCard.Status) {
-      // No status change — check if it's a same-column reorder
-      if (over && String(over.id) !== activeId && !String(over.id).startsWith("col__")) {
-        const overId = String(over.id);
+    const overId = String(over.id);
+
+    const targetStatus = overId.startsWith("col__")
+      ? overId.replace("col__", "")
+      : (data.find((c) => c.Id === overId) ?? localData.find((c) => c.Id === overId))?.Status ?? null;
+
+    if (!targetStatus || targetStatus === originalCard.Status) {
+      // Same column — check if it's a reorder
+      if (!overId.startsWith("col__") && overId !== activeId) {
         const colCards = localData.filter((c) => c.Status === originalCard.Status).map((c) => c.Id);
         const oldIdx = colCards.indexOf(activeId);
         const newIdx = colCards.indexOf(overId);
@@ -242,12 +258,14 @@ const KanbanBoard = ({
               .filter(Boolean);
             return [...rest, ...ordered];
           });
+          return;
         }
       }
+      setLocalData(data);
       return;
     }
 
-    await onCardStatusChange({ ...originalCard, Status: finalStatus });
+    await onCardStatusChange({ ...originalCard, Status: targetStatus });
   };
 
   const handleMobileMove = async (card: KanbanTasksListDtoFixed, newStatus: string) => {
@@ -271,10 +289,17 @@ const KanbanBoard = ({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={(args) => {
+        // Pointer directly inside a droppable? Use that — this makes empty columns work.
+        const within = pointerWithin(args);
+        if (within.length > 0) return within;
+        // Fallback to rectangle intersection for edge cases
+        return rectIntersection(args);
+      }}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <div className="overflow-x-auto pb-1">
         <div
@@ -292,6 +317,7 @@ const KanbanBoard = ({
                 allowToggle={col.allowToggle}
                 defaultExpanded={col.isExpanded !== false}
                 onCardClick={onCardClick}
+                isAnyDragging={activeCard !== null}
               />
             );
           })}

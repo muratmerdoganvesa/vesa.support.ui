@@ -7,7 +7,8 @@ import {
   DragStartEvent,
   PointerSensor,
   TouchSensor,
-  closestCorners,
+  pointerWithin,
+  rectIntersection,
   useSensor,
   useSensors,
   useDroppable,
@@ -327,22 +328,41 @@ const AllProjectsBoard = ({
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragCancel = () => {
     setActiveCard(null);
+    targetStatusRef.current = null;
+    setLocalData(data);
+  };
 
-    const activeId = String(event.active.id);
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveCard(null);
+    targetStatusRef.current = null;
+
+    const activeId = String(active.id);
     const originalCard = data.find((c) => c.Id === activeId);
     if (!originalCard) {
-      targetStatusRef.current = null;
+      setLocalData(data);
       return;
     }
 
-    const finalStatus = targetStatusRef.current;
-    targetStatusRef.current = null;
+    // Dropped outside any droppable (or ESC cancel) — revert optimistic UI
+    if (!over) {
+      setLocalData(data);
+      return;
+    }
 
-    if (!finalStatus || finalStatus === originalCard.Status) return;
+    const overId = String(over.id);
+    const targetStatus = overId.startsWith("col__")
+      ? overId.replace("col__", "")
+      : (data.find((c) => c.Id === overId) ?? localData.find((c) => c.Id === overId))?.Status ?? null;
 
-    await onCardStatusChange({ ...originalCard, Status: finalStatus });
+    if (!targetStatus || targetStatus === originalCard.Status) {
+      setLocalData(data);
+      return;
+    }
+
+    await onCardStatusChange({ ...originalCard, Status: targetStatus });
   };
 
   const handleMobileMove = async (card: KanbanTasksListDtoFixed, newStatus: string) => {
@@ -367,10 +387,15 @@ const AllProjectsBoard = ({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={(args) => {
+        const within = pointerWithin(args);
+        if (within.length > 0) return within;
+        return rectIntersection(args);
+      }}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
     >
       <div className="overflow-x-auto pb-1">
         <div
