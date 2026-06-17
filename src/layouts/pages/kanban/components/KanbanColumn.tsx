@@ -13,6 +13,7 @@ interface KanbanColumnProps {
   allowToggle?: boolean;
   defaultExpanded?: boolean;
   onCardClick: (card: KanbanTasksListDtoFixed) => void;
+  isAnyDragging?: boolean;
 }
 
 const COLUMN_COLORS: Record<string, { header: string; badge: string; dot: string }> = {
@@ -30,6 +31,7 @@ const KanbanColumn = ({
   allowToggle = false,
   defaultExpanded = true,
   onCardClick,
+  isAnyDragging = false,
 }: KanbanColumnProps) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -45,6 +47,7 @@ const KanbanColumn = ({
 
   return (
     <div
+      ref={setNodeRef}
       className={cn(
         "flex flex-col overflow-hidden border min-w-[210px] w-full transition-all duration-150",
         "border-t-[3px]",
@@ -91,7 +94,6 @@ const KanbanColumn = ({
       {/* Cards drop zone */}
       {isExpanded && (
         <div
-          ref={setNodeRef}
           className={cn(
             "flex-1 bg-gray-50 flex flex-col gap-2 p-2 min-h-[80px] transition-colors duration-100",
             isOver && "bg-indigo-50/40"
@@ -99,7 +101,12 @@ const KanbanColumn = ({
         >
           <SortableContext items={cardIds} strategy={verticalListSortingStrategy}>
             {cards.map((card) => (
-              <KanbanSortableCard key={card.Id} card={card} onCardClick={onCardClick} />
+              <KanbanSortableCard
+                key={card.Id}
+                card={card}
+                onCardClick={onCardClick}
+                isAnyDragging={isAnyDragging}
+              />
             ))}
           </SortableContext>
 

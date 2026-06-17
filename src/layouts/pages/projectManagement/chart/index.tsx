@@ -1821,7 +1821,11 @@ function ProjectChart() {
                 <ShadcnSelectTrigger id="pdf-pagesize" className="w-full">
                   <ShadcnSelectValue placeholder="Boyut seçin" />
                 </ShadcnSelectTrigger>
-                <ShadcnSelectContent>
+                <ShadcnSelectContent
+                  className="z-[1200]"
+                  position="popper"
+                  sideOffset={4}
+                >
                   <ShadcnSelectItem value="A0">A0</ShadcnSelectItem>
                   <ShadcnSelectItem value="A4">A4</ShadcnSelectItem>
                 </ShadcnSelectContent>
@@ -1886,7 +1890,11 @@ function ProjectChart() {
                 <ShadcnSelectTrigger id="child-batch-count" className="w-full">
                   <ShadcnSelectValue />
                 </ShadcnSelectTrigger>
-                <ShadcnSelectContent className="max-h-60">
+                <ShadcnSelectContent
+                  className="z-[1200] max-h-60"
+                  position="popper"
+                  sideOffset={4}
+                >
                   {Array.from({ length: 30 }, (_, i) => i + 1).map((n) => (
                     <ShadcnSelectItem key={n} value={String(n)}>
                       {n}
