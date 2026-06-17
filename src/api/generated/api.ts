@@ -4037,6 +4037,142 @@ export interface Company {
 /**
  * 
  * @export
+ * @interface CompanyGanttPersonnelByProjectDto
+ */
+export interface CompanyGanttPersonnelByProjectDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttPersonnelByProjectDto
+     */
+    'projectId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttPersonnelByProjectDto
+     */
+    'projectName'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttPersonnelByProjectDto
+     */
+    'taskCount'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttPersonnelByProjectDto
+     */
+    'avgProgress'?: number;
+}
+/**
+ * 
+ * @export
+ * @interface CompanyGanttPersonnelWorkloadDto
+ */
+export interface CompanyGanttPersonnelWorkloadDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttPersonnelWorkloadDto
+     */
+    'userId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttPersonnelWorkloadDto
+     */
+    'fullName'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttPersonnelWorkloadDto
+     */
+    'totalTasks'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttPersonnelWorkloadDto
+     */
+    'avgProgress'?: number;
+    /**
+     * 
+     * @type {Array<CompanyGanttPersonnelByProjectDto>}
+     * @memberof CompanyGanttPersonnelWorkloadDto
+     */
+    'byProject'?: Array<CompanyGanttPersonnelByProjectDto> | null;
+}
+/**
+ * 
+ * @export
+ * @interface CompanyGanttProjectWorkloadDto
+ */
+export interface CompanyGanttProjectWorkloadDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'projectId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'projectName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'subProjectName'?: string | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'isActive'?: boolean;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'taskCount'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'avgProgress'?: number;
+    /**
+     * 
+     * @type {number}
+     * @memberof CompanyGanttProjectWorkloadDto
+     */
+    'assigneeCount'?: number;
+}
+/**
+ * 
+ * @export
+ * @interface CompanyGanttWorkloadDto
+ */
+export interface CompanyGanttWorkloadDto {
+    /**
+     * 
+     * @type {Array<CompanyGanttProjectWorkloadDto>}
+     * @memberof CompanyGanttWorkloadDto
+     */
+    'projects'?: Array<CompanyGanttProjectWorkloadDto> | null;
+    /**
+     * 
+     * @type {Array<CompanyGanttPersonnelWorkloadDto>}
+     * @memberof CompanyGanttWorkloadDto
+     */
+    'personnel'?: Array<CompanyGanttPersonnelWorkloadDto> | null;
+}
+/**
+ * 
+ * @export
  * @interface ConsultantInfoDto
  */
 export interface ConsultantInfoDto {
@@ -16078,6 +16214,12 @@ export interface TicketTaskInsertDto {
      * @memberof TicketTaskInsertDto
      */
     'assigneeId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketTaskInsertDto
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
@@ -16145,6 +16287,12 @@ export interface TicketTaskListDto {
      * @memberof TicketTaskListDto
      */
     'createdDate'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketTaskListDto
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
@@ -16182,6 +16330,12 @@ export interface TicketTaskUpdateDto {
      * @memberof TicketTaskUpdateDto
      */
     'assigneeId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketTaskUpdateDto
+     */
+    'dueDate'?: string | null;
 }
 /**
  * 
@@ -40544,6 +40698,44 @@ export const ProjectTasksApiAxiosParamCreator = function (configuration?: Config
         },
         /**
          * 
+         * @param {string} [workCompanyId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiProjectTasksGetCompanyGanttWorkloadGet: async (workCompanyId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/ProjectTasks/GetCompanyGanttWorkload`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (workCompanyId !== undefined) {
+                localVarQueryParameter['workCompanyId'] = workCompanyId;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @param {string} [projectId] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -40964,6 +41156,18 @@ export const ProjectTasksApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @param {string} [workCompanyId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CompanyGanttWorkloadDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ProjectTasksApi.apiProjectTasksGetCompanyGanttWorkloadGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @param {string} [projectId] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -41114,6 +41318,15 @@ export const ProjectTasksApiFactory = function (configuration?: Configuration, b
         },
         /**
          * 
+         * @param {string} [workCompanyId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId?: string, options?: RawAxiosRequestConfig): AxiosPromise<CompanyGanttWorkloadDto> {
+            return localVarFp.apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @param {string} [projectId] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -41234,6 +41447,17 @@ export class ProjectTasksApi extends BaseAPI {
      */
     public apiProjectTasksGet(projectId?: string, options?: RawAxiosRequestConfig) {
         return ProjectTasksApiFp(this.configuration).apiProjectTasksGet(projectId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} [workCompanyId] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof ProjectTasksApi
+     */
+    public apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId?: string, options?: RawAxiosRequestConfig) {
+        return ProjectTasksApiFp(this.configuration).apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
