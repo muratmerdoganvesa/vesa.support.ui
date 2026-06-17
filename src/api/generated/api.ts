@@ -4539,6 +4539,12 @@ export interface CreateUserDto {
      * @memberof CreateUserDto
      */
     'isTeamLeader'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CreateUserDto
+     */
+    'isKanbanAdmin'?: boolean;
 }
 
 
@@ -17499,6 +17505,12 @@ export interface UpdateUserDto {
      * @memberof UpdateUserDto
      */
     'isTeamLeader'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UpdateUserDto
+     */
+    'isKanbanAdmin'?: boolean;
 }
 
 
@@ -17852,6 +17864,12 @@ export interface UserApp {
     'isTeamLeader'?: boolean;
     /**
      * 
+     * @type {boolean}
+     * @memberof UserApp
+     */
+    'isKanbanAdmin'?: boolean;
+    /**
+     * 
      * @type {Array<PerformanceForm>}
      * @memberof UserApp
      */
@@ -18147,6 +18165,12 @@ export interface UserAppDto {
      * @memberof UserAppDto
      */
     'isTeamLeader'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UserAppDto
+     */
+    'isKanbanAdmin'?: boolean;
 }
 
 

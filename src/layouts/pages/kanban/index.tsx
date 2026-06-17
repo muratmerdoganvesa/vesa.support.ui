@@ -522,13 +522,23 @@ function KanbanPage() {
     const fetchCurrentUser = async () => {
       try {
         const api = new UserApi(getConfiguration());
-        const [userRes, adminRes] = await Promise.all([
-          api.apiUserGetLoginUserGet(),
-          api.apiUserCheckIsAdminGet(),
-        ]);
-        setCurrentUserId(userRes.data.id);
-        setIsAdminUser(adminRes.data);
-      } catch {}
+        const detailRes = await api.apiUserGetLoginUserDetailGet();
+        const d = detailRes.data;
+        setCurrentUserId(d.id ?? "");
+        setIsAdminUser(Boolean(d.isSystemAdmin) || Boolean(d.isKanbanAdmin));
+      } catch {
+        try {
+          const api = new UserApi(getConfiguration());
+          const [userRes, adminRes] = await Promise.all([
+            api.apiUserGetLoginUserGet(),
+            api.apiUserCheckIsAdminGet(),
+          ]);
+          setCurrentUserId(userRes.data.id);
+          setIsAdminUser(Boolean(adminRes.data));
+        } catch {
+          /* ignore */
+        }
+      }
     };
     fetchHasPerm();
     fetchIsManager();
@@ -905,11 +915,21 @@ function KanbanPage() {
 
   // ── Sidebar filter items ──────────────────────────────────────────────────
 
-  const radioItems = [
-    { value: 1, label: "Kendim" },
-    ...(isAdminUser || isManager || hasPerm ? [{ value: 2, label: "Ekibim" }] : []),
-    ...(isAdminUser ? [{ value: 3, label: "Herkes" }] : []),
-  ];
+  const radioItems = useMemo(
+    () => [
+      { value: 1, label: "Kendim" },
+      ...(isAdminUser || isManager || hasPerm ? [{ value: 2, label: "Ekibim" }] : []),
+      ...(isAdminUser ? [{ value: 3, label: "Herkes" }] : []),
+    ],
+    [isAdminUser, isManager, hasPerm]
+  );
+
+  useEffect(() => {
+    const valid = new Set(radioItems.map((r) => r.value));
+    if (!valid.has(selectedRadio)) {
+      setSelectedRadio(1);
+    }
+  }, [radioItems, selectedRadio]);
 
   const typeItems = ["All", ...uniqueTypes];
   const priorityItems = ["All", ...PRIORITY_OPTIONS];

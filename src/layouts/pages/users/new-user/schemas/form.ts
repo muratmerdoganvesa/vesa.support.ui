@@ -255,7 +255,13 @@ let form = {
       label: "Takım Lideri",
       type: "checkbox",
       errorMsg: "Takım Lideri ",
-    }
+    },
+    isKanbanAdmin: {
+      name: "isKanbanAdmin",
+      label: "Kanbanda Admin Yetkisi",
+      type: "checkbox",
+      errorMsg: "isKanbanAdmin",
+    },
   
 
   },

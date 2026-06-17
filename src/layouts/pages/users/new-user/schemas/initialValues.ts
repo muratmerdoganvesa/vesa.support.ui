@@ -54,7 +54,8 @@ let {
     userLevel,
     mainManagerUserAppId,
     pCname,
-    isTeamLeader
+    isTeamLeader,
+    isKanbanAdmin,
   },
 } = checkout;
 
@@ -102,7 +103,8 @@ let initialValues: InitialValuesType = {
   [userLevel.name]: null,
   [mainManagerUserAppId.name]: null,
   [pCname.name]: "",
-  [isTeamLeader.name]:false
+  [isTeamLeader.name]:false,
+  [isKanbanAdmin.name]: false,
 };
 
 
