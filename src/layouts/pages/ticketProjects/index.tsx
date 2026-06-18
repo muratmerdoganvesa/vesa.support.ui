@@ -1,172 +1,32 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import {
-  Plus, Pencil, Trash2, Building2, Search,
-  ChevronLeft, ChevronRight, ChevronDown, X,
-} from "lucide-react";
+import { BarChart3, FolderKanban, Plus } from "lucide-react";
+import { cn } from "lib/utils";
 
-import { TicketProjectsApi, TicketProjectsListDto, WorkCompanyApi, WorkCompanyDto } from "api/generated";
-import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import { useBusy } from "layouts/pages/hooks/useBusy";
-import { useAlert } from "layouts/pages/hooks/useAlert";
-import MessageBox from "layouts/pages/Components/MessageBox";
+import TicketProjectsListTab from "layouts/pages/ticketProjects/components/TicketProjectsListTab";
+import ProjectStatisticsTab from "layouts/pages/ticketProjects/components/ProjectStatisticsTab";
 
 import { Button } from "components/ui/button";
-import { Input } from "components/ui/input";
-import { Badge } from "components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "components/ui/table";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const ROWS_PER_PAGE = 10;
-
-const formatDate = (dateStr: string | null | undefined): string => {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-// ─── Component ────────────────────────────────────────────────────────────────
+type TicketProjectsTab = "list" | "statistics";
 
 function TicketProjects() {
-  const dispatchAlert = useAlert();
-  const dispatchBusy = useBusy();
   const navigate = useNavigate();
-  const { t } = useTranslation();
-
-  const [isQuestionMessageBoxOpen, setIsQuestionMessageBoxOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [projectsData, setProjectsData] = useState<TicketProjectsListDto[]>([]);
-  const [workCompanyData, setWorkCompanyData] = useState<WorkCompanyDto[]>([]);
-  const [selectedWorkCompanyId, setSelectedWorkCompanyId] = useState<string>("");
-  const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-
-  // ─── Derived data ───────────────────────────────────────────────────────────
-
-  const filtered = projectsData.filter((row) => {
-    const q = search.toLowerCase();
-    return (
-      row.name?.toLowerCase().includes(q) ||
-      row.subProjectName?.toLowerCase().includes(q) ||
-      (row as any).workCompany?.name?.toLowerCase().includes(q)
-    );
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
-  const paginated = filtered.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE);
-
-  // Reset to page 1 when search or filter changes
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setPage(1);
-  };
-
-  // ─── Data fetching ──────────────────────────────────────────────────────────
-
-  const fetchProjectsData = async (companyId?: string) => {
-    try {
-      dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const api = new TicketProjectsApi(conf);
-      const data = await api.apiTicketProjectsGet(companyId);
-      setProjectsData(data.data as any);
-      setPage(1);
-    } catch {
-      dispatchAlert({ message: "Projeler getirilirken hata oluştu.", type: "Error" });
-    } finally {
-      dispatchBusy({ isBusy: false });
-    }
-  };
-
-  const fetchCompanyData = async () => {
-    try {
-      dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const api = new WorkCompanyApi(conf);
-      const data = await api.apiWorkCompanyGetAssingListGet();
-      setWorkCompanyData(data.data as any);
-    } catch {
-      dispatchAlert({ message: "Veriler getirilirken hata oluştu.", type: "Error" });
-    } finally {
-      dispatchBusy({ isBusy: false });
-    }
-  };
-
-  useEffect(() => {
-    fetchProjectsData();
-    fetchCompanyData();
-  }, []);
-
-  // ─── Handlers ──────────────────────────────────────────────────────────────
-
-  const handleDelete = async (id: string) => {
-    try {
-      dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const api = new TicketProjectsApi(conf);
-      await api.apiTicketProjectsDelete(id);
-      dispatchAlert({ message: "Proje Silindi", type: "Success" });
-      fetchProjectsData(selectedWorkCompanyId || undefined);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      dispatchBusy({ isBusy: false });
-    }
-  };
-
-  const handleOpenQuestionBox = (id: string) => {
-    setSelectedId(id);
-    setIsQuestionMessageBoxOpen(true);
-  };
-
-  const handleCloseQuestionBox = (action: string) => {
-    setIsQuestionMessageBoxOpen(false);
-    if (action === "Yes") handleDelete(selectedId);
-  };
-
-  const handleWorkCompanyChange = (value: string) => {
-    setSelectedWorkCompanyId(value);
-    const company = workCompanyData.find((c) => c.id === value);
-    fetchProjectsData(company?.id);
-  };
-
-  // ─── Render ────────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<TicketProjectsTab>("list");
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
 
       <div className="space-y-6 py-6">
-
-        {/* ── Page header ─────────────────────────────────────────────── */}
         <div className="flex items-start justify-between rounded-xl bg-card px-6 py-5 ring-1 ring-foreground/10">
           <div className="space-y-0.5">
-            <h1 className="text-xl font-semibold text-[#344767]">Proje Yönetimi</h1>
-            <p className="text-sm text-[#7b809a]">Projeleri görüntüleyin, oluşturun ve dahası</p>
+            <h1 className="text-xl font-semibold text-[#344767] dark:text-foreground">Proje Yönetimi</h1>
+            <p className="text-sm text-[#7b809a] dark:text-muted-foreground">
+              Projeleri görüntüleyin, oluşturun ve dahası
+            </p>
           </div>
           <Button
             size="sm"
@@ -178,203 +38,70 @@ function TicketProjects() {
           </Button>
         </div>
 
-        {/* ── Filters & search bar ─────────────────────────────────────── */}
-        <div className="flex flex-wrap items-end gap-4">
-          {/* Company filter — searchable select */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-foreground">Müşteri</label>
-            <Popover open={companyPopoverOpen} onOpenChange={setCompanyPopoverOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  role="combobox"
-                  aria-expanded={companyPopoverOpen}
-                  aria-label="Müşteri seç"
-                  className="flex h-8 w-52 items-center justify-between gap-1 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors hover:bg-muted/50 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                >
-                  <span className="flex items-center gap-1.5 truncate text-left">
-                    <Building2 className="size-4 shrink-0 text-muted-foreground" />
-                    {selectedWorkCompanyId
-                      ? (workCompanyData.find((c) => c.id === selectedWorkCompanyId)?.name ?? "Müşteri Seçiniz")
-                      : <span className="text-muted-foreground">Müşteri Seçiniz</span>}
-                  </span>
-                  <span className="flex shrink-0 items-center gap-0.5">
-                    {selectedWorkCompanyId && (
-                      <span
-                        role="button"
-                        aria-label="Temizle"
-                        tabIndex={0}
-                        className="rounded p-0.5 hover:bg-muted"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleWorkCompanyChange("");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.stopPropagation();
-                            handleWorkCompanyChange("");
-                          }
-                        }}
-                      >
-                        <X className="size-3 text-muted-foreground" />
-                      </span>
-                    )}
-                    <ChevronDown className="size-4 text-muted-foreground" />
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-52 p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Müşteri ara…" />
-                  <CommandList>
-                    <CommandEmpty>Müşteri bulunamadı</CommandEmpty>
-                    <CommandGroup>
-                      {workCompanyData.map((company) => (
-                        <CommandItem
-                          key={company.id}
-                          value={company.name}
-                          data-checked={selectedWorkCompanyId === company.id}
-                          onSelect={() => {
-                            handleWorkCompanyChange(
-                              selectedWorkCompanyId === company.id ? "" : company.id
-                            );
-                            setCompanyPopoverOpen(false);
-                          }}
-                        >
-                          <Building2 className="size-4 text-muted-foreground" />
-                          {company.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Text search */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-foreground">Ara</label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Proje veya müşteri ara…"
-                value={search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-64 pl-8"
-              />
-            </div>
-          </div>
+        <div
+          role="tablist"
+          aria-label="Proje görünümü"
+          className="flex w-fit items-center gap-1 rounded-xl border border-border/60 bg-muted/40 p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "list"}
+            aria-controls="panel-project-list"
+            id="tab-project-list"
+            tabIndex={activeTab === "list" ? 0 : -1}
+            onClick={() => setActiveTab("list")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 motion-reduce:transition-none",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+              activeTab === "list"
+                ? "bg-white text-indigo-700 shadow-sm ring-1 ring-border/60 dark:bg-card dark:text-indigo-300"
+                : "text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-card/60",
+            )}
+          >
+            <FolderKanban className="size-4 shrink-0" aria-hidden />
+            Proje Listesi
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "statistics"}
+            aria-controls="panel-project-statistics"
+            id="tab-project-statistics"
+            tabIndex={activeTab === "statistics" ? 0 : -1}
+            onClick={() => setActiveTab("statistics")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 motion-reduce:transition-none",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+              activeTab === "statistics"
+                ? "bg-white text-indigo-700 shadow-sm ring-1 ring-border/60 dark:bg-card dark:text-indigo-300"
+                : "text-muted-foreground hover:bg-white/60 hover:text-foreground dark:hover:bg-card/60",
+            )}
+          >
+            <BarChart3 className="size-4 shrink-0" aria-hidden />
+            Proje İstatistikleri
+          </button>
         </div>
 
-        {/* ── Table ───────────────────────────────────────────────────── */}
-        <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead className="font-bold text-foreground">Müşteri</TableHead>
-                <TableHead className="font-bold text-foreground">Proje Tanımı</TableHead>
-                <TableHead className="font-bold text-foreground">Proje Alt Tanımı</TableHead>
-                <TableHead className="font-bold text-foreground">Durum</TableHead>
-                <TableHead className="font-bold text-foreground">Oluşturulma Tarihi</TableHead>
-                <TableHead className="font-bold text-foreground">İşlemler</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginated.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                    {search ? "Aramanızla eşleşen proje bulunamadı." : "Henüz proje eklenmemiş."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginated.map((row) => (
-                  <TableRow key={(row as any).id}>
-                    <TableCell className="text-sm">
-                      {(row as any).workCompany?.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm font-medium">
-                      {row.name ?? "—"}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                      {row.subProjectName ?? "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={row.isActive ? "default" : "secondary"}>
-                        {row.isActive ? "Aktif" : "Pasif"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate((row as any).createdDate)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          aria-label="Düzenle"
-                          onClick={() => navigate(`/ticketProjects/detail/${(row as any).id}`)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <Pencil className="size-4" />
-                        </button>
-                        <button
-                          type="button"
-                          aria-label="Sil"
-                          onClick={() => handleOpenQuestionBox((row as any).id)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div
+          id="panel-project-list"
+          role="tabpanel"
+          aria-labelledby="tab-project-list"
+          hidden={activeTab !== "list"}
+          className="space-y-6"
+        >
+          {activeTab === "list" && <TicketProjectsListTab />}
+        </div>
 
-          {/* ── Pagination ──────────────────────────────────────────── */}
-          <div className="flex items-center justify-between border-t border-border px-4 py-3">
-            <p className="text-sm text-muted-foreground">
-              Toplam{" "}
-              <span className="font-medium text-foreground">{filtered.length}</span>{" "}
-              kayıt
-              {totalPages > 1 && (
-                <>, sayfa{" "}
-                  <span className="font-medium text-foreground">{page}</span>
-                  {" "}/{" "}
-                  <span className="font-medium text-foreground">{totalPages}</span>
-                </>
-              )}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                aria-label="Önceki sayfa"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                aria-label="Sonraki sayfa"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-          </div>
+        <div
+          id="panel-project-statistics"
+          role="tabpanel"
+          aria-labelledby="tab-project-statistics"
+          hidden={activeTab !== "statistics"}
+        >
+          {activeTab === "statistics" && <ProjectStatisticsTab />}
         </div>
       </div>
-
-      <MessageBox
-        isQuestionmessageBoxOpen={isQuestionMessageBoxOpen}
-        handleCloseQuestionBox={handleCloseQuestionBox}
-      />
     </DashboardLayout>
   );
 }
