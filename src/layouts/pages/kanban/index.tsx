@@ -44,6 +44,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Building2,
   // CalendarDays, // takvim görünümü devre dışı
   CalendarClock,
   Clock,
@@ -427,6 +428,7 @@ function KanbanPage() {
   const [currentFilter, setCurrentFilter] = useState<string>("All");
   const [currentPriorityFilter, setCurrentPriorityFilter] = useState<string>("All");
   const [currentAssigneeFilter, setCurrentAssigneeFilter] = useState<string>("All");
+  const [currentDepartmentFilter, setCurrentDepartmentFilter] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedRadio, setSelectedRadio] = useState<number>(2);
   const [hasPerm, setHasPerm] = useState(false);
@@ -583,6 +585,46 @@ function KanbanPage() {
     const types = new Set(sidebarBaseData.map((d) => d.Type).filter(Boolean));
     return Array.from(types);
   }, [sidebarBaseData]);
+
+  const departmentUserMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const user of assigneeData) {
+      const dept = user.departmentText?.trim();
+      if (!dept) continue;
+      const existing = map.get(dept) ?? [];
+      if (user.id) existing.push(user.id);
+      map.set(dept, existing);
+    }
+    return map;
+  }, [assigneeData]);
+
+  const departmentItems = useMemo(
+    () =>
+      Array.from(departmentUserMap.keys())
+        .filter((dept) => {
+          const userIds = departmentUserMap.get(dept) ?? [];
+          return sidebarBaseData.some((d) => userIds.includes(d.AssigneeId));
+        })
+        .sort((a, b) => a.localeCompare(b, "tr")),
+    [departmentUserMap, sidebarBaseData]
+  );
+
+  const showDepartmentAll = departmentItems.length > 1;
+
+  const effectiveDepartmentFilter = useMemo(() => {
+    if (departmentItems.length === 0) return "All";
+    if (departmentItems.length === 1) return departmentItems[0];
+    if (currentDepartmentFilter !== "All" && departmentItems.includes(currentDepartmentFilter)) {
+      return currentDepartmentFilter;
+    }
+    return "All";
+  }, [departmentItems, currentDepartmentFilter]);
+
+  const departmentFilteredBaseData = useMemo(() => {
+    if (effectiveDepartmentFilter === "All") return sidebarBaseData;
+    const userIds = departmentUserMap.get(effectiveDepartmentFilter) ?? [];
+    return sidebarBaseData.filter((d) => userIds.includes(d.AssigneeId));
+  }, [sidebarBaseData, effectiveDepartmentFilter, departmentUserMap]);
 
   // ── Data fetchers ─────────────────────────────────────────────────────────
 
@@ -792,7 +834,7 @@ function KanbanPage() {
   const handleProjectFilterApply = (filterId: string, project?: TicketProjectsListDto | null) => {
     setSelectedTicketProject(project ?? null);
     setCurrentProjectFilter(filterId);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, filterId, currentDueDateFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, filterId, currentDueDateFilter, effectiveDepartmentFilter);
   };
 
   // ── Board handlers ────────────────────────────────────────────────────────
@@ -810,34 +852,48 @@ function KanbanPage() {
   const handleFilterChange = useCallback(
     (filter: string) => {
       setCurrentFilter(filter);
-      applyFilters(filter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
+      applyFilters(filter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
     },
-    [searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter]
+    [searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter]
   );
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
-    applyFilters(currentFilter, term, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
+    applyFilters(currentFilter, term, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
   };
 
   const handlePriorityFilter = (priority: string) => {
     setCurrentPriorityFilter(priority);
-    applyFilters(currentFilter, searchTerm, priority, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
+    applyFilters(currentFilter, searchTerm, priority, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
   };
 
   const handleAssigneeFilter = (assigneeId: string) => {
     setCurrentAssigneeFilter(assigneeId);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, assigneeId, currentProjectFilter, currentDueDateFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, assigneeId, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
+  };
+
+  const handleDepartmentFilter = (department: string) => {
+    setCurrentDepartmentFilter(department);
+    let assigneeId = currentAssigneeFilter;
+    if (department !== "All" && assigneeId !== "All") {
+      const userIds = departmentUserMap.get(department) ?? [];
+      if (!userIds.includes(assigneeId)) {
+        assigneeId = "All";
+        setCurrentAssigneeFilter("All");
+      }
+    }
+    const effectiveDept = departmentItems.length === 1 ? departmentItems[0] : department;
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, assigneeId, currentProjectFilter, currentDueDateFilter, effectiveDept);
   };
 
   const handleProjectFilter = (projectId: string) => {
     setCurrentProjectFilter(projectId);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, projectId, currentDueDateFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, projectId, currentDueDateFilter, effectiveDepartmentFilter);
   };
 
   const handleDueDateFilter = (dueDateFilter: "All" | "overdue" | "today" | "thisWeek" | "noDueDate") => {
     setCurrentDueDateFilter(dueDateFilter);
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, dueDateFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, dueDateFilter, effectiveDepartmentFilter);
   };
 
   const applyFilters = (
@@ -847,9 +903,14 @@ function KanbanPage() {
     assigneeId: string,
     projectFilter: string = "All",
     dueDateFilter: "All" | "overdue" | "today" | "thisWeek" | "noDueDate" = "All",
+    department: string = "All",
   ) => {
     if (!allData || allData.length === 0) return;
     let filtered = allData;
+    if (department !== "All") {
+      const deptUserIds = departmentUserMap.get(department) ?? [];
+      filtered = filtered.filter((item) => deptUserIds.includes(item.AssigneeId));
+    }
     if (filter !== "All" && filter !== "") {
       filtered = filtered.filter((item) => item.Type === filter);
     }
@@ -899,9 +960,9 @@ function KanbanPage() {
   }, []);
 
   useEffect(() => {
-    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter);
+    applyFilters(currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, allData, selectedRadio]);
+  }, [currentFilter, searchTerm, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, allData, selectedRadio, effectiveDepartmentFilter]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -935,22 +996,28 @@ function KanbanPage() {
   const priorityItems = ["All", ...PRIORITY_OPTIONS];
 
   const uniqueAssignees = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const d of sidebarBaseData) {
-      if (d.AssigneeId && d.Assignee) map.set(d.AssigneeId, d.Assignee);
+    let users = assigneeData;
+    if (effectiveDepartmentFilter !== "All") {
+      users = users.filter((u) => u.departmentText?.trim() === effectiveDepartmentFilter);
     }
-    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [sidebarBaseData]);
+    return users
+      .map((u) => ({
+        id: u.id ?? "",
+        name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
+      }))
+      .filter((u) => u.id && u.name)
+      .sort((a, b) => a.name.localeCompare(b.name, "tr"));
+  }, [assigneeData, effectiveDepartmentFilter]);
 
   const personStats = useMemo(() => buildPersonStats(filteredData), [filteredData]);
 
   const handlePersonClick = useCallback(
     (userId: string) => {
       setCurrentAssigneeFilter(userId);
-      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter, currentDueDateFilter);
+      applyFilters(currentFilter, searchTerm, currentPriorityFilter, userId, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
       setViewMode("kanban");
     },
-    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter, currentDueDateFilter]
+    [currentFilter, searchTerm, currentPriorityFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter]
   );
 
 
@@ -1134,6 +1201,80 @@ function KanbanPage() {
                     </div>
                   </div>
 
+                  {/* DEPARTMAN */}
+                  {departmentItems.length > 0 && (
+                    <div>
+                      <div className="px-2 mb-1.5 flex items-center justify-between">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <Building2 className="w-3 h-3" />
+                          Departman
+                        </p>
+                        {showDepartmentAll && effectiveDepartmentFilter !== "All" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDepartmentFilter("All")}
+                            className="text-[10px] text-indigo-500 hover:text-indigo-700 font-semibold transition-colors"
+                            aria-label="Departman filtresini temizle"
+                          >
+                            Temizle
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-0.5">
+                        {showDepartmentAll && (
+                          <button
+                            type="button"
+                            onClick={() => handleDepartmentFilter("All")}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left",
+                              effectiveDepartmentFilter === "All"
+                                ? "bg-indigo-50 text-indigo-700 font-semibold"
+                                : "text-slate-600 hover:bg-slate-50"
+                            )}
+                          >
+                            <span className="w-2 h-2 rounded-full shrink-0 bg-slate-300" />
+                            <span className="flex-1 truncate">Tümü</span>
+                            <span className={cn(
+                              "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
+                              effectiveDepartmentFilter === "All" ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
+                            )}>
+                              {sidebarBaseData.length}
+                            </span>
+                          </button>
+                        )}
+                        {departmentItems.map((dept) => {
+                          const isActive = effectiveDepartmentFilter === dept;
+                          const deptUserIds = departmentUserMap.get(dept) ?? [];
+                          const deptCount = sidebarBaseData.filter((d) => deptUserIds.includes(d.AssigneeId)).length;
+                          return (
+                            <button
+                              key={dept}
+                              type="button"
+                              onClick={() => handleDepartmentFilter(dept)}
+                              className={cn(
+                                "w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left",
+                                isActive
+                                  ? "bg-indigo-50 text-indigo-700 font-semibold"
+                                  : "text-slate-600 hover:bg-slate-50"
+                              )}
+                            >
+                              {isActive && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                              )}
+                              <span className={cn("flex-1 truncate", !isActive && "pl-3.5")}>{dept}</span>
+                              <span className={cn(
+                                "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
+                                isActive ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
+                              )}>
+                                {deptCount}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* ATANAN KİŞİ */}
                   {uniqueAssignees.length > 0 && (
                     <div>
@@ -1194,7 +1335,7 @@ function KanbanPage() {
                             "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
                             currentAssigneeFilter === "All" ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
                           )}>
-                            {sidebarBaseData.length}
+                            {departmentFilteredBaseData.length}
                           </span>
                         </button>
 
@@ -1210,7 +1351,7 @@ function KanbanPage() {
                               {visible.map(({ id, name }) => {
                                 const isActive = currentAssigneeFilter === id;
                                 const initials = name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
-                                const aCount = sidebarBaseData.filter((d) => d.AssigneeId === id).length;
+                                const aCount = departmentFilteredBaseData.filter((d) => d.AssigneeId === id).length;
                                 return (
                                   <button
                                     key={id}

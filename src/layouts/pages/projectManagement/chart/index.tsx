@@ -51,7 +51,11 @@ import "@syncfusion/ej2-treegrid/styles/material.css";
 import "@syncfusion/ej2-react-gantt/styles/material.css";
 
 ensureSyncfusionLicense();
-import { ArrowLeft, ChevronRight, MessageSquare, FolderKanban } from "lucide-react";
+import { ArrowLeft, ChevronRight, MessageSquare, FolderKanban, Users } from "lucide-react";
+import { cn } from "lib/utils";
+import ProjectStatsPanel from "../projectDashboard/components/ProjectStatsPanel";
+import { buildProjectGanttStats } from "../projectDashboard/utils/buildGanttWorkload";
+import PersonnelStatsView from "./PersonnelStatsView";
 import { Card as ShadcnCard } from "components/ui/card";
 import { Button } from "components/ui/button";
 import {
@@ -510,6 +514,14 @@ function ProjectChart() {
     id: "id",
     name: "fullName", //yaklasık line 226 da resourcesWithFullName oluşturuluyor. sonrasında buraya binding ediliyor
   };
+
+  const ganttStats = useMemo(
+    () => buildProjectGanttStats(projectData, resources),
+    [projectData, resources],
+  );
+
+  type ChartTab = "gantt" | "personnel";
+  const [activeTab, setActiveTab] = useState<ChartTab>("gantt");
 
   const isProcessingTaskRef = useRef(false); // * burada flag-based locking yapıyoruz bu sayede aynı anda birden fazla task oluşturulamaz.
 
@@ -1583,8 +1595,83 @@ function ProjectChart() {
           </div>
         </div>
       </ShadcnCard>
+
+      {/* ── Tab switcher ─────────────────────────────────────────────── */}
       <div
-        style={{ height: "calc(100vh - 180px)", width: "100%", overflow: "hidden" }}
+        role="tablist"
+        aria-label="Görünüm seçimi"
+        className="mb-2 flex items-center gap-1 rounded-xl border border-border/60 bg-muted/40 p-1 w-fit"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "gantt"}
+          aria-controls="panel-gantt"
+          id="tab-gantt"
+          tabIndex={activeTab === "gantt" ? 0 : -1}
+          onClick={() => setActiveTab("gantt")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 motion-reduce:transition-none",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+            activeTab === "gantt"
+              ? "bg-white dark:bg-card text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-border/60"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-card/60",
+          )}
+        >
+          <FolderKanban className="size-4 shrink-0" aria-hidden />
+          Gantt Chart
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === "personnel"}
+          aria-controls="panel-personnel"
+          id="tab-personnel"
+          tabIndex={activeTab === "personnel" ? 0 : -1}
+          onClick={() => setActiveTab("personnel")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all duration-200 motion-reduce:transition-none",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400",
+            activeTab === "personnel"
+              ? "bg-white dark:bg-card text-indigo-700 dark:text-indigo-300 shadow-sm ring-1 ring-border/60"
+              : "text-muted-foreground hover:text-foreground hover:bg-white/60 dark:hover:bg-card/60",
+          )}
+        >
+          <Users className="size-4 shrink-0" aria-hidden />
+          Kişi İstatistikleri
+        </button>
+      </div>
+
+      {/* ── Gantt tab ────────────────────────────────────────────────── */}
+      <div
+        id="panel-gantt"
+        role="tabpanel"
+        aria-labelledby="tab-gantt"
+        hidden={activeTab !== "gantt"}
+      >
+        <ProjectStatsPanel
+          totalTasks={ganttStats.totalTasks}
+          completedTasks={ganttStats.completedTasks}
+          inProgressTasks={ganttStats.inProgressTasks}
+          avgProgress={ganttStats.avgProgress}
+          assigneeCount={ganttStats.assigneeCount}
+        />
+      </div>
+
+      {/* ── Personnel tab ────────────────────────────────────────────── */}
+      {activeTab === "personnel" && (
+        <section
+          id="panel-personnel"
+          role="tabpanel"
+          aria-labelledby="tab-personnel"
+        >
+          <PersonnelStatsView tasks={projectData} />
+        </section>
+      )}
+
+      {/* ── Gantt container (kept mounted to preserve Syncfusion state) ─ */}
+      <div
+        style={{ height: "calc(100vh - 240px)", width: "100%", overflow: "hidden", display: activeTab === "gantt" ? undefined : "none" }}
         className="gantt-chart-container"
       >
         <GanttComponent
