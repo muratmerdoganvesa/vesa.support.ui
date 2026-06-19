@@ -44,6 +44,7 @@ const buildProjectWorkloadSummary = (
       assigneeCount: 0,
       managerId: project.managerId,
       managerName,
+      projectStatus: project.projectStatus ?? project.projectType ?? null,
     };
   }
 
@@ -67,6 +68,7 @@ const buildProjectWorkloadSummary = (
     assigneeCount: uniqueAssignees.size,
     managerId: project.managerId,
     managerName,
+    projectStatus: project.projectStatus ?? project.projectType ?? null,
   };
 };
 
