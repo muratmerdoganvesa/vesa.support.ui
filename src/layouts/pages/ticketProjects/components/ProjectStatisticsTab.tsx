@@ -141,11 +141,12 @@ const MobileProjectBoard = ({ columns, groupedProjects }: MobileProjectBoardProp
   );
 };
 
-const ProjectStatisticsTab = () => {
+const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
   const dispatchAlert = useAlert();
   const isMobile = useIsMobile();
   const [projects, setProjects] = useState<TicketProjectStatsDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
 
@@ -154,6 +155,7 @@ const ProjectStatisticsTab = () => {
       setIsLoading(true);
       const data = await fetchProjectStatistics();
       setProjects(data);
+      setHasLoaded(true);
     } catch {
       dispatchAlert({ message: "Proje istatistikleri getirilirken hata oluştu.", type: "Error" });
       setProjects([]);
@@ -163,8 +165,9 @@ const ProjectStatisticsTab = () => {
   }, [dispatchAlert]);
 
   useEffect(() => {
+    if (!isActive || hasLoaded) return;
     loadStatistics();
-  }, [loadStatistics]);
+  }, [isActive, hasLoaded, loadStatistics]);
 
   const groupedProjects = useMemo(() => {
     const groups = Object.fromEntries(

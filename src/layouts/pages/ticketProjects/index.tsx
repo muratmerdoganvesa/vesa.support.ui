@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart3, FolderKanban, Plus } from "lucide-react";
 import { cn } from "lib/utils";
@@ -15,6 +15,13 @@ type TicketProjectsTab = "list" | "statistics";
 function TicketProjects() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TicketProjectsTab>("list");
+  const [hasVisitedStats, setHasVisitedStats] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "statistics") {
+      setHasVisitedStats(true);
+    }
+  }, [activeTab]);
 
   return (
     <DashboardLayout>
@@ -99,7 +106,7 @@ function TicketProjects() {
           aria-labelledby="tab-project-statistics"
           hidden={activeTab !== "statistics"}
         >
-          {activeTab === "statistics" && <ProjectStatisticsTab />}
+          {hasVisitedStats && <ProjectStatisticsTab isActive={activeTab === "statistics"} />}
         </div>
       </div>
     </DashboardLayout>

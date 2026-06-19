@@ -117,14 +117,26 @@ const ProjectBreakdownRow = ({ name, taskCount, avgProgress }: ProjectBreakdownR
 interface PersonnelWorkloadCardProps {
   person: PersonGanttWorkload;
   getPhoto: (id: string) => string | null | undefined;
+  viewMode?: "company" | "project";
 }
 
-const PersonnelWorkloadCard = ({ person, getPhoto }: PersonnelWorkloadCardProps) => {
+const PersonnelWorkloadCard = ({
+  person,
+  getPhoto,
+  viewMode = "company",
+}: PersonnelWorkloadCardProps) => {
   const palette = avatarPalette(person.name);
+  const isProjectView = viewMode === "project";
+  const isBlocked = person.isBlocked === true;
 
   return (
     <div
-      className="w-full bg-white dark:bg-card rounded-2xl border border-slate-200 dark:border-border shadow-sm p-4 flex flex-col gap-3 hover:shadow-md hover:ring-1 hover:ring-indigo-100 hover:border-indigo-200 dark:hover:border-indigo-800 transition-all duration-200 group"
+      className={cn(
+        "w-full bg-white dark:bg-card rounded-2xl border border-slate-200 dark:border-border shadow-sm p-4 flex flex-col gap-3 transition-all duration-200 group",
+        isBlocked
+          ? "opacity-75"
+          : "hover:shadow-md hover:ring-1 hover:ring-indigo-100 hover:border-indigo-200 dark:hover:border-indigo-800",
+      )}
       aria-label={`${person.name} – ${person.totalTasks} görev, ${person.byProject.length} proje`}
     >
       {/* Header */}
@@ -148,29 +160,37 @@ const PersonnelWorkloadCard = ({ person, getPhoto }: PersonnelWorkloadCardProps)
           </div>
 
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-            <span className="text-[11px] text-slate-400 font-medium">
-              {person.byProject.length} proje
-            </span>
+            {isBlocked ? (
+              <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                Devam etmiyor
+              </span>
+            ) : (
+              <span className="text-[11px] text-slate-400 font-medium">
+                {isProjectView ? `${person.totalTasks} görev` : `${person.byProject.length} proje`}
+              </span>
+            )}
           </div>
         </div>
       </div>
 
       {/* Project breakdown */}
-      <div className="flex flex-col gap-2.5 pt-1 border-t border-slate-100 dark:border-border/60">
-        {person.byProject.map((bp) => {
-          const label = bp.subProjectName
-            ? `${bp.projectName} – ${bp.subProjectName}`
-            : bp.projectName;
-          return (
-            <ProjectBreakdownRow
-              key={bp.projectId}
-              name={label}
-              taskCount={bp.taskCount}
-              avgProgress={bp.avgProgress}
-            />
-          );
-        })}
-      </div>
+      {!isProjectView && (
+        <div className="flex flex-col gap-2.5 pt-1 border-t border-slate-100 dark:border-border/60">
+          {person.byProject.map((bp) => {
+            const label = bp.subProjectName
+              ? `${bp.projectName} – ${bp.subProjectName}`
+              : bp.projectName;
+            return (
+              <ProjectBreakdownRow
+                key={bp.projectId}
+                name={label}
+                taskCount={bp.taskCount}
+                avgProgress={bp.avgProgress}
+              />
+            );
+          })}
+        </div>
+      )}
 
       {/* Footer: overall completion */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-border/60">

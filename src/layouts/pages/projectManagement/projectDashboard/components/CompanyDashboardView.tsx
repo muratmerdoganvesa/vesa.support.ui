@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   BarChart2,
@@ -19,6 +19,7 @@ import { ProjectWorkloadSummary, CompanyGanttWorkload } from "../types";
 import DashboardKpiRow from "./DashboardKpiRow";
 import ProjectListPanel from "./ProjectListPanel";
 import PersonnelWorkloadGrid from "./PersonnelWorkloadGrid";
+import { filterPersonnelForProject } from "../utils/filterPersonnelForProject";
 
 // ─── Project detail side panel ────────────────────────────────────────────────
 
@@ -209,6 +210,11 @@ const CompanyDashboardView = ({
     setSelectedProject((prev) => (prev?.projectId === project.projectId ? null : project));
   };
 
+  const displayPersonnel = useMemo(() => {
+    if (!selectedProject) return workload.personnel;
+    return filterPersonnelForProject(workload.personnel, selectedProject.projectId);
+  }, [workload.personnel, selectedProject]);
+
   const handleNavigateGantt = () => {
     if (!selectedProject) return;
     navigate(
@@ -315,8 +321,10 @@ const CompanyDashboardView = ({
           {/* Right: personnel workload */}
           <div className="lg:col-span-8">
             <PersonnelWorkloadGrid
-              personnel={workload.personnel}
+              personnel={displayPersonnel}
               getPhoto={getPhoto}
+              viewMode={selectedProject ? "project" : "company"}
+              selectedProject={selectedProject}
             />
           </div>
         </div>

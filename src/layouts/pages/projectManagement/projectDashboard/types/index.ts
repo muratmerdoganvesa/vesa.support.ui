@@ -26,6 +26,7 @@ export type PersonGanttWorkload = {
   name: string;
   totalTasks: number;
   avgProgress: number;
+  isBlocked?: boolean;
   byProject: PersonProjectBreakdown[];
 };
 

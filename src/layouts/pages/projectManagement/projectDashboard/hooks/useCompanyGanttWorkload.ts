@@ -55,6 +55,7 @@ const mapPersonnel = (dto: CompanyGanttPersonnelWorkloadDto): PersonGanttWorkloa
   name: dto.fullName ?? "",
   totalTasks: dto.totalTasks ?? 0,
   avgProgress: Math.round(dto.avgProgress ?? 0),
+  isBlocked: dto.isBlocked ?? false,
   byProject: (dto.byProject ?? []).map(mapPersonProjectBreakdown),
 });
 

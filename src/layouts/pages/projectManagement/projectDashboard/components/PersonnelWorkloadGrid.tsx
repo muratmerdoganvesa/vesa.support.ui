@@ -1,6 +1,6 @@
 import { AlertTriangle, BarChart3, ListTodo, Users } from "lucide-react";
 import { cn } from "lib/utils";
-import { PersonGanttWorkload } from "../types";
+import { PersonGanttWorkload, ProjectWorkloadSummary } from "../types";
 import PersonnelWorkloadCard from "./PersonnelWorkloadCard";
 
 interface SummaryKpiProps {
@@ -31,15 +31,29 @@ const SummaryKpi = ({ icon, label, value, sub, accent }: SummaryKpiProps) => (
 interface PersonnelWorkloadGridProps {
   personnel: PersonGanttWorkload[];
   getPhoto: (id: string) => string | null | undefined;
+  viewMode?: "company" | "project";
+  selectedProject?: ProjectWorkloadSummary | null;
 }
 
-const PersonnelWorkloadGrid = ({ personnel, getPhoto }: PersonnelWorkloadGridProps) => {
+const PersonnelWorkloadGrid = ({
+  personnel,
+  getPhoto,
+  viewMode = "company",
+  selectedProject,
+}: PersonnelWorkloadGridProps) => {
   const totalTasks = personnel.reduce((s, p) => s + p.totalTasks, 0);
   const avgCompletion =
     personnel.length > 0
       ? Math.round(personnel.reduce((s, p) => s + p.avgProgress, 0) / personnel.length)
       : 0;
   const highWorkload = personnel.filter((p) => p.totalTasks > 10).length;
+
+  const isProjectView = viewMode === "project";
+  const projectLabel = selectedProject
+    ? selectedProject.subProjectName
+      ? `${selectedProject.projectName} – ${selectedProject.subProjectName}`
+      : selectedProject.projectName
+    : null;
 
   if (personnel.length === 0) {
     return (
@@ -49,7 +63,9 @@ const PersonnelWorkloadGrid = ({ personnel, getPhoto }: PersonnelWorkloadGridPro
         </div>
         <p className="text-slate-500 font-semibold">Görevli kişi bulunamadı</p>
         <p className="text-slate-400 text-sm max-w-xs">
-          Seçili projelerde atanmış görev bulunamadı.
+          {isProjectView
+            ? "Seçili projede atanmış görev bulunamadı."
+            : "Seçili projelerde atanmış görev bulunamadı."}
         </p>
       </div>
     );
@@ -59,7 +75,11 @@ const PersonnelWorkloadGrid = ({ personnel, getPhoto }: PersonnelWorkloadGridPro
     <div className="flex flex-col gap-4">
       {/* Section header */}
       <div>
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">Ekip İş Yükü</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          {isProjectView && projectLabel
+            ? `Ekip İş Yükü - ${projectLabel}`
+            : "Ekip İş Yükü"}
+        </h2>
         <p className="text-xs text-muted-foreground mt-0.5">
           Gantt görevlerine göre kişi bazlı dağılım
         </p>
@@ -103,6 +123,7 @@ const PersonnelWorkloadGrid = ({ personnel, getPhoto }: PersonnelWorkloadGridPro
             key={person.userId}
             person={person}
             getPhoto={getPhoto}
+            viewMode={viewMode}
           />
         ))}
       </div>
