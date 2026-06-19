@@ -1,3 +1,5 @@
+import { ProjectTypes } from "api/generated";
+
 export type ProjectWorkloadSummary = {
   projectId: string;
   projectName: string;
@@ -8,6 +10,7 @@ export type ProjectWorkloadSummary = {
   assigneeCount: number;
   managerId?: string | null;
   managerName?: string | null;
+  projectStatus?: ProjectTypes | null;
 };
 
 export type PersonProjectBreakdown = {

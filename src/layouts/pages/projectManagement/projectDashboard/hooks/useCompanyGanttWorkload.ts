@@ -38,6 +38,7 @@ const mapProject = (
     assigneeCount: dto.assigneeCount ?? 0,
     managerId: managerInfo?.managerId ?? null,
     managerName,
+    projectStatus: managerInfo?.projectStatus ?? managerInfo?.projectType ?? null,
   };
 };
 
