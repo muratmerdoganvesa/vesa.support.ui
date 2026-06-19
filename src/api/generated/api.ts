@@ -4097,6 +4097,12 @@ export interface CompanyGanttPersonnelWorkloadDto {
     'avgProgress'?: number;
     /**
      * 
+     * @type {boolean}
+     * @memberof CompanyGanttPersonnelWorkloadDto
+     */
+    'isBlocked'?: boolean;
+    /**
+     * 
      * @type {Array<CompanyGanttPersonnelByProjectDto>}
      * @memberof CompanyGanttPersonnelWorkloadDto
      */

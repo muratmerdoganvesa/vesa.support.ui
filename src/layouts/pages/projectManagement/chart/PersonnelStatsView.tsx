@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { AlertTriangle, BarChart3, CheckCircle2, Clock, ListTodo, Loader2, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { useUserPhotos } from "layouts/pages/kanban/hooks/useUserPhotos";
+import { useCompanyGanttWorkload } from "../projectDashboard/hooks/useCompanyGanttWorkload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -13,6 +14,7 @@ type ChartPersonStat = {
   inProgressTasks: number;
   notStartedTasks: number;
   avgProgress: number;
+  isBlocked?: boolean;
 };
 
 type UnassignedTask = {
@@ -28,7 +30,10 @@ type PersonnelData = {
 
 // ─── Stats builder (pure function — runs inside useMemo) ─────────────────────
 
-export const buildChartPersonStats = (tasks: any[]): PersonnelData => {
+export const buildChartPersonStats = (
+  tasks: any[],
+  blockedUserIds?: ReadonlyMap<string, boolean>,
+): PersonnelData => {
   type PersonAccum = ChartPersonStat & { progressSum: number };
   const personMap = new Map<string, PersonAccum>();
   const unassignedTasks: UnassignedTask[] = [];
@@ -59,6 +64,7 @@ export const buildChartPersonStats = (tasks: any[]): PersonnelData => {
           notStartedTasks: 0,
           avgProgress: 0,
           progressSum: 0,
+          isBlocked: blockedUserIds?.get(userId) ?? false,
         });
       }
 
@@ -233,6 +239,7 @@ const PersonCard = ({
   person: ChartPersonStat;
   getPhoto: (id: string) => string | null | undefined;
 }) => {
+  const isBlocked = person.isBlocked === true;
   const stats = [
     { icon: <CheckCircle2 className="size-3.5 text-emerald-600" />, label: "Tamamlanan", value: person.completedTasks, color: "text-emerald-700 dark:text-emerald-400" },
     { icon: <Clock className="size-3.5 text-indigo-500" />, label: "Devam Eden", value: person.inProgressTasks, color: "text-indigo-700 dark:text-indigo-300" },
@@ -243,8 +250,10 @@ const PersonCard = ({
     <article
       className={cn(
         "group flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-border bg-white dark:bg-card p-4 shadow-sm",
-        "transition-all duration-200 hover:shadow-md hover:ring-1 hover:ring-indigo-100 hover:border-indigo-200 dark:hover:border-indigo-800",
-        "focus-within:ring-2 focus-within:ring-indigo-300",
+        "transition-all duration-200 focus-within:ring-2 focus-within:ring-indigo-300",
+        isBlocked
+          ? "opacity-75"
+          : "hover:shadow-md hover:ring-1 hover:ring-indigo-100 hover:border-indigo-200 dark:hover:border-indigo-800",
       )}
       aria-label={`${person.name} – ${person.totalTasks} görev, %${person.avgProgress} tamamlandı`}
     >
@@ -267,7 +276,15 @@ const PersonCard = ({
               {person.totalTasks}
             </span>
           </div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">{person.totalTasks} görev atanmış</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {isBlocked ? (
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
+                Devam etmiyor
+              </span>
+            ) : (
+              `${person.totalTasks} görev atanmış`
+            )}
+          </p>
         </div>
       </div>
 
@@ -379,12 +396,27 @@ const Legend = () => (
 
 interface PersonnelStatsViewProps {
   tasks: any[];
+  workCompanyId?: string | null;
 }
 
-const PersonnelStatsView = ({ tasks }: PersonnelStatsViewProps) => {
+const PersonnelStatsView = ({ tasks, workCompanyId }: PersonnelStatsViewProps) => {
   const { getPhoto } = useUserPhotos();
+  const { workload } = useCompanyGanttWorkload(workCompanyId ?? undefined);
 
-  const { persons, unassignedTasks } = useMemo(() => buildChartPersonStats(tasks), [tasks]);
+  const blockedUserIds = useMemo(() => {
+    const map = new Map<string, boolean>();
+    for (const person of workload.personnel) {
+      if (person.isBlocked) {
+        map.set(person.userId, true);
+      }
+    }
+    return map;
+  }, [workload.personnel]);
+
+  const { persons, unassignedTasks } = useMemo(
+    () => buildChartPersonStats(tasks, blockedUserIds),
+    [tasks, blockedUserIds],
+  );
 
   const totalAssigned = persons.reduce((s, p) => s + p.totalTasks, 0);
   const totalCompleted = persons.reduce((s, p) => s + p.completedTasks, 0);
