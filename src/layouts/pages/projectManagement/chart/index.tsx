@@ -1665,7 +1665,7 @@ function ProjectChart() {
           role="tabpanel"
           aria-labelledby="tab-personnel"
         >
-          <PersonnelStatsView tasks={projectData} />
+          <PersonnelStatsView tasks={projectData} workCompanyId={workCompanyId} />
         </section>
       )}
 

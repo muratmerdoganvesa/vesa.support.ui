@@ -53,6 +53,7 @@ export const fetchProjectStatistics = async (
       params: {
         workCompanyId: workCompanyId || undefined,
       },
+      timeout: 90_000,
     },
   );
 
