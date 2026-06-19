@@ -5,7 +5,6 @@ import { ProjectTypes } from "api/generated";
 const normalizePerson = (item: Record<string, unknown>): TicketProjectStatsPersonDto => ({
   id: String(item.id ?? item.Id ?? ""),
   fullName: String(item.fullName ?? item.FullName ?? ""),
-  profilePhoto: (item.profilePhoto ?? item.ProfilePhoto) as string | null | undefined,
 });
 
 const normalizeStatsItem = (item: Record<string, unknown>): TicketProjectStatsDto => {
@@ -53,6 +52,7 @@ export const fetchProjectStatistics = async (
       params: {
         workCompanyId: workCompanyId || undefined,
       },
+      timeout: 90_000,
     },
   );
 
