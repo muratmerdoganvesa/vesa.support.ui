@@ -1,6 +1,7 @@
 import { Check, Folder, User } from "lucide-react";
 import { Badge } from "components/ui/badge";
 import { cn } from "lib/utils";
+import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import { ProjectWorkloadSummary } from "../types";
 
 interface ProjectRowCardProps {
@@ -66,6 +67,15 @@ const ProjectRowCard = ({ project, isSelected, onClick }: ProjectRowCardProps) =
             <span className="truncate">{project.managerName}</span>
           </div>
         )}
+
+        <div className="mt-1.5">
+          <Badge
+            variant="secondary"
+            className="rounded-md px-1.5 py-0 text-[10px] font-semibold"
+          >
+            {getProjectStatusLabel(project.projectStatus)}
+          </Badge>
+        </div>
 
         {/* Mini progress bar */}
         <div className="mt-2 flex items-center gap-2">

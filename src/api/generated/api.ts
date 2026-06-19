@@ -15226,6 +15226,23 @@ export type TicketPriority = typeof TicketPriority[keyof typeof TicketPriority];
 /**
  * 
  * @export
+ * @enum {number}
+ */
+
+export const ProjectTypes = {
+    Backlog: 1,
+    Realization: 2,
+    UAT: 3,
+    Preparation: 4,
+    DONE: 5
+} as const;
+
+export type ProjectTypes = typeof ProjectTypes[keyof typeof ProjectTypes];
+
+
+/**
+ * 
+ * @export
  * @interface TicketProjects
  */
 export interface TicketProjects {
@@ -15415,6 +15432,12 @@ export interface TicketProjects {
      * @memberof TicketProjects
      */
     'costStatus'?: string | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof TicketProjects
+     */
+    'projectType'?: ProjectTypes | null;
 }
 /**
  * 
@@ -15530,6 +15553,12 @@ export interface TicketProjectsInsertDto {
      * @memberof TicketProjectsInsertDto
      */
     'isUserCopied'?: boolean | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof TicketProjectsInsertDto
+     */
+    'projectType'?: ProjectTypes | null;
 }
 /**
  * 
@@ -15681,6 +15710,44 @@ export interface TicketProjectsListDto {
      * @memberof TicketProjectsListDto
      */
     'isUserCopied'?: boolean | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof TicketProjectsListDto
+     */
+    'projectType'?: ProjectTypes | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof TicketProjectsListDto
+     */
+    'projectStatus'?: ProjectTypes | null;
+}
+/**
+ * 
+ * @export
+ * @interface TicketProjectStatsPersonDto
+ */
+export interface TicketProjectStatsPersonDto {
+    'id'?: string;
+    'fullName'?: string | null;
+    'profilePhoto'?: string | null;
+}
+/**
+ * 
+ * @export
+ * @interface TicketProjectStatsDto
+ */
+export interface TicketProjectStatsDto {
+    'id'?: string;
+    'customerName'?: string | null;
+    'projectDescription'?: string | null;
+    'projectSubDescription'?: string | null;
+    'createdDate'?: string | null;
+    'projectStatus'?: ProjectTypes | null;
+    'modules'?: Array<string> | null;
+    'employees'?: Array<TicketProjectStatsPersonDto> | null;
+    'projectManager'?: TicketProjectStatsPersonDto | null;
 }
 /**
  * 
@@ -15784,6 +15851,12 @@ export interface TicketProjectsUpdateDto {
      * @memberof TicketProjectsUpdateDto
      */
     'costStatus'?: string | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof TicketProjectsUpdateDto
+     */
+    'projectType'?: ProjectTypes | null;
 }
 /**
  * 

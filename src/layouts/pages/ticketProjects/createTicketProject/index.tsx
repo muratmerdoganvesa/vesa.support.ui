@@ -14,12 +14,14 @@ import {
   ProjectCategoriesApi,
   ListModuleDto,
   ModuleApi,
+  ProjectTypes,
 } from "api/generated";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
+import { projectTypeOptions } from "layouts/pages/ticketProjects/projectTypeHelpers";
 
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
@@ -88,6 +90,7 @@ function CreateTicketProject() {
     costStatus: null,
     projectPeriod: null,
     projectSupportPeriod: null,
+    projectType: null,
   });
 
   const dispatchBusy = useBusy();
@@ -632,6 +635,31 @@ function CreateTicketProject() {
                   <SelectContent>
                     <SelectItem value="Aktif">Aktif</SelectItem>
                     <SelectItem value="Pasif">Pasif</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Proje Tipi */}
+              <div className="space-y-1.5">
+                <Label>Proje Tipi</Label>
+                <Select
+                  value={projectData.projectType != null ? String(projectData.projectType) : ""}
+                  onValueChange={(value) =>
+                    setProjectData({
+                      ...projectData,
+                      projectType: value === "" ? null : (Number(value) as ProjectTypes),
+                    })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Proje tipi seçiniz" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
