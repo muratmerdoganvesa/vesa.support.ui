@@ -3,7 +3,6 @@ import { ProjectTypes } from "api/generated";
 export type TicketProjectStatsPersonDto = {
   id: string;
   fullName: string;
-  profilePhoto?: string | null;
 };
 
 export type TicketProjectStatsDto = {

@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "components/ui/table";
-import { PlusIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, YoutubeIcon, LinkIcon } from "lucide-react";
 
 type WebEventRow = WebEventResponseDto & {
   rowType: "Etkinlik" | "Haber";
@@ -142,13 +142,14 @@ function WebEventsList() {
                 <TableHead className="text-base font-bold text-black">Baslik (EN)</TableHead>
                 <TableHead className="text-base font-bold text-black">Baslik (AZ)</TableHead>
                 <TableHead className="text-base font-bold text-black">Tarih</TableHead>
+                <TableHead className="text-base font-bold text-black">Medya</TableHead>
                 <TableHead className="text-base font-bold text-black">Islem</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagedRows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                     Kayit bulunamadi.
                   </TableCell>
                 </TableRow>
@@ -182,6 +183,35 @@ function WebEventsList() {
                       </TableCell>
                       <TableCell>
                         <GlobalCell value={row.startsAt ?? ""} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {row.videoLink?.trim() ? (
+                            <span
+                              className="inline-flex items-center text-red-600"
+                              title={row.videoLink}
+                              aria-label="YouTube videosu mevcut"
+                            >
+                              <YoutubeIcon className="h-4 w-4" />
+                            </span>
+                          ) : null}
+                          {row.link?.trim() ? (
+                            <a
+                              href={row.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                              title={row.link}
+                              aria-label="Harici baglanti mevcut"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </a>
+                          ) : null}
+                          {!row.videoLink?.trim() && !row.link?.trim() ? (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <button
