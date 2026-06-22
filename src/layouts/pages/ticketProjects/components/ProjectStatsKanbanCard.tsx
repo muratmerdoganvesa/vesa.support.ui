@@ -1,17 +1,9 @@
-import { useMemo } from "react";
+import { memo } from "react";
 import { Building2, CalendarClock } from "lucide-react";
 import { cn } from "lib/utils";
 import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { TicketProjectStatsDto } from "layouts/pages/ticketProjects/types";
-import { ProjectPersonAvatar } from "layouts/pages/ticketProjects/components/ProjectPersonAvatar";
-import { AvatarGroup, AvatarGroupCount } from "components/ui/avatar";
 import { Badge } from "components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "components/ui/tooltip";
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
@@ -22,26 +14,12 @@ const formatDate = (dateStr: string | null | undefined): string => {
   });
 };
 
-const MAX_VISIBLE_CONSULTANTS = 6;
-
 type ProjectStatsKanbanCardProps = {
   project: TicketProjectStatsDto;
   cardBorderClass: string;
 };
 
 const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanbanCardProps) => {
-  const sortedEmployees = useMemo(
-    () =>
-      [...project.employees].sort((a, b) =>
-        a.fullName.localeCompare(b.fullName, "tr", { sensitivity: "base" }),
-      ),
-    [project.employees],
-  );
-
-  const visibleEmployees = sortedEmployees.slice(0, MAX_VISIBLE_CONSULTANTS);
-  const hiddenEmployees = sortedEmployees.slice(MAX_VISIBLE_CONSULTANTS);
-  const hiddenEmployeeCount = hiddenEmployees.length;
-
   const displayName = project.projectSubDescription
     ? `${project.projectDescription} — ${project.projectSubDescription}`
     : project.projectDescription;
@@ -90,38 +68,21 @@ const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanban
         </div>
       )}
 
-      {sortedEmployees.length > 0 && (
+      {project.employees.length > 0 && (
         <div className="mb-2 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Danışmanlar
           </p>
-          <TooltipProvider delayDuration={150}>
-            <AvatarGroup className="justify-start">
-              {visibleEmployees.map((employee) => (
-                <ProjectPersonAvatar
-                  key={employee.id}
-                  fullName={employee.fullName}
-                  profilePhoto={employee.profilePhoto}
-                  size="sm"
-                />
-              ))}
-              {hiddenEmployeeCount > 0 && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <AvatarGroupCount
-                      className="relative z-10 cursor-default"
-                      aria-label={`${hiddenEmployeeCount} danışman daha`}
-                    >
-                      +{hiddenEmployeeCount}
-                    </AvatarGroupCount>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" sideOffset={4}>
-                    {hiddenEmployees.map((e) => e.fullName).join(", ")}
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </AvatarGroup>
-          </TooltipProvider>
+          <ul className="flex flex-col gap-0.5" aria-label="Danışman listesi">
+            {project.employees.map((employee) => (
+              <li
+                key={employee.id}
+                className="text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
+              >
+                {employee.fullName}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -130,17 +91,9 @@ const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanban
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Proje Yöneticisi
           </p>
-          <div className="flex items-center gap-2">
-            <ProjectPersonAvatar
-              fullName={project.projectManager.fullName}
-              profilePhoto={project.projectManager.profilePhoto}
-              size="sm"
-              showTooltip={false}
-            />
-            <span className="truncate text-[11px] font-medium text-slate-700 dark:text-foreground">
-              {project.projectManager.fullName}
-            </span>
-          </div>
+          <p className="text-[11px] font-medium text-slate-700 dark:text-foreground">
+            {project.projectManager.fullName}
+          </p>
         </div>
       )}
 
@@ -156,4 +109,4 @@ const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanban
   );
 };
 
-export default ProjectStatsKanbanCard;
+export default memo(ProjectStatsKanbanCard);

@@ -18,13 +18,19 @@ import {
   toWebEventImageSource,
   uploadWebEventImage,
 } from "../imageUtils";
+import {
+  isValidHttpUrl,
+  isValidYouTubeUrl,
+  normalizeExternalUrl,
+  toYouTubeEmbedUrl,
+} from "../urlUtils";
 import { Button } from "components/ui/button";
 import { Card, CardContent } from "components/ui/card";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
 import { Switch } from "components/ui/switch";
 import { Textarea } from "components/ui/textarea";
-import { XIcon } from "lucide-react";
+import { XIcon, ExternalLinkIcon } from "lucide-react";
 
 type LanguageCode = 1 | 2 | 3;
 type TranslationForm = Record<LanguageCode, { mainTitle: string; title: string; content: string }>;
@@ -68,6 +74,8 @@ function WebEventsCreate() {
   const [eventDate, setEventDate] = useState<string>("");
   const [status, setStatus] = useState<boolean>(true);
   const [isEvent, setIsEvent] = useState<boolean>(true);
+  const [videoLink, setVideoLink] = useState<string>("");
+  const [link, setLink] = useState<string>("");
   const [translations, setTranslations] = useState<TranslationForm>(emptyTranslationForm);
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [isGalleryUploading, setIsGalleryUploading] = useState(false);
@@ -96,6 +104,8 @@ function WebEventsCreate() {
         setLocation(data.venue?.tr ?? "");
         setCity(data.city ?? "");
         setEventDate(toDateTimeLocalValue(data.startsAt));
+        setVideoLink(data.videoLink ?? "");
+        setLink(data.link ?? "");
 
         setTranslations({
           1: {
@@ -240,6 +250,25 @@ function WebEventsCreate() {
       return;
     }
 
+    const trimmedVideoLink = videoLink.trim();
+    const trimmedLink = link.trim();
+
+    if (trimmedVideoLink && !isValidYouTubeUrl(trimmedVideoLink)) {
+      dispatchAlert({
+        message: "Video Link gecerli bir YouTube URL'si olmalidir.",
+        type: "Warning",
+      });
+      return;
+    }
+
+    if (trimmedLink && !isValidHttpUrl(trimmedLink)) {
+      dispatchAlert({
+        message: "Link gecerli bir http veya https URL'si olmalidir.",
+        type: "Warning",
+      });
+      return;
+    }
+
     try {
       dispatchBusy({ isBusy: true });
       const conf = getConfiguration();
@@ -252,6 +281,8 @@ function WebEventsCreate() {
         eventDate,
         status,
         isEvent,
+        videoLink: trimmedVideoLink || null,
+        link: trimmedLink || null,
         images: images.map((imageUrl) => ({ imageUrl: normalizeWebEventImagePath(imageUrl) })),
         translations: buildTranslations(),
       };
@@ -272,6 +303,9 @@ function WebEventsCreate() {
       dispatchBusy({ isBusy: false });
     }
   };
+
+  const youtubeEmbedUrl = toYouTubeEmbedUrl(videoLink);
+  const externalLinkUrl = link.trim() ? normalizeExternalUrl(link) : "";
 
   return (
     <DashboardLayout>
@@ -401,6 +435,65 @@ function WebEventsCreate() {
                       </button>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Video & External Link */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="videoLink">Video Link (YouTube URL)</Label>
+              <Input
+                id="videoLink"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={videoLink}
+                onChange={(e) => setVideoLink(e.target.value)}
+              />
+              {videoLink.trim() && !isValidYouTubeUrl(videoLink) && (
+                <span className="text-xs text-destructive">Gecerli bir YouTube URL'si giriniz.</span>
+              )}
+              {youtubeEmbedUrl && (
+                <div className="mt-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-black">
+                  <div className="relative w-full pt-[56.25%]">
+                    <iframe
+                      title="YouTube video onizleme"
+                      src={youtubeEmbedUrl}
+                      className="absolute inset-0 h-full w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="link">Link (Harici URL)</Label>
+              <Input
+                id="link"
+                type="url"
+                placeholder="https://example.com"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+              />
+              {link.trim() && !isValidHttpUrl(link) && (
+                <span className="text-xs text-destructive">Gecerli bir http veya https URL'si giriniz.</span>
+              )}
+              {externalLinkUrl && isValidHttpUrl(link) && (
+                <div className="mt-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={externalLinkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Siteyi yeni sekmede ac"
+                    >
+                      <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                      Siteyi Ac
+                    </a>
+                  </Button>
                 </div>
               )}
             </div>

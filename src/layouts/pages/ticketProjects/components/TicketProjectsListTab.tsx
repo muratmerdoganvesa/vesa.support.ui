@@ -236,7 +236,7 @@ const TicketProjectsListTab = () => {
               <TableHead className="font-bold text-foreground">Proje Tanımı</TableHead>
               <TableHead className="font-bold text-foreground">Proje Alt Tanımı</TableHead>
               <TableHead className="font-bold text-foreground">Proje Durumu</TableHead>
-              <TableHead className="font-bold text-foreground">Durum</TableHead>
+              <TableHead className="font-bold text-foreground">Aktif/Pasif</TableHead>
               <TableHead className="font-bold text-foreground">Oluşturulma Tarihi</TableHead>
               <TableHead className="font-bold text-foreground">İşlemler</TableHead>
             </TableRow>

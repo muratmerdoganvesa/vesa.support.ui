@@ -624,7 +624,7 @@ function CreateTicketProject() {
 
               {/* Durum */}
               <div className="space-y-1.5">
-                <Label>Durum</Label>
+                <Label>Aktif/Pasif</Label>
                 <Select
                   value={projectData?.isActive ? "Aktif" : "Pasif"}
                   onValueChange={(value) => setProjectData({ ...projectData, isActive: value === "Aktif" })}
@@ -641,7 +641,7 @@ function CreateTicketProject() {
 
               {/* Proje Tipi */}
               <div className="space-y-1.5">
-                <Label>Proje Tipi</Label>
+                <Label>Proje Durumu</Label>
                 <Select
                   value={projectData.projectType != null ? String(projectData.projectType) : ""}
                   onValueChange={(value) =>
@@ -652,7 +652,7 @@ function CreateTicketProject() {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Proje tipi seçiniz" />
+                    <SelectValue placeholder="Proje Durumu Seçiniz" />
                   </SelectTrigger>
                   <SelectContent>
                     {projectTypeOptions.map((option) => (

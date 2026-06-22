@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, ListTodo, Users } from "lucide-react";
+import { BarChart3, ListTodo, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { PersonGanttWorkload, ProjectWorkloadSummary } from "../types";
 import PersonnelWorkloadCard from "./PersonnelWorkloadCard";
@@ -46,7 +46,7 @@ const PersonnelWorkloadGrid = ({
     personnel.length > 0
       ? Math.round(personnel.reduce((s, p) => s + p.avgProgress, 0) / personnel.length)
       : 0;
-  const highWorkload = personnel.filter((p) => p.totalTasks > 10).length;
+  // const highWorkload = personnel.filter((p) => p.totalTasks > 10).length;
 
   const isProjectView = viewMode === "project";
   const projectLabel = selectedProject
@@ -106,6 +106,7 @@ const PersonnelWorkloadGrid = ({
           sub="%"
           accent="bg-emerald-50 dark:bg-emerald-950/40"
         />
+        {/* TODO: Yüksek Yük KPI — geliştirme sonrası açılacak
         {highWorkload > 0 && (
           <SummaryKpi
             icon={<AlertTriangle className="size-4 text-amber-500" />}
@@ -114,6 +115,7 @@ const PersonnelWorkloadGrid = ({
             accent="bg-amber-50 dark:bg-amber-950/40"
           />
         )}
+        */}
       </div>
 
       {/* Person grid */}

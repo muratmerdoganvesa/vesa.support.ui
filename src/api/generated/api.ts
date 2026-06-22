@@ -19142,6 +19142,18 @@ export interface WebEventCreateDto {
      * @memberof WebEventCreateDto
      */
     'translations'?: Array<WebEventTranslationCreateDto> | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventCreateDto
+     */
+    'videoLink'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventCreateDto
+     */
+    'link'?: string | null;
 }
 /**
  * 
@@ -19328,12 +19340,19 @@ export interface WebEventResponseDto {
      * @memberof WebEventResponseDto
      */
     'gallery'?: Array<string> | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventResponseDto
+     */
+    'videoLink'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventResponseDto
+     */
+    'link'?: string | null;
 }
-/**
- * 
- * @export
- * @interface WebEventSapHirePdfMailRequestDto
- */
 export interface WebEventSapHirePdfMailRequestDto {
     /**
      * 
@@ -19507,12 +19526,19 @@ export interface WebEventUpdateDto {
      * @memberof WebEventUpdateDto
      */
     'translations'?: Array<WebEventTranslationCreateDto> | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventUpdateDto
+     */
+    'videoLink'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventUpdateDto
+     */
+    'link'?: string | null;
 }
-/**
- * 
- * @export
- * @interface WebEventsDto
- */
 export interface WebEventsDto {
     /**
      * 
@@ -19562,6 +19588,18 @@ export interface WebEventsDto {
      * @memberof WebEventsDto
      */
     'translations'?: Array<WebEventTranslationDto> | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventsDto
+     */
+    'videoLink'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventsDto
+     */
+    'link'?: string | null;
 }
 /**
  * 
