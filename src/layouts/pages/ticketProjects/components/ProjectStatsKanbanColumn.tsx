@@ -23,7 +23,7 @@ const ProjectStatsKanbanColumn = ({ column, projects }: ProjectStatsKanbanColumn
         "border-slate-200/80 bg-white/40 backdrop-blur-sm dark:border-border dark:bg-card/40",
       )}
     >
-      <div className="flex items-center gap-2 border-b border-slate-200/70 bg-white/60 px-3 py-2.5 dark:border-border dark:bg-card/60">
+      <div className="flex shrink-0 items-center gap-2 border-b border-slate-200/70 bg-white/60 px-3 py-2.5 dark:border-border dark:bg-card/60">
         <span className={cn("size-2 shrink-0 rounded-full", colors.dot)} />
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-foreground">
           {column.label}
@@ -39,7 +39,10 @@ const ProjectStatsKanbanColumn = ({ column, projects }: ProjectStatsKanbanColumn
         </span>
       </div>
 
-      <div className="flex min-h-[72px] flex-1 flex-col gap-2 bg-gray-50 p-2 dark:bg-muted/20">
+      <div
+        className="flex flex-col gap-2 overflow-y-auto bg-gray-50 p-2 dark:bg-muted/20"
+        style={{ maxHeight: "calc(100vh - 380px)", minHeight: "625px" }}
+      >
         {projects.length > 0 ? (
           projects.map((project) => (
             <ProjectStatsKanbanCard
