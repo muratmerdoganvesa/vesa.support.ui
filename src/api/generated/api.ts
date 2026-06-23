@@ -8395,6 +8395,18 @@ export interface KanbanTasksListDto {
      * @type {string}
      * @memberof KanbanTasksListDto
      */
+    'createdBy'?: string | null;
+    /**
+     * 
+     * @type {UserAppDtoOnlyNameId}
+     * @memberof KanbanTasksListDto
+     */
+    'creator'?: UserAppDtoOnlyNameId;
+    /**
+     * 
+     * @type {string}
+     * @memberof KanbanTasksListDto
+     */
     'projectId'?: string | null;
     /**
      * 

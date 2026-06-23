@@ -7,11 +7,13 @@ export const generateNextId = (data: KanbanCard[]): number => {
 export const formatDate = (date: string | Date): string => {
     const d = new Date(date);
     return d.toLocaleDateString('tr-TR', {
+        day: '2-digit',
+        month: '2-digit',
         year: 'numeric',
-        month: 'short',
-        day: 'numeric'
     });
 };
+
+export const formatDateTime = (date: string | Date): string => formatDate(date);
 
 export const getPriorityWeight = (priority: string): number => {
     const weights = {
