@@ -9,6 +9,7 @@ import { useBusy } from "layouts/pages/hooks/useBusy";
 import { KanbanApi } from "api/generated";
 import getConfiguration from "confiuration";
 import { useAlert } from "layouts/pages/hooks/useAlert";
+import { formatDate } from "../utils/kanbanHelpers";
 
 // KanbanCard receives the full data object from Syncfusion (field names are PascalCase)
 interface KanbanCardData {
@@ -23,6 +24,8 @@ interface KanbanCardData {
   Status?: string;
   RankId?: string | number;
   creatorId?: string;
+  creatorName?: string | null;
+  createdDate?: string | null;
   projectName?: string | null;
   dueDate?: string | null;
   CanSendMail?: boolean;
@@ -214,11 +217,32 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
         </div>
       )}
 
+      {/* ── Creator + created date ── */}
+      {(data.creatorName || data.createdDate) && (
+        <div className="mb-2 space-y-0.5">
+          <div className="flex flex-wrap items-baseline gap-x-1.5 text-[10px] min-w-0">
+            <span className="text-slate-400 font-medium shrink-0">Oluşturan kişi:</span>
+            <span className="text-slate-600 font-medium truncate">
+              {data.creatorName || "—"}
+            </span>
+            {data.createdDate && (
+              <>
+                <span aria-hidden className="text-slate-300">·</span>
+                <span className="text-slate-500 whitespace-nowrap">
+                  {formatDate(data.createdDate)}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Footer: assignee + type ── */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-100 mt-1">
 
         {/* Assignee */}
         <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[10px] text-slate-400 font-medium shrink-0">Atanan kişi:</span>
           <div
             className={cn(
               "w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ring-1 ring-white",
@@ -227,7 +251,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
           >
             {initials || "?"}
           </div>
-          <span className="text-[11px] text-slate-500 font-medium truncate">
+          <span className="text-[11px] text-slate-600 font-medium truncate">
             {assigneeName || "—"}
           </span>
         </div>

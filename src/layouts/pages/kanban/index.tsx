@@ -23,11 +23,11 @@ import {
   UserCalendarApi,
   TicketProjectsListDto,
 } from "api/generated";
-import { KanbanTasksListDtoFixed } from "./utils/fetchKanbanData";
+import { KanbanTasksListDtoFixed, mapKanbanItem } from "./utils/fetchKanbanData";
 import getConfiguration from "confiuration";
 import { useAlert } from "../hooks/useAlert";
 import { useBusy } from "../hooks/useBusy";
-import { isGuid } from "./utils/kanbanHelpers";
+import { formatDate, isGuid } from "./utils/kanbanHelpers";
 import {
   Plus,
   Search,
@@ -92,6 +92,7 @@ type ListSortCol =
   | "Priority"
   | "Status"
   | "Assignee"
+  | "creatorName"
   | "dueDate"
   | "createdDate"
   | "projectName";
@@ -142,6 +143,7 @@ const ListView = ({
       case "Priority":    cmp = (PRIORITY_SORT_ORDER[a.Priority] ?? 99) - (PRIORITY_SORT_ORDER[b.Priority] ?? 99); break;
       case "Status":      cmp = (a.Status ?? "").localeCompare(b.Status ?? "", "tr"); break;
       case "Assignee":    cmp = (a.Assignee ?? "").localeCompare(b.Assignee ?? "", "tr"); break;
+      case "creatorName": cmp = (a.creatorName ?? "").localeCompare(b.creatorName ?? "", "tr"); break;
       case "projectName": cmp = (a.projectName ?? "").localeCompare(b.projectName ?? "", "tr"); break;
       case "dueDate":     cmp = (a.dueDate ?? "").localeCompare(b.dueDate ?? ""); break;
       case "createdDate": cmp = (a.createdDate ?? "").localeCompare(b.createdDate ?? ""); break;
@@ -151,7 +153,7 @@ const ListView = ({
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
-  const colSpanCount = showProjectName ? 8 : 7;
+  const colSpanCount = showProjectName ? 9 : 8;
 
   const getSortIcon = (col: ListSortCol) => {
     if (sortCol !== col)
@@ -195,6 +197,7 @@ const ListView = ({
               {renderSortableTh("Priority", "Öncelik")}
               {renderSortableTh("Status", "Durum")}
               {renderSortableTh("Assignee", "Atanan")}
+              {renderSortableTh("creatorName", "Oluşturan")}
               {renderSortableTh("dueDate", "Son Tarih")}
               {renderSortableTh("createdDate", "Oluşturulma")}
             </tr>
@@ -279,6 +282,9 @@ const ListView = ({
                         <span className="text-slate-600 text-xs">{row.Assignee}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">
+                      {row.creatorName ?? "—"}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {row.dueDate ? (
                         <span className={cn(
@@ -299,7 +305,7 @@ const ListView = ({
                     </td>
                     <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
                       {row.createdDate
-                        ? new Date(row.createdDate).toLocaleDateString("tr-TR")
+                        ? formatDate(row.createdDate)
                         : "—"}
                     </td>
                   </tr>
@@ -648,24 +654,7 @@ function KanbanPage() {
       const response = await api.apiKanbanGet(selectedRadioRef.current, projectId ?? undefined);
       console.log("response.data", response.data);
       if (response.data.length > 0) {
-        const fixedData = response.data.map((item: KanbanTasksListDto) => ({
-          Id: item.id,
-          Assignee: item.assignee.firstName + " " + item.assignee.lastName,
-          AssigneeId: item.assignee.id,
-          RankId: item.rankId,
-          Priority: item.priority,
-          Status: item.status,
-          Tags: item.tags,
-          Type: item.type,
-          Description: item.description,
-          Summary: item.summary,
-          creatorId: item.creatorId,
-          projectId: item.projectId,
-          createdDate: item.createdDate ?? null,
-          projectName: item.projectName ?? null,
-          dueDate: item.dueDate ?? null,
-          CanSendMail: item.canSendMail ?? false,
-        }));
+        const fixedData = response.data.map((item: KanbanTasksListDto) => mapKanbanItem(item));
         setAllData(fixedData);
         setFilteredData(fixedData);
       } else {
