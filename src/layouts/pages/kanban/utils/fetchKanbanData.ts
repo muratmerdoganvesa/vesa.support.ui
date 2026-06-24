@@ -17,6 +17,7 @@ export interface KanbanTasksListDtoFixed  {
     createdDate?: string | null;
     projectName?: string | null;
     dueDate?: string | null;
+    CanSendMail : boolean;
 }
 
 const fetchKanbanDataForAll = async (): Promise<KanbanTasksListDtoFixed[]> => {
@@ -37,7 +38,8 @@ const fetchKanbanDataForAll = async (): Promise<KanbanTasksListDtoFixed[]> => {
                 Type: item.type,
                 Description: item.description,
                 Summary: item.summary,
-                creatorId: item.creatorId
+                creatorId: item.creatorId,
+                CanSendMail: item.canSendMail
 
             }
             })

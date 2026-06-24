@@ -8414,6 +8414,12 @@ export interface KanbanTasksListDto {
      * @memberof KanbanTasksListDto
      */
     'dueDate'?: string | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof KanbanTasksListDto
+     */
+    'canSendMail'?: boolean | null;
 }
 /**
  * 
@@ -12142,6 +12148,23 @@ export interface ProjectTasksUpdateDto {
  * @enum {number}
  */
 
+export const ProjectTypes = {
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3,
+    NUMBER_4: 4,
+    NUMBER_5: 5
+} as const;
+
+export type ProjectTypes = typeof ProjectTypes[keyof typeof ProjectTypes];
+
+
+/**
+ * 
+ * @export
+ * @enum {number}
+ */
+
 export const Quarter = {
     NUMBER_1: 1,
     NUMBER_2: 2,
@@ -15232,20 +15255,91 @@ export type TicketPriority = typeof TicketPriority[keyof typeof TicketPriority];
 /**
  * 
  * @export
- * @enum {number}
+ * @interface TicketProjectStatsDto
  */
+export interface TicketProjectStatsDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsDto
+     */
+    'id'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsDto
+     */
+    'customerName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsDto
+     */
+    'projectDescription'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsDto
+     */
+    'projectSubDescription'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsDto
+     */
+    'createdDate'?: string | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof TicketProjectStatsDto
+     */
+    'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof TicketProjectStatsDto
+     */
+    'modules'?: Array<string> | null;
+    /**
+     * 
+     * @type {Array<TicketProjectStatsPersonDto>}
+     * @memberof TicketProjectStatsDto
+     */
+    'employees'?: Array<TicketProjectStatsPersonDto> | null;
+    /**
+     * 
+     * @type {TicketProjectStatsPersonDto}
+     * @memberof TicketProjectStatsDto
+     */
+    'projectManager'?: TicketProjectStatsPersonDto;
+}
 
-export const ProjectTypes = {
-    Backlog: 1,
-    Realization: 2,
-    UAT: 3,
-    Preparation: 4,
-    DONE: 5
-} as const;
 
-export type ProjectTypes = typeof ProjectTypes[keyof typeof ProjectTypes];
-
-
+/**
+ * 
+ * @export
+ * @interface TicketProjectStatsPersonDto
+ */
+export interface TicketProjectStatsPersonDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsPersonDto
+     */
+    'id'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsPersonDto
+     */
+    'fullName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketProjectStatsPersonDto
+     */
+    'profilePhoto'?: string | null;
+}
 /**
  * 
  * @export
@@ -15443,8 +15537,10 @@ export interface TicketProjects {
      * @type {ProjectTypes}
      * @memberof TicketProjects
      */
-    'projectType'?: ProjectTypes | null;
+    'projectType'?: ProjectTypes;
 }
+
+
 /**
  * 
  * @export
@@ -15564,8 +15660,10 @@ export interface TicketProjectsInsertDto {
      * @type {ProjectTypes}
      * @memberof TicketProjectsInsertDto
      */
-    'projectType'?: ProjectTypes | null;
+    'projectType'?: ProjectTypes;
 }
+
+
 /**
  * 
  * @export
@@ -15721,40 +15819,16 @@ export interface TicketProjectsListDto {
      * @type {ProjectTypes}
      * @memberof TicketProjectsListDto
      */
-    'projectType'?: ProjectTypes | null;
+    'projectType'?: ProjectTypes;
     /**
      * 
      * @type {ProjectTypes}
      * @memberof TicketProjectsListDto
      */
-    'projectStatus'?: ProjectTypes | null;
+    'projectStatus'?: ProjectTypes;
 }
-/**
- * 
- * @export
- * @interface TicketProjectStatsPersonDto
- */
-export interface TicketProjectStatsPersonDto {
-    'id'?: string;
-    'fullName'?: string | null;
-    'profilePhoto'?: string | null;
-}
-/**
- * 
- * @export
- * @interface TicketProjectStatsDto
- */
-export interface TicketProjectStatsDto {
-    'id'?: string;
-    'customerName'?: string | null;
-    'projectDescription'?: string | null;
-    'projectSubDescription'?: string | null;
-    'createdDate'?: string | null;
-    'projectStatus'?: ProjectTypes | null;
-    'modules'?: Array<string> | null;
-    'employees'?: Array<TicketProjectStatsPersonDto> | null;
-    'projectManager'?: TicketProjectStatsPersonDto | null;
-}
+
+
 /**
  * 
  * @export
@@ -15862,8 +15936,10 @@ export interface TicketProjectsUpdateDto {
      * @type {ProjectTypes}
      * @memberof TicketProjectsUpdateDto
      */
-    'projectType'?: ProjectTypes | null;
+    'projectType'?: ProjectTypes;
 }
+
+
 /**
  * 
  * @export
@@ -18973,6 +19049,49 @@ export type UserLevel = typeof UserLevel[keyof typeof UserLevel];
 /**
  * 
  * @export
+ * @interface UserProjectStatsDto
+ */
+export interface UserProjectStatsDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof UserProjectStatsDto
+     */
+    'userId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserProjectStatsDto
+     */
+    'firstName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserProjectStatsDto
+     */
+    'lastName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserProjectStatsDto
+     */
+    'departmentText'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UserProjectStatsDto
+     */
+    'projectCount'?: number;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof UserProjectStatsDto
+     */
+    'projectNames'?: Array<string> | null;
+}
+/**
+ * 
+ * @export
  * @interface UserRoleDto
  */
 export interface UserRoleDto {
@@ -19132,18 +19251,6 @@ export interface WebEventCreateDto {
     'isEvent'?: boolean;
     /**
      * 
-     * @type {Array<WebEventImageCreateDto>}
-     * @memberof WebEventCreateDto
-     */
-    'images'?: Array<WebEventImageCreateDto> | null;
-    /**
-     * 
-     * @type {Array<WebEventTranslationCreateDto>}
-     * @memberof WebEventCreateDto
-     */
-    'translations'?: Array<WebEventTranslationCreateDto> | null;
-    /**
-     * 
      * @type {string}
      * @memberof WebEventCreateDto
      */
@@ -19154,6 +19261,18 @@ export interface WebEventCreateDto {
      * @memberof WebEventCreateDto
      */
     'link'?: string | null;
+    /**
+     * 
+     * @type {Array<WebEventImageCreateDto>}
+     * @memberof WebEventCreateDto
+     */
+    'images'?: Array<WebEventImageCreateDto> | null;
+    /**
+     * 
+     * @type {Array<WebEventTranslationCreateDto>}
+     * @memberof WebEventCreateDto
+     */
+    'translations'?: Array<WebEventTranslationCreateDto> | null;
 }
 /**
  * 
@@ -19353,6 +19472,11 @@ export interface WebEventResponseDto {
      */
     'link'?: string | null;
 }
+/**
+ * 
+ * @export
+ * @interface WebEventSapHirePdfMailRequestDto
+ */
 export interface WebEventSapHirePdfMailRequestDto {
     /**
      * 
@@ -19516,18 +19640,6 @@ export interface WebEventUpdateDto {
     'isEvent'?: boolean;
     /**
      * 
-     * @type {Array<WebEventImageCreateDto>}
-     * @memberof WebEventUpdateDto
-     */
-    'images'?: Array<WebEventImageCreateDto> | null;
-    /**
-     * 
-     * @type {Array<WebEventTranslationCreateDto>}
-     * @memberof WebEventUpdateDto
-     */
-    'translations'?: Array<WebEventTranslationCreateDto> | null;
-    /**
-     * 
      * @type {string}
      * @memberof WebEventUpdateDto
      */
@@ -19538,7 +19650,24 @@ export interface WebEventUpdateDto {
      * @memberof WebEventUpdateDto
      */
     'link'?: string | null;
+    /**
+     * 
+     * @type {Array<WebEventImageCreateDto>}
+     * @memberof WebEventUpdateDto
+     */
+    'images'?: Array<WebEventImageCreateDto> | null;
+    /**
+     * 
+     * @type {Array<WebEventTranslationCreateDto>}
+     * @memberof WebEventUpdateDto
+     */
+    'translations'?: Array<WebEventTranslationCreateDto> | null;
 }
+/**
+ * 
+ * @export
+ * @interface WebEventsDto
+ */
 export interface WebEventsDto {
     /**
      * 
@@ -19578,18 +19707,6 @@ export interface WebEventsDto {
     'isEvent'?: boolean;
     /**
      * 
-     * @type {Array<WebEventImageDto>}
-     * @memberof WebEventsDto
-     */
-    'images'?: Array<WebEventImageDto> | null;
-    /**
-     * 
-     * @type {Array<WebEventTranslationDto>}
-     * @memberof WebEventsDto
-     */
-    'translations'?: Array<WebEventTranslationDto> | null;
-    /**
-     * 
      * @type {string}
      * @memberof WebEventsDto
      */
@@ -19600,6 +19717,18 @@ export interface WebEventsDto {
      * @memberof WebEventsDto
      */
     'link'?: string | null;
+    /**
+     * 
+     * @type {Array<WebEventImageDto>}
+     * @memberof WebEventsDto
+     */
+    'images'?: Array<WebEventImageDto> | null;
+    /**
+     * 
+     * @type {Array<WebEventTranslationDto>}
+     * @memberof WebEventsDto
+     */
+    'translations'?: Array<WebEventTranslationDto> | null;
 }
 /**
  * 
@@ -34184,6 +34313,43 @@ export const KanbanApiAxiosParamCreator = function (configuration?: Configuratio
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 
+         * @param {string} taskId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiKanbanSendTaskReminderMailTaskIdPost: async (taskId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'taskId' is not null or undefined
+            assertParamExists('apiKanbanSendTaskReminderMailTaskIdPost', 'taskId', taskId)
+            const localVarPath = `/api/Kanban/SendTaskReminderMail/{taskId}`
+                .replace(`{${"taskId"}}`, encodeURIComponent(String(taskId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -34301,6 +34467,18 @@ export const KanbanApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['KanbanApi.apiKanbanSendEmailToBacklogUsersGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * 
+         * @param {string} taskId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiKanbanSendTaskReminderMailTaskIdPost(taskId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiKanbanSendTaskReminderMailTaskIdPost(taskId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['KanbanApi.apiKanbanSendTaskReminderMailTaskIdPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -34390,6 +34568,15 @@ export const KanbanApiFactory = function (configuration?: Configuration, basePat
          */
         apiKanbanSendEmailToBacklogUsersGet(options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.apiKanbanSendEmailToBacklogUsersGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} taskId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiKanbanSendTaskReminderMailTaskIdPost(taskId: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiKanbanSendTaskReminderMailTaskIdPost(taskId, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -34497,6 +34684,17 @@ export class KanbanApi extends BaseAPI {
      */
     public apiKanbanSendEmailToBacklogUsersGet(options?: RawAxiosRequestConfig) {
         return KanbanApiFp(this.configuration).apiKanbanSendEmailToBacklogUsersGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} taskId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof KanbanApi
+     */
+    public apiKanbanSendTaskReminderMailTaskIdPost(taskId: string, options?: RawAxiosRequestConfig) {
+        return KanbanApiFp(this.configuration).apiKanbanSendTaskReminderMailTaskIdPost(taskId, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -51168,6 +51366,44 @@ export const TicketProjectsApiAxiosParamCreator = function (configuration?: Conf
         },
         /**
          * 
+         * @param {string} [workCompanyId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiTicketProjectsGetProjectStatisticsGet: async (workCompanyId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/TicketProjects/GetProjectStatistics`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (workCompanyId !== undefined) {
+                localVarQueryParameter['workCompanyId'] = workCompanyId;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @param {string} [userId] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -51188,6 +51424,49 @@ export const TicketProjectsApiAxiosParamCreator = function (configuration?: Conf
             // authentication Bearer required
             // http bearer authentication required
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (userId !== undefined) {
+                localVarQueryParameter['userId'] = userId;
+            }
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} [departmentId] 
+         * @param {string} [userId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiTicketProjectsGetUserProjectStatsGet: async (departmentId?: string, userId?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/TicketProjects/GetUserProjectStats`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            if (departmentId !== undefined) {
+                localVarQueryParameter['departmentId'] = departmentId;
+            }
 
             if (userId !== undefined) {
                 localVarQueryParameter['userId'] = userId;
@@ -51414,6 +51693,18 @@ export const TicketProjectsApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @param {string} [workCompanyId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<TicketProjectStatsDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketProjectsGetProjectStatisticsGet(workCompanyId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TicketProjectsApi.apiTicketProjectsGetProjectStatisticsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @param {string} [userId] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
@@ -51422,6 +51713,19 @@ export const TicketProjectsApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketProjectsGetProjectsByUserGet(userId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['TicketProjectsApi.apiTicketProjectsGetProjectsByUserGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} [departmentId] 
+         * @param {string} [userId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiTicketProjectsGetUserProjectStatsGet(departmentId?: string, userId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<UserProjectStatsDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketProjectsGetUserProjectStatsGet(departmentId, userId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['TicketProjectsApi.apiTicketProjectsGetUserProjectStatsGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -51538,12 +51842,31 @@ export const TicketProjectsApiFactory = function (configuration?: Configuration,
         },
         /**
          * 
+         * @param {string} [workCompanyId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketProjectStatsDto>> {
+            return localVarFp.apiTicketProjectsGetProjectStatisticsGet(workCompanyId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
          * @param {string} [userId] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
         apiTicketProjectsGetProjectsByUserGet(userId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketProjectsListDto>> {
             return localVarFp.apiTicketProjectsGetProjectsByUserGet(userId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} [departmentId] 
+         * @param {string} [userId] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiTicketProjectsGetUserProjectStatsGet(departmentId?: string, userId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<UserProjectStatsDto>> {
+            return localVarFp.apiTicketProjectsGetUserProjectStatsGet(departmentId, userId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -51664,6 +51987,17 @@ export class TicketProjectsApi extends BaseAPI {
 
     /**
      * 
+     * @param {string} [workCompanyId] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TicketProjectsApi
+     */
+    public apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig) {
+        return TicketProjectsApiFp(this.configuration).apiTicketProjectsGetProjectStatisticsGet(workCompanyId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
      * @param {string} [userId] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -51671,6 +52005,18 @@ export class TicketProjectsApi extends BaseAPI {
      */
     public apiTicketProjectsGetProjectsByUserGet(userId?: string, options?: RawAxiosRequestConfig) {
         return TicketProjectsApiFp(this.configuration).apiTicketProjectsGetProjectsByUserGet(userId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} [departmentId] 
+     * @param {string} [userId] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof TicketProjectsApi
+     */
+    public apiTicketProjectsGetUserProjectStatsGet(departmentId?: string, userId?: string, options?: RawAxiosRequestConfig) {
+        return TicketProjectsApiFp(this.configuration).apiTicketProjectsGetUserProjectStatsGet(departmentId, userId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

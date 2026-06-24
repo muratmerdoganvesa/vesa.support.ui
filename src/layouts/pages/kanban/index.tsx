@@ -664,6 +664,7 @@ function KanbanPage() {
           createdDate: item.createdDate ?? null,
           projectName: item.projectName ?? null,
           dueDate: item.dueDate ?? null,
+          CanSendMail: item.canSendMail ?? false,
         }));
         setAllData(fixedData);
         setFilteredData(fixedData);

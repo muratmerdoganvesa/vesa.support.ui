@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
@@ -155,27 +155,6 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
 
   const filters = useProjectStatisticsFilters(projects);
 
-  // Reload when company filter changes (server-side filter)
-  const prevCompanyIdRef = useRef(filters.selectedCompanyId);
-  useEffect(() => {
-    if (prevCompanyIdRef.current === filters.selectedCompanyId) return;
-    prevCompanyIdRef.current = filters.selectedCompanyId;
-    const companyId = filters.selectedCompanyId === "All" ? undefined : filters.selectedCompanyId;
-    const reload = async () => {
-      try {
-        setIsLoading(true);
-        const data = await fetchProjectStatistics(companyId);
-        setProjects(data);
-      } catch {
-        dispatchAlert({ message: "Proje istatistikleri getirilirken hata oluştu.", type: "Error" });
-        setProjects([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    reload();
-  }, [filters.selectedCompanyId, dispatchAlert]);
-
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -268,9 +247,14 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
           isLoading={isLoading}
           searchTerm={filters.searchTerm}
           onSearchChange={filters.handleSearchChange}
-          companies={filters.companies}
-          selectedCompanyId={filters.selectedCompanyId}
-          onCompanySelect={filters.handleCompanySelect}
+          uniqueStatuses={filters.uniqueStatuses}
+          selectedStatus={filters.selectedStatus}
+          onStatusSelect={filters.handleStatusSelect}
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+          onDateFromChange={filters.handleDateFromChange}
+          onDateToChange={filters.handleDateToChange}
+          onDateClear={filters.handleDateClear}
           uniquePersons={filters.uniquePersons}
           selectedPersonId={filters.selectedPersonId}
           onPersonSelect={filters.handlePersonSelect}

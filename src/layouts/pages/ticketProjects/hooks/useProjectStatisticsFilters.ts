@@ -1,19 +1,65 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { WorkCompanyApi, WorkCompanyDto } from "api/generated";
-import getConfiguration from "confiuration";
+import { useCallback, useMemo, useState } from "react";
+import {
+  getProjectColumnKey,
+  getProjectTypeColumns,
+  type ProjectTypeColumnKey,
+} from "../projectTypeHelpers";
 import type { TicketProjectStatsDto } from "../types";
 
 export type PersonItem = { id: string; name: string; count: number };
 export type LabelCountItem = { name: string; count: number };
+export type StatusItem = { key: ProjectTypeColumnKey; label: string; count: number };
+
+type FilterParams = {
+  searchTerm: string;
+  selectedPersonId: string;
+  selectedCustomer: string;
+  selectedModule: string;
+  selectedStatus: ProjectTypeColumnKey | "All";
+  dateFrom: string;
+  dateTo: string;
+};
+
+const matchesDateRange = (
+  createdDate: string | null | undefined,
+  dateFrom: string,
+  dateTo: string,
+): boolean => {
+  if (!dateFrom && !dateTo) return true;
+  if (!createdDate) return false;
+
+  const date = new Date(createdDate);
+  if (Number.isNaN(date.getTime())) return false;
+
+  if (dateFrom) {
+    const from = new Date(dateFrom);
+    from.setHours(0, 0, 0, 0);
+    if (date < from) return false;
+  }
+
+  if (dateTo) {
+    const to = new Date(dateTo);
+    to.setHours(23, 59, 59, 999);
+    if (date > to) return false;
+  }
+
+  return true;
+};
 
 const applyClientFilters = (
   projects: TicketProjectStatsDto[],
-  searchTerm: string,
-  selectedPersonId: string,
-  selectedCustomer: string,
-  selectedModule: string,
+  params: FilterParams,
 ): TicketProjectStatsDto[] => {
   let filtered = projects;
+  const {
+    searchTerm,
+    selectedPersonId,
+    selectedCustomer,
+    selectedModule,
+    selectedStatus,
+    dateFrom,
+    dateTo,
+  } = params;
 
   if (searchTerm.trim()) {
     const q = searchTerm.toLowerCase();
@@ -46,6 +92,16 @@ const applyClientFilters = (
     filtered = filtered.filter((p) => p.modules.includes(selectedModule));
   }
 
+  if (selectedStatus !== "All") {
+    filtered = filtered.filter(
+      (p) => getProjectColumnKey(p.projectStatus) === selectedStatus,
+    );
+  }
+
+  if (dateFrom || dateTo) {
+    filtered = filtered.filter((p) => matchesDateRange(p.createdDate, dateFrom, dateTo));
+  }
+
   return filtered;
 };
 
@@ -54,46 +110,50 @@ export const useProjectStatisticsFilters = (projects: TicketProjectStatsDto[]) =
   const [selectedPersonId, setSelectedPersonId] = useState("All");
   const [selectedCustomer, setSelectedCustomer] = useState("All");
   const [selectedModule, setSelectedModule] = useState("All");
-  const [selectedCompanyId, setSelectedCompanyId] = useState("All");
+  const [selectedStatus, setSelectedStatus] = useState<ProjectTypeColumnKey | "All">("All");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [personSearch, setPersonSearch] = useState("");
-  const [companies, setCompanies] = useState<WorkCompanyDto[]>([]);
 
-  useEffect(() => {
-    const loadCompanies = async () => {
-      try {
-        const api = new WorkCompanyApi(getConfiguration());
-        const res = await api.apiWorkCompanyGetAssingListGet();
-        setCompanies(res.data ?? []);
-      } catch {
-        // ignore — companies are optional enhancement
-      }
-    };
-    loadCompanies();
-  }, []);
-
-  const filteredProjects = useMemo(
-    () => applyClientFilters(projects, searchTerm, selectedPersonId, selectedCustomer, selectedModule),
-    [projects, searchTerm, selectedPersonId, selectedCustomer, selectedModule],
+  const filterParams = useMemo(
+    (): FilterParams => ({
+      searchTerm,
+      selectedPersonId,
+      selectedCustomer,
+      selectedModule,
+      selectedStatus,
+      dateFrom,
+      dateTo,
+    }),
+    [searchTerm, selectedPersonId, selectedCustomer, selectedModule, selectedStatus, dateFrom, dateTo],
   );
 
-  // Base for each section's counts: apply all filters EXCEPT the section's own filter
+  const filteredProjects = useMemo(
+    () => applyClientFilters(projects, filterParams),
+    [projects, filterParams],
+  );
+
   const baseForPerson = useMemo(
-    () => applyClientFilters(projects, searchTerm, "All", selectedCustomer, selectedModule),
-    [projects, searchTerm, selectedCustomer, selectedModule],
+    () => applyClientFilters(projects, { ...filterParams, selectedPersonId: "All" }),
+    [projects, filterParams],
   );
 
   const baseForCustomer = useMemo(
-    () => applyClientFilters(projects, searchTerm, selectedPersonId, "All", selectedModule),
-    [projects, searchTerm, selectedPersonId, selectedModule],
+    () => applyClientFilters(projects, { ...filterParams, selectedCustomer: "All" }),
+    [projects, filterParams],
   );
 
   const baseForModule = useMemo(
-    () => applyClientFilters(projects, searchTerm, selectedPersonId, selectedCustomer, "All"),
-    [projects, searchTerm, selectedPersonId, selectedCustomer],
+    () => applyClientFilters(projects, { ...filterParams, selectedModule: "All" }),
+    [projects, filterParams],
   );
 
-  // All unique persons across all loaded projects (for the sidebar list)
+  const baseForStatus = useMemo(
+    () => applyClientFilters(projects, { ...filterParams, selectedStatus: "All" }),
+    [projects, filterParams],
+  );
+
   const allPersons = useMemo((): { id: string; name: string }[] => {
     const map = new Map<string, string>();
     for (const p of projects) {
@@ -140,6 +200,15 @@ export const useProjectStatisticsFilters = (projects: TicketProjectStatsDto[]) =
       .map(([name, count]) => ({ name, count }));
   }, [baseForModule]);
 
+  const uniqueStatuses = useMemo((): StatusItem[] => {
+    const columns = getProjectTypeColumns();
+    return columns.map(({ key, label }) => ({
+      key,
+      label,
+      count: baseForStatus.filter((p) => getProjectColumnKey(p.projectStatus) === key).length,
+    }));
+  }, [baseForStatus]);
+
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
   }, []);
@@ -157,14 +226,21 @@ export const useProjectStatisticsFilters = (projects: TicketProjectStatsDto[]) =
     setSelectedModule(module);
   }, []);
 
-  const handleCompanySelect = useCallback((companyId: string) => {
-    setSelectedCompanyId(companyId);
-    // Reset all client-side filters when the data source changes
-    setSearchTerm("");
-    setSelectedPersonId("All");
-    setSelectedCustomer("All");
-    setSelectedModule("All");
-    setPersonSearch("");
+  const handleStatusSelect = useCallback((status: ProjectTypeColumnKey | "All") => {
+    setSelectedStatus(status);
+  }, []);
+
+  const handleDateFromChange = useCallback((value: string) => {
+    setDateFrom(value);
+  }, []);
+
+  const handleDateToChange = useCallback((value: string) => {
+    setDateTo(value);
+  }, []);
+
+  const handleDateClear = useCallback(() => {
+    setDateFrom("");
+    setDateTo("");
   }, []);
 
   const activeFilterCount = useMemo(
@@ -174,8 +250,10 @@ export const useProjectStatisticsFilters = (projects: TicketProjectStatsDto[]) =
         selectedPersonId !== "All" ? 1 : 0,
         selectedCustomer !== "All" ? 1 : 0,
         selectedModule !== "All" ? 1 : 0,
+        selectedStatus !== "All" ? 1 : 0,
+        dateFrom || dateTo ? 1 : 0,
       ].reduce((a, b) => a + b, 0),
-    [searchTerm, selectedPersonId, selectedCustomer, selectedModule],
+    [searchTerm, selectedPersonId, selectedCustomer, selectedModule, selectedStatus, dateFrom, dateTo],
   );
 
   return {
@@ -183,7 +261,9 @@ export const useProjectStatisticsFilters = (projects: TicketProjectStatsDto[]) =
     selectedPersonId,
     selectedCustomer,
     selectedModule,
-    selectedCompanyId,
+    selectedStatus,
+    dateFrom,
+    dateTo,
     personSearch,
     setPersonSearch,
     sidebarOpen,
@@ -192,12 +272,15 @@ export const useProjectStatisticsFilters = (projects: TicketProjectStatsDto[]) =
     handlePersonSelect,
     handleCustomerSelect,
     handleModuleSelect,
-    handleCompanySelect,
+    handleStatusSelect,
+    handleDateFromChange,
+    handleDateToChange,
+    handleDateClear,
     filteredProjects,
     uniquePersons,
     uniqueCustomers,
     uniqueModules,
-    companies,
+    uniqueStatuses,
     activeFilterCount,
     totalCount: projects.length,
     filteredCount: filteredProjects.length,

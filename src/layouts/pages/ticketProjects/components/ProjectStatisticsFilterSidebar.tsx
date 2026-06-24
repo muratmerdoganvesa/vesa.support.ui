@@ -1,33 +1,33 @@
 import { useState } from "react";
-import { Building2, Package, Search, User, X } from "lucide-react";
+import { Building2, CalendarClock, CircleDot, Package, Search, User, X } from "lucide-react";
 import { cn } from "lib/utils";
-import type { WorkCompanyDto } from "api/generated";
-import type { LabelCountItem, PersonItem } from "../hooks/useProjectStatisticsFilters";
+import { getProjectTypeColumnColors } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import type { ProjectTypeColumnKey } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import type { LabelCountItem, PersonItem, StatusItem } from "../hooks/useProjectStatisticsFilters";
 
 type Props = {
   isLoading: boolean;
-  // Search
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  // Company (server-side filter)
-  companies: WorkCompanyDto[];
-  selectedCompanyId: string;
-  onCompanySelect: (id: string) => void;
-  // Person
+  uniqueStatuses: StatusItem[];
+  selectedStatus: ProjectTypeColumnKey | "All";
+  onStatusSelect: (status: ProjectTypeColumnKey | "All") => void;
+  dateFrom: string;
+  dateTo: string;
+  onDateFromChange: (value: string) => void;
+  onDateToChange: (value: string) => void;
+  onDateClear: () => void;
   uniquePersons: PersonItem[];
   selectedPersonId: string;
   onPersonSelect: (id: string) => void;
   personSearch: string;
   onPersonSearchChange: (s: string) => void;
-  // Customer
   uniqueCustomers: LabelCountItem[];
   selectedCustomer: string;
   onCustomerSelect: (name: string) => void;
-  // Module
   uniqueModules: LabelCountItem[];
   selectedModule: string;
   onModuleSelect: (name: string) => void;
-  // Counts
   totalCount: number;
   filteredCount: number;
 };
@@ -128,9 +128,14 @@ const ProjectStatisticsFilterSidebar = ({
   isLoading,
   searchTerm,
   onSearchChange,
-  companies,
-  selectedCompanyId,
-  onCompanySelect,
+  uniqueStatuses,
+  selectedStatus,
+  onStatusSelect,
+  dateFrom,
+  dateTo,
+  onDateFromChange,
+  onDateToChange,
+  onDateClear,
   uniquePersons,
   selectedPersonId,
   onPersonSelect,
@@ -145,12 +150,7 @@ const ProjectStatisticsFilterSidebar = ({
   totalCount,
   filteredCount,
 }: Props) => {
-  const [companySearch, setCompanySearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
-
-  const filteredCompanyList = companies.filter(
-    ({ name }) => !companySearch || (name ?? "").toLowerCase().includes(companySearch.toLowerCase()),
-  );
 
   const filteredPersonList = uniquePersons.filter(
     ({ name }) => !personSearch || name.toLowerCase().includes(personSearch.toLowerCase()),
@@ -159,6 +159,8 @@ const ProjectStatisticsFilterSidebar = ({
   const filteredCustomerList = uniqueCustomers.filter(
     ({ name }) => !customerSearch || name.toLowerCase().includes(customerSearch.toLowerCase()),
   );
+
+  const hasDateFilter = Boolean(dateFrom || dateTo);
 
   return (
     <div className="mt-1 flex-1 overflow-y-auto pt-3 space-y-5 px-2">
@@ -197,48 +199,76 @@ const ProjectStatisticsFilterSidebar = ({
         </p>
       </div>
 
-      {/* ŞİRKET */}
-      {companies.length > 0 && (
+      {/* DURUM */}
+      {uniqueStatuses.length > 0 && (
         <div>
           <SectionLabel
-            icon={<Building2 className="w-3 h-3" />}
-            label="Şirket"
-            onClear={selectedCompanyId !== "All" ? () => onCompanySelect("All") : undefined}
-          />
-          <SectionSearch
-            value={companySearch}
-            onChange={setCompanySearch}
-            placeholder="Şirket ara..."
-            ariaLabel="Şirket ara"
+            icon={<CircleDot className="w-3 h-3" />}
+            label="Durum"
+            onClear={selectedStatus !== "All" ? () => onStatusSelect("All") : undefined}
           />
           <div className="space-y-0.5 max-h-40 overflow-y-auto">
-            <FilterButton isActive={selectedCompanyId === "All"} onClick={() => onCompanySelect("All")}>
-              {selectedCompanyId === "All" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
-              )}
-              <span className={cn("flex-1 truncate text-xs", selectedCompanyId !== "All" && "pl-3.5")}>
-                Tümü
-              </span>
-              <CountBadge count={totalCount} isActive={selectedCompanyId === "All"} />
+            <FilterButton isActive={selectedStatus === "All"} onClick={() => onStatusSelect("All")}>
+              <span className="w-2 h-2 rounded-full shrink-0 bg-slate-300" />
+              <span className="flex-1 truncate text-xs">Tümü</span>
+              <CountBadge
+                count={uniqueStatuses.reduce((s, st) => s + st.count, 0)}
+                isActive={selectedStatus === "All"}
+              />
             </FilterButton>
-            {filteredCompanyList.map((company) => {
-              const id = company.id ?? "";
-              const isActive = selectedCompanyId === id;
+            {uniqueStatuses.map(({ key, label, count }) => {
+              const isActive = selectedStatus === key;
+              const colors = getProjectTypeColumnColors(label);
               return (
-                <FilterButton key={id} isActive={isActive} onClick={() => onCompanySelect(id)}>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />}
-                  <span className={cn("flex-1 truncate text-xs", !isActive && "pl-3.5")}>
-                    {company.name ?? "—"}
-                  </span>
+                <FilterButton key={String(key)} isActive={isActive} onClick={() => onStatusSelect(key)}>
+                  <span className={cn("w-2 h-2 rounded-full shrink-0", colors.dot)} aria-hidden />
+                  <span className="flex-1 truncate text-xs">{label}</span>
+                  <CountBadge count={count} isActive={isActive} />
                 </FilterButton>
               );
             })}
-            {companySearch && filteredCompanyList.length === 0 && (
-              <p className="px-3 py-2.5 text-xs text-slate-400 text-center">Şirket bulunamadı</p>
-            )}
           </div>
         </div>
       )}
+
+      {/* OLUŞTURULMA TARİHİ */}
+      <div>
+        <SectionLabel
+          icon={<CalendarClock className="w-3 h-3" />}
+          label="Oluşturulma Tarihi"
+          onClear={hasDateFilter ? onDateClear : undefined}
+        />
+        <div className="mx-1 space-y-2">
+          <div>
+            <label htmlFor="stats-date-from" className="mb-1 block px-1 text-[10px] text-slate-400">
+              Başlangıç
+            </label>
+            <input
+              id="stats-date-from"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => onDateFromChange(e.target.value)}
+              disabled={isLoading}
+              aria-label="Başlangıç tarihi"
+              className="w-full h-7 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all disabled:opacity-50"
+            />
+          </div>
+          <div>
+            <label htmlFor="stats-date-to" className="mb-1 block px-1 text-[10px] text-slate-400">
+              Bitiş
+            </label>
+            <input
+              id="stats-date-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => onDateToChange(e.target.value)}
+              disabled={isLoading}
+              aria-label="Bitiş tarihi"
+              className="w-full h-7 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all disabled:opacity-50"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* KİŞİ */}
       {uniquePersons.length > 0 && (
@@ -373,7 +403,6 @@ const ProjectStatisticsFilterSidebar = ({
         </div>
       )}
 
-      {/* Veri yükleniyor state: tüm bölümler disabled */}
       {isLoading && (
         <div className="absolute inset-0 bg-white/60 rounded-xl" aria-hidden />
       )}

@@ -42,16 +42,11 @@ const normalizeStatsItem = (item: Record<string, unknown>): TicketProjectStatsDt
   };
 };
 
-export const fetchProjectStatistics = async (
-  workCompanyId?: string,
-): Promise<TicketProjectStatsDto[]> => {
+export const fetchProjectStatistics = async (): Promise<TicketProjectStatsDto[]> => {
   const basePath = import.meta.env.VITE_BASE_PATH || "";
   const response = await axiosInstance.get<Record<string, unknown>[]>(
     `${basePath}/api/TicketProjects/GetProjectStatistics`,
     {
-      params: {
-        workCompanyId: workCompanyId || undefined,
-      },
       timeout: 90_000,
     },
   );
