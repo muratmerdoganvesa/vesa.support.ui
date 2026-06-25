@@ -309,15 +309,13 @@ export default function App() {
           <Route path="/tickets/statistic" element={<Sales />} />
           <Route path="/profile/profile-overview" element={<Overview />} />
           <Route path="/profile/all-projects" element={<AllProjects />} />
-          <Route path="/webEvents" element={<WebEvents />} />
-          <Route path="/webEvents/detail" element={<WebEventsCE />} />
-          <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
+      
           <Route path="/" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="*" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
-        
+         
 
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
@@ -330,9 +328,12 @@ export default function App() {
             <Route path="/documentation/library/:libraryId" element={<DocumentationModule />} />
             <Route path="/documentation/page/:pageId" element={<DocumentationModule />} />
             <Route path="/documentation/templates" element={<DocumentationModule />} /> */}
+            <Route path="/webEvents" element={<WebEvents />} />
+            <Route path="/webEvents/detail" element={<WebEventsCE />} />
+            <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
             <Route path="/crmModul" element={<CrmModulPage />} />
-          <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
-          <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
+            <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
+            <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}
