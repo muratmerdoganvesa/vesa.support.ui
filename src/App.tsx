@@ -137,6 +137,8 @@ const WebEventsCE = lazy(() => import("layouts/pages/webEvents/ce"));
 const ActivityCenterPage = lazy(() => import("layouts/pages/activity-center"));
 const ActivityPeriodManagement = lazy(() => import("layouts/pages/activityPeriodManagement"));
 const ActivityRuleManagement = lazy(() => import("layouts/pages/activityRuleManagement"));
+const CrmModulPage = lazy(() => import("layouts/pages/crmModul"));
+const CrmModulDetailPage = lazy(() => import("layouts/pages/crmModul/detail"));
 
 
 // import GeneralSidenav from "./examples/Sidenav/components/GeneralSidenav/GeneralSidenav";
@@ -315,6 +317,7 @@ export default function App() {
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
+     
 
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
@@ -327,7 +330,9 @@ export default function App() {
             <Route path="/documentation/library/:libraryId" element={<DocumentationModule />} />
             <Route path="/documentation/page/:pageId" element={<DocumentationModule />} />
             <Route path="/documentation/templates" element={<DocumentationModule />} /> */}
-            
+          <Route path="/crmModul" element={<CrmModulPage />} />
+          <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
+          <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}
