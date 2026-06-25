@@ -1,7 +1,14 @@
-import React from "react";
-import { AlertTriangle, CalendarClock, Folder, Ticket } from "lucide-react";
+import React, { useState } from "react";
+import { AlertTriangle, CalendarClock, Folder, Mail, Ticket } from "lucide-react";
 import { cn } from "lib/utils";
 import { getDueDateStatus, formatDueDate, DueDateStatus } from "../utils/dueDateHelpers";
+import { Tooltip, TooltipContent, TooltipTrigger } from "components/ui/tooltip";
+import { Button } from "components/ui/button";
+import { Dialog, DialogTitle, DialogHeader, DialogContent, DialogDescription, DialogFooter } from "components/ui/dialog";
+import { useBusy } from "layouts/pages/hooks/useBusy";
+import { KanbanApi } from "api/generated";
+import getConfiguration from "confiuration";
+import { useAlert } from "layouts/pages/hooks/useAlert";
 import { formatDate } from "../utils/kanbanHelpers";
 
 // KanbanCard receives the full data object from Syncfusion (field names are PascalCase)
@@ -21,6 +28,7 @@ interface KanbanCardData {
   createdDate?: string | null;
   projectName?: string | null;
   dueDate?: string | null;
+  CanSendMail?: boolean;
 }
 
 interface KanbanCardProps {
@@ -90,7 +98,9 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
   const type          = TYPE_CONFIG[data.Type ?? ""];
   const dueDateStatus = getDueDateStatus({ dueDate: data.dueDate, Status: data.Status });
   const dueDateStyle  = DUE_DATE_STYLES[dueDateStatus];
-
+  const [showMailDialog, setShowMailDialog] = useState(false);
+  const dispatchBusy = useBusy();
+  const dispatchAlert = useAlert();
   const tags = (data.Tags ?? "")
     .split(",")
     .map((t) => t.trim())
@@ -105,6 +115,26 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
 
   const isCardOverdue = dueDateStatus === "overdue";
 
+  const handleMailClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setShowMailDialog(true);
+  };
+
+  const handleMailSend = async () => {
+    try {
+      dispatchBusy({ isBusy: true });
+      const api = new KanbanApi(getConfiguration());
+      await api.apiKanbanSendTaskReminderMailTaskIdPost(data.Id);
+      dispatchAlert({ message: "Hatırlatma maili başarıyla gönderildi", type: "Success" });
+      dispatchBusy({ isBusy: false });
+    } catch (error) {
+      console.error("Error sending mail:", error);
+      dispatchBusy({ isBusy: false });
+      dispatchAlert({ message: "Hatırlatma maili gönderimi sırasında bir hata oluştu", type: "Error" });
+    }
+    setShowMailDialog(false);
+  };
+
   return (
     <div className={cn(
       "group p-3.5 bg-white border-l-[3px]",
@@ -113,6 +143,7 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
 
       {/* ── Header row: summary + priority badge ── */}
       <div className="flex items-start justify-between gap-2 mb-2">
+        
         <p className="text-[13px] font-semibold text-slate-800 leading-snug line-clamp-2 flex-1">
           {data.Summary}
         </p>
@@ -125,6 +156,19 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
           <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", priority.dot)} />
           {data.Priority}
         </span>
+
+        {data.CanSendMail && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+          <Button onClick={(e) => handleMailClick(e)} variant="ghost"  className="inline-flex p-0 h-4 w-4 items-center justify-center hover:bg-sky-50 hover:text-sky-600 hover:cursor-pointer">
+              <Mail className="size-3.5 text-sky-600 shrink-0" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="text-xs">
+            Mail göndermek için tıklayınız.
+          </TooltipContent>
+        </Tooltip>
+        )}
       </div>
 
       {/* ── Description ── */}
@@ -226,6 +270,25 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ data }) => {
           )
         )}
       </div>
+      <Dialog open={showMailDialog} onOpenChange={setShowMailDialog}>
+        <DialogContent onClick={(e) => e.stopPropagation()}
+    onPointerDown={(e) => e.stopPropagation()}
+    onMouseDown={(e) => e.stopPropagation()}
+    onCloseAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Hatırlatma Maili Gönder</DialogTitle>
+          </DialogHeader>
+          <DialogDescription className="space-y-2">
+            <span className="text-xs text-slate-500 block">
+              Tamam butonuna basıldığında ilgili göreve ait atanan kişiye bir hatırlatma maili gönderilecektir.
+            </span>
+          </DialogDescription>
+          <DialogFooter>
+            <Button className="hover:cursor-pointer" onClick={(e) => { e.stopPropagation(); setShowMailDialog(false); }} variant="outline">İptal</Button>
+            <Button className="hover:cursor-pointer" onClick={(e) => { e.stopPropagation(); void handleMailSend(); }} variant="default">Gönder</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
