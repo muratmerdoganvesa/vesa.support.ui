@@ -15,6 +15,8 @@ Coded by www.creative-tim.com
 
 
 
+import CrmModulPage from "layouts/pages/crmModul";
+import CrmModulDetailPage from "layouts/pages/crmModul/detail";
 import {
   lazy,
   Suspense,
@@ -137,7 +139,7 @@ const WebEventsCE = lazy(() => import("layouts/pages/webEvents/ce"));
 const ActivityCenterPage = lazy(() => import("layouts/pages/activity-center"));
 const ActivityPeriodManagement = lazy(() => import("layouts/pages/activityPeriodManagement"));
 const ActivityRuleManagement = lazy(() => import("layouts/pages/activityRuleManagement"));
-
+const ChatHome = lazy(() => import("layouts/pages/ai-page/chat-home"));
 
 // import GeneralSidenav from "./examples/Sidenav/components/GeneralSidenav/GeneralSidenav";
 
@@ -315,7 +317,7 @@ export default function App() {
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
-     
+        
 
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
@@ -328,7 +330,7 @@ export default function App() {
             <Route path="/documentation/library/:libraryId" element={<DocumentationModule />} />
             <Route path="/documentation/page/:pageId" element={<DocumentationModule />} />
             <Route path="/documentation/templates" element={<DocumentationModule />} /> */}
-          <Route path="/crmModul" element={<CrmModulPage />} />
+            <Route path="/crmModul" element={<CrmModulPage />} />
           <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
           <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
