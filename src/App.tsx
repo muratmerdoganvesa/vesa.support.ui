@@ -15,6 +15,8 @@ Coded by www.creative-tim.com
 
 
 
+import CrmModulPage from "layouts/pages/crmModul";
+import CrmModulDetailPage from "layouts/pages/crmModul/detail";
 import {
   lazy,
   Suspense,
@@ -137,7 +139,7 @@ const WebEventsCE = lazy(() => import("layouts/pages/webEvents/ce"));
 const ActivityCenterPage = lazy(() => import("layouts/pages/activity-center"));
 const ActivityPeriodManagement = lazy(() => import("layouts/pages/activityPeriodManagement"));
 const ActivityRuleManagement = lazy(() => import("layouts/pages/activityRuleManagement"));
-
+const ChatHome = lazy(() => import("layouts/pages/ai-page/chat-home"));
 
 // import GeneralSidenav from "./examples/Sidenav/components/GeneralSidenav/GeneralSidenav";
 
@@ -307,14 +309,13 @@ export default function App() {
           <Route path="/tickets/statistic" element={<Sales />} />
           <Route path="/profile/profile-overview" element={<Overview />} />
           <Route path="/profile/all-projects" element={<AllProjects />} />
-          <Route path="/webEvents" element={<WebEvents />} />
-          <Route path="/webEvents/detail" element={<WebEventsCE />} />
-          <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
+      
           <Route path="/" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="*" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
+         
 
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
@@ -327,7 +328,12 @@ export default function App() {
             <Route path="/documentation/library/:libraryId" element={<DocumentationModule />} />
             <Route path="/documentation/page/:pageId" element={<DocumentationModule />} />
             <Route path="/documentation/templates" element={<DocumentationModule />} /> */}
-            
+            <Route path="/webEvents" element={<WebEvents />} />
+            <Route path="/webEvents/detail" element={<WebEventsCE />} />
+            <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
+            <Route path="/crmModul" element={<CrmModulPage />} />
+            <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
+            <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}
@@ -388,6 +394,7 @@ export default function App() {
             <Route path="/projectmanagement" element={<MainScreen />} />
             <Route path="/projectmanagement/chart" element={<ProjectChart />} />
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
+            <Route path="/chat-home" element={<ChatHome />} />
           </Route> 
 
           {/* <Route path="/mmessages" element={<ChatPage />} /> */}
