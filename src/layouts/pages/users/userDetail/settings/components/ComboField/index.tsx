@@ -70,8 +70,8 @@ export function ComboField({
                   <CommandItem
                     key={opt}
                     value={opt}
-                    onSelect={(current) => {
-                      onChange(current === value ? "" : current);
+                    onSelect={() => {
+                      onChange(value === opt ? "" : opt);
                       setOpen(false);
                     }}
                   >

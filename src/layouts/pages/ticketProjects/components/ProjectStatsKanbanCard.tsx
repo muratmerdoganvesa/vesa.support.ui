@@ -14,12 +14,27 @@ const formatDate = (dateStr: string | null | undefined): string => {
   });
 };
 
+const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> | null) =>
+  cn(
+    "text-[11px] leading-snug",
+    highlightPersonIds?.has(personId)
+      ? "font-bold text-slate-900 dark:text-foreground"
+      : highlightPersonIds
+        ? "font-medium text-slate-400 dark:text-muted-foreground"
+        : "font-medium text-slate-700 dark:text-foreground",
+  );
+
 type ProjectStatsKanbanCardProps = {
   project: TicketProjectStatsDto;
   cardBorderClass: string;
+  highlightPersonIds?: Set<string> | null;
 };
 
-const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanbanCardProps) => {
+const ProjectStatsKanbanCard = ({
+  project,
+  cardBorderClass,
+  highlightPersonIds,
+}: ProjectStatsKanbanCardProps) => {
   const displayName = project.projectSubDescription
     ? `${project.projectDescription} — ${project.projectSubDescription}`
     : project.projectDescription;
@@ -75,10 +90,7 @@ const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanban
           </p>
           <ul className="flex flex-col gap-0.5" aria-label="Danışman listesi">
             {project.employees.map((employee) => (
-              <li
-                key={employee.id}
-                className="text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
-              >
+              <li key={employee.id} className={getPersonNameClass(employee.id, highlightPersonIds)}>
                 {employee.fullName}
               </li>
             ))}
@@ -91,7 +103,7 @@ const ProjectStatsKanbanCard = ({ project, cardBorderClass }: ProjectStatsKanban
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Proje Yöneticisi
           </p>
-          <p className="text-[11px] font-medium text-slate-700 dark:text-foreground">
+          <p className={getPersonNameClass(project.projectManager.id, highlightPersonIds)}>
             {project.projectManager.fullName}
           </p>
         </div>
