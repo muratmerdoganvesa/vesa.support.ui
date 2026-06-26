@@ -429,6 +429,14 @@ function SolveAllTicket() {
       ),
     },
     {
+      accessor: "priorityText",
+      header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.Oncelik"),
+      className: "w-24",
+      cell: ({ row, value }) => (
+        <GlobalCell value={value} columnName="priorityText" testRow={row.original} />
+      ),
+    },
+    {
       accessor: "title",
       header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.Baslik"),
       cell: ({ row, value }) => (

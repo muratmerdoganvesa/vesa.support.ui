@@ -4,6 +4,7 @@ interface RowProps {
   name?: string;
   category?: string;
   status?: number;
+  priority?: number;
 }
 
 interface Props {
@@ -40,6 +41,35 @@ const STATUS_COLORS = [
 const getStatusColor = (statusId?: string): string | undefined => {
   if (!statusId) return undefined;
   return STATUS_COLORS[Number(statusId) - 1];
+};
+
+const PRIORITY_COLORS: Record<number, string> = {
+  1: "#4CAF50",
+  2: "#ffaa00",
+  3: "#F44336",
+};
+
+const PRIORITY_LABELS: Record<number, string> = {
+  1: "Düşük",
+  2: "Orta",
+  3: "Yüksek",
+};
+
+const getPriorityColor = (priorityId?: number, priorityText?: string): string | undefined => {
+  if (priorityId && PRIORITY_COLORS[priorityId]) return PRIORITY_COLORS[priorityId];
+
+  const text = (priorityText ?? "").toLocaleLowerCase("tr-TR");
+  if (text.includes("yüksek") || text.includes("yuksek")) return PRIORITY_COLORS[3];
+  if (text.includes("orta")) return PRIORITY_COLORS[2];
+  if (text.includes("düşük") || text.includes("dusuk")) return PRIORITY_COLORS[1];
+
+  return undefined;
+};
+
+const getPriorityLabel = (priorityId?: number, priorityText?: string): string => {
+  if (priorityText?.trim()) return priorityText.trim();
+  if (priorityId && PRIORITY_LABELS[priorityId]) return PRIORITY_LABELS[priorityId];
+  return "";
 };
 
 const formatDate = (dateString: string): string => {
@@ -82,6 +112,22 @@ function GlobalCell({ value, statusId, ...rest }: Props) {
           style={{ color: getStatusColor(statusId) }}
         >
           {value}
+        </span>
+      </div>
+    );
+  }
+
+  if (col === "priorityText") {
+    const priorityId = rest.testRow?.priority;
+    const priorityLabel = getPriorityLabel(priorityId, value);
+    const priorityColor = getPriorityColor(priorityId, priorityLabel);
+    return (
+      <div className="flex items-center">
+        <span
+          className="text-xs font-medium leading-none"
+          style={{ color: priorityColor }}
+        >
+          {priorityLabel}
         </span>
       </div>
     );

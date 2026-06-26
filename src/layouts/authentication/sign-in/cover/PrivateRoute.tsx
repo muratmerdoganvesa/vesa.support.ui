@@ -72,6 +72,9 @@ const PrivateRoute: React.FC = () => {
       />
     );
   }
+  // if(localStorage.getItem("menuNameSurmane") === "Eren Burukçu"){
+  //   return <Outlet />
+  // }
 
   if (isLoading) {
     return <div></div>; // Yüklenme mesajı

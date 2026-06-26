@@ -3,6 +3,9 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import { useNavigate, useParams } from "react-router-dom";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import "../../talepYonetimi/createTicket/index.css";
 import {
   WebEventCreateDto,
   WebEventTranslationCreateDto,
@@ -33,7 +36,10 @@ import { Textarea } from "components/ui/textarea";
 import { XIcon, ExternalLinkIcon } from "lucide-react";
 
 type LanguageCode = 1 | 2 | 3;
-type TranslationForm = Record<LanguageCode, { mainTitle: string; title: string; content: string }>;
+type TranslationForm = Record<
+  LanguageCode,
+  { mainTitle: string; title: string; content: string; contentBody: string }
+>;
 
 const languageConfigs: Array<{ code: LanguageCode; label: string }> = [
   { code: 1, label: "Turkce" },
@@ -42,10 +48,53 @@ const languageConfigs: Array<{ code: LanguageCode; label: string }> = [
 ];
 
 const emptyTranslationForm: TranslationForm = {
-  1: { mainTitle: "", title: "", content: "" },
-  2: { mainTitle: "", title: "", content: "" },
-  3: { mainTitle: "", title: "", content: "" },
+  1: { mainTitle: "", title: "", content: "", contentBody: "" },
+  2: { mainTitle: "", title: "", content: "", contentBody: "" },
+  3: { mainTitle: "", title: "", content: "", contentBody: "" },
 };
+
+const quillModules = {
+  toolbar: {
+    container: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      ["blockquote", "code-block"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      [{ script: "sub" }, { script: "super" }],
+      [{ indent: "-1" }, { indent: "+1" }],
+      [{ direction: "rtl" }],
+      [{ size: ["small", false, "large", "huge"] }],
+      [{ color: [] as string[] }, { background: [] as string[] }],
+      [{ font: [] as string[] }],
+      [{ align: [] as string[] }],
+      ["clean"],
+      ["link", "image"],
+    ] as const,
+  },
+  clipboard: { matchVisual: false },
+};
+
+const quillFormats = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "blockquote",
+  "code-block",
+  "list",
+  "bullet",
+  "indent",
+  "link",
+  "image",
+  "align",
+  "direction",
+  "color",
+  "background",
+  "font",
+  "size",
+  "script",
+];
 
 const toDateTimeLocalValue = (value?: string) => {
   if (!value) return "";
@@ -76,6 +125,7 @@ function WebEventsCreate() {
   const [isEvent, setIsEvent] = useState<boolean>(true);
   const [videoLink, setVideoLink] = useState<string>("");
   const [link, setLink] = useState<string>("");
+  const [linkedinUrl, setLinkedinUrl] = useState<string>("");
   const [translations, setTranslations] = useState<TranslationForm>(emptyTranslationForm);
   const [isCoverUploading, setIsCoverUploading] = useState(false);
   const [isGalleryUploading, setIsGalleryUploading] = useState(false);
@@ -104,24 +154,30 @@ function WebEventsCreate() {
         setLocation(data.venue?.tr ?? "");
         setCity(data.city ?? "");
         setEventDate(toDateTimeLocalValue(data.startsAt));
+        setStatus(data.status ?? true);
+        setIsEvent(data.isEvent ?? true);
         setVideoLink(data.videoLink ?? "");
         setLink(data.link ?? "");
+        setLinkedinUrl(data.linkedinUrl ?? "");
 
         setTranslations({
           1: {
             mainTitle: data.title?.tr ?? "",
             title: data.topic?.tr ?? "",
             content: data.summary?.tr ?? "",
+            contentBody: data.contentBody?.tr ?? "",
           },
           2: {
             mainTitle: data.title?.en ?? "",
             title: data.topic?.en ?? "",
             content: data.summary?.en ?? "",
+            contentBody: data.contentBody?.en ?? "",
           },
           3: {
             mainTitle: data.title?.az ?? "",
             title: data.topic?.az ?? "",
             content: data.summary?.az ?? "",
+            contentBody: data.contentBody?.az ?? "",
           },
         });
       } catch (error) {
@@ -136,7 +192,7 @@ function WebEventsCreate() {
 
   const handleTranslationChange = (
     languageCode: LanguageCode,
-    field: "mainTitle" | "title" | "content",
+    field: "mainTitle" | "title" | "content" | "contentBody",
     value: string
   ) => {
     setTranslations((prev) => ({
@@ -203,6 +259,7 @@ function WebEventsCreate() {
       mainTitle: translations[language.code].mainTitle,
       title: translations[language.code].title,
       content: translations[language.code].content,
+      contentBody: translations[language.code].contentBody || null,
     }));
 
   const hasEmptyTranslation = languageConfigs.some(
@@ -252,6 +309,7 @@ function WebEventsCreate() {
 
     const trimmedVideoLink = videoLink.trim();
     const trimmedLink = link.trim();
+    const trimmedLinkedinUrl = linkedinUrl.trim();
 
     if (trimmedVideoLink && !isValidYouTubeUrl(trimmedVideoLink)) {
       dispatchAlert({
@@ -264,6 +322,14 @@ function WebEventsCreate() {
     if (trimmedLink && !isValidHttpUrl(trimmedLink)) {
       dispatchAlert({
         message: "Link gecerli bir http veya https URL'si olmalidir.",
+        type: "Warning",
+      });
+      return;
+    }
+
+    if (trimmedLinkedinUrl && !isValidHttpUrl(trimmedLinkedinUrl)) {
+      dispatchAlert({
+        message: "LinkedIn URL gecerli bir http veya https URL'si olmalidir.",
         type: "Warning",
       });
       return;
@@ -283,6 +349,7 @@ function WebEventsCreate() {
         isEvent,
         videoLink: trimmedVideoLink || null,
         link: trimmedLink || null,
+        linkedinUrl: trimmedLinkedinUrl || null,
         images: images.map((imageUrl) => ({ imageUrl: normalizeWebEventImagePath(imageUrl) })),
         translations: buildTranslations(),
       };
@@ -306,6 +373,7 @@ function WebEventsCreate() {
 
   const youtubeEmbedUrl = toYouTubeEmbedUrl(videoLink);
   const externalLinkUrl = link.trim() ? normalizeExternalUrl(link) : "";
+  const linkedinExternalUrl = linkedinUrl.trim() ? normalizeExternalUrl(linkedinUrl) : "";
 
   return (
     <DashboardLayout>
@@ -440,8 +508,8 @@ function WebEventsCreate() {
             </div>
           </div>
 
-          {/* Video & External Link */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+          {/* Video, External Link & LinkedIn */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="videoLink">Video Link (YouTube URL)</Label>
               <Input
@@ -497,6 +565,35 @@ function WebEventsCreate() {
                 </div>
               )}
             </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+              <Input
+                id="linkedinUrl"
+                type="url"
+                placeholder="https://www.linkedin.com/..."
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+              />
+              {linkedinUrl.trim() && !isValidHttpUrl(linkedinUrl) && (
+                <span className="text-xs text-destructive">Gecerli bir http veya https URL'si giriniz.</span>
+              )}
+              {linkedinExternalUrl && isValidHttpUrl(linkedinUrl) && (
+                <div className="mt-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <a
+                      href={linkedinExternalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="LinkedIn profilini yeni sekmede ac"
+                    >
+                      <ExternalLinkIcon className="mr-2 h-4 w-4" />
+                      LinkedIn Ac
+                    </a>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Dil Formlari */}
@@ -533,6 +630,21 @@ function WebEventsCreate() {
                     onChange={(e) =>
                       handleTranslationChange(language.code, "content", e.target.value)
                     }
+                  />
+                </div>
+                <div className="col-span-full flex flex-col gap-1.5">
+                  <Label htmlFor={`contentBody-${language.code}`}>Content Body</Label>
+                  <ReactQuill
+                    id={`contentBody-${language.code}`}
+                    className="custom-quill"
+                    style={{ minHeight: "200px" }}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    value={translations[language.code].contentBody || ""}
+                    onChange={(value) =>
+                      handleTranslationChange(language.code, "contentBody", value)
+                    }
+                    theme="snow"
                   />
                 </div>
               </div>
