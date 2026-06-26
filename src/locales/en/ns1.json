@@ -258,6 +258,7 @@
         "Islemler": "Actions",
         "TalepNo": "Ticket No",
         "Durum": "Status",
+        "Oncelik": "Priority",
         "Baslik": "Title",
         "Musteri": "Customer",
         "Atanan": "Assigned (Person/Team)",

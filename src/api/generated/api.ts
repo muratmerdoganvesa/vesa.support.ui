@@ -19275,6 +19275,12 @@ export interface WebEventCreateDto {
     'link'?: string | null;
     /**
      * 
+     * @type {string}
+     * @memberof WebEventCreateDto
+     */
+    'linkedinUrl'?: string | null;
+    /**
+     * 
      * @type {Array<WebEventImageCreateDto>}
      * @memberof WebEventCreateDto
      */
@@ -19440,6 +19446,12 @@ export interface WebEventResponseDto {
      * @type {WebEventLocalizedTextDto}
      * @memberof WebEventResponseDto
      */
+    'contentBody'?: WebEventLocalizedTextDto;
+    /**
+     * 
+     * @type {WebEventLocalizedTextDto}
+     * @memberof WebEventResponseDto
+     */
     'venue'?: WebEventLocalizedTextDto;
     /**
      * 
@@ -19459,6 +19471,18 @@ export interface WebEventResponseDto {
      * @memberof WebEventResponseDto
      */
     'endsAt'?: string;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebEventResponseDto
+     */
+    'status'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebEventResponseDto
+     */
+    'isEvent'?: boolean;
     /**
      * 
      * @type {string}
@@ -19483,6 +19507,12 @@ export interface WebEventResponseDto {
      * @memberof WebEventResponseDto
      */
     'link'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventResponseDto
+     */
+    'linkedinUrl'?: string | null;
 }
 /**
  * 
@@ -19570,6 +19600,12 @@ export interface WebEventTranslationCreateDto {
      * @memberof WebEventTranslationCreateDto
      */
     'content'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventTranslationCreateDto
+     */
+    'contentBody'?: string | null;
 }
 /**
  * 
@@ -19601,6 +19637,12 @@ export interface WebEventTranslationDto {
      * @memberof WebEventTranslationDto
      */
     'content'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventTranslationDto
+     */
+    'contentBody'?: string | null;
 }
 /**
  * 
@@ -19662,6 +19704,12 @@ export interface WebEventUpdateDto {
      * @memberof WebEventUpdateDto
      */
     'link'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventUpdateDto
+     */
+    'linkedinUrl'?: string | null;
     /**
      * 
      * @type {Array<WebEventImageCreateDto>}
