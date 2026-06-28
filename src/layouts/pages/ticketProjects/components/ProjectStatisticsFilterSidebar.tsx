@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, CalendarClock, CircleDot, Package, Search, User, X } from "lucide-react";
+import { Building2, CircleDot, Landmark, Package, Search, User, X } from "lucide-react";
 import { cn } from "lib/utils";
 import { getProjectTypeColumnColors } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { ProjectTypeColumnKey } from "layouts/pages/ticketProjects/projectTypeHelpers";
@@ -12,11 +12,10 @@ type Props = {
   uniqueStatuses: StatusItem[];
   selectedStatus: ProjectTypeColumnKey | "All";
   onStatusSelect: (status: ProjectTypeColumnKey | "All") => void;
-  dateFrom: string;
-  dateTo: string;
-  onDateFromChange: (value: string) => void;
-  onDateToChange: (value: string) => void;
-  onDateClear: () => void;
+  uniqueDepartments: LabelCountItem[];
+  selectedDepartment: string;
+  onDepartmentSelect: (department: string) => void;
+  departmentAllCount: number;
   uniquePersons: PersonItem[];
   selectedPersonId: string;
   onPersonSelect: (id: string) => void;
@@ -131,11 +130,10 @@ const ProjectStatisticsFilterSidebar = ({
   uniqueStatuses,
   selectedStatus,
   onStatusSelect,
-  dateFrom,
-  dateTo,
-  onDateFromChange,
-  onDateToChange,
-  onDateClear,
+  uniqueDepartments,
+  selectedDepartment,
+  onDepartmentSelect,
+  departmentAllCount,
   uniquePersons,
   selectedPersonId,
   onPersonSelect,
@@ -159,8 +157,6 @@ const ProjectStatisticsFilterSidebar = ({
   const filteredCustomerList = uniqueCustomers.filter(
     ({ name }) => !customerSearch || name.toLowerCase().includes(customerSearch.toLowerCase()),
   );
-
-  const hasDateFilter = Boolean(dateFrom || dateTo);
 
   return (
     <div className="mt-1 flex-1 overflow-y-auto pt-3 space-y-5 px-2">
@@ -231,44 +227,40 @@ const ProjectStatisticsFilterSidebar = ({
         </div>
       )}
 
-      {/* OLUŞTURULMA TARİHİ */}
-      <div>
-        <SectionLabel
-          icon={<CalendarClock className="w-3 h-3" />}
-          label="Oluşturulma Tarihi"
-          onClear={hasDateFilter ? onDateClear : undefined}
-        />
-        <div className="mx-1 space-y-2">
-          <div>
-            <label htmlFor="stats-date-from" className="mb-1 block px-1 text-[10px] text-slate-400">
-              Başlangıç
-            </label>
-            <input
-              id="stats-date-from"
-              type="date"
-              value={dateFrom}
-              onChange={(e) => onDateFromChange(e.target.value)}
-              disabled={isLoading}
-              aria-label="Başlangıç tarihi"
-              className="w-full h-7 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all disabled:opacity-50"
-            />
-          </div>
-          <div>
-            <label htmlFor="stats-date-to" className="mb-1 block px-1 text-[10px] text-slate-400">
-              Bitiş
-            </label>
-            <input
-              id="stats-date-to"
-              type="date"
-              value={dateTo}
-              onChange={(e) => onDateToChange(e.target.value)}
-              disabled={isLoading}
-              aria-label="Bitiş tarihi"
-              className="w-full h-7 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 transition-all disabled:opacity-50"
-            />
+      {/* DEPARTMAN */}
+      {uniqueDepartments.length > 0 && (
+        <div>
+          <SectionLabel
+            icon={<Landmark className="w-3 h-3" />}
+            label="Departman"
+            onClear={selectedDepartment !== "All" ? () => onDepartmentSelect("All") : undefined}
+          />
+          <div className="space-y-0.5 max-h-40 overflow-y-auto">
+            <FilterButton
+              isActive={selectedDepartment === "All"}
+              onClick={() => onDepartmentSelect("All")}
+            >
+              <span className="w-2 h-2 rounded-full shrink-0 bg-slate-300" />
+              <span className="flex-1 truncate text-xs">Tümü</span>
+              <CountBadge count={departmentAllCount} isActive={selectedDepartment === "All"} />
+            </FilterButton>
+            {uniqueDepartments.map(({ name, count }) => {
+              const isActive = selectedDepartment === name;
+              return (
+                <FilterButton key={name} isActive={isActive} onClick={() => onDepartmentSelect(name)}>
+                  {isActive ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-slate-200 shrink-0" />
+                  )}
+                  <span className="flex-1 truncate text-xs">{name}</span>
+                  <CountBadge count={count} isActive={isActive} />
+                </FilterButton>
+              );
+            })}
           </div>
         </div>
-      </div>
+      )}
 
       {/* KİŞİ */}
       {uniquePersons.length > 0 && (

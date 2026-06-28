@@ -1,10 +1,24 @@
 import { ProjectTypes } from "api/generated";
 
-const projectTypeEntries = Object.entries(ProjectTypes) as [string, ProjectTypes][];
-
 export const UNASSIGNED_PROJECT_TYPE_KEY = "__unassigned__" as const;
 
 export type ProjectTypeColumnKey = typeof UNASSIGNED_PROJECT_TYPE_KEY | ProjectTypes;
+
+const PROJECT_TYPE_LABEL_BY_VALUE: Record<ProjectTypes, string> = {
+  [ProjectTypes.NUMBER_1]: "Backlog",
+  [ProjectTypes.NUMBER_2]: "Realization",
+  [ProjectTypes.NUMBER_3]: "UAT",
+  [ProjectTypes.NUMBER_4]: "Preparation",
+  [ProjectTypes.NUMBER_5]: "DONE",
+};
+
+const PROJECT_TYPE_ORDER: ProjectTypes[] = [
+  ProjectTypes.NUMBER_1,
+  ProjectTypes.NUMBER_2,
+  ProjectTypes.NUMBER_3,
+  ProjectTypes.NUMBER_4,
+  ProjectTypes.NUMBER_5,
+];
 
 export type ProjectTypeColumnDef = {
   key: ProjectTypeColumnKey;
@@ -14,23 +28,22 @@ export type ProjectTypeColumnDef = {
 
 export const getProjectTypeLabel = (value?: ProjectTypes | null): string => {
   if (value == null) return "—";
-  const entry = projectTypeEntries.find(([, enumValue]) => enumValue === value);
-  return entry?.[0] ?? "—";
+  return PROJECT_TYPE_LABEL_BY_VALUE[value] ?? "—";
 };
 
 export const getProjectStatusLabel = getProjectTypeLabel;
 
-export const projectTypeOptions = projectTypeEntries.map(([label, value]) => ({
-  label,
+export const projectTypeOptions = PROJECT_TYPE_ORDER.map((value) => ({
+  label: PROJECT_TYPE_LABEL_BY_VALUE[value],
   value,
 }));
 
 /** Enum sırasına göre kolon tanımları; başta atanmamış projeler. */
 export const getProjectTypeColumns = (): ProjectTypeColumnDef[] => [
   { key: UNASSIGNED_PROJECT_TYPE_KEY, label: "Seçilmeyenler", projectType: null },
-  ...projectTypeOptions.map(({ label, value }) => ({
+  ...PROJECT_TYPE_ORDER.map((value) => ({
     key: value,
-    label,
+    label: PROJECT_TYPE_LABEL_BY_VALUE[value],
     projectType: value,
   })),
 ];

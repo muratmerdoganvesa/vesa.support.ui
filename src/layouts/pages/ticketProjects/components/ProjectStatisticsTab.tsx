@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
+import { fetchUserDepartmentMap } from "layouts/pages/ticketProjects/api/fetchUsersForStats";
 import {
   getProjectColumnKey,
   getProjectTypeColumnColors,
@@ -88,9 +89,14 @@ const BoardSkeleton = ({ columnCount }: { columnCount: number }) => (
 type MobileProjectBoardProps = {
   columns: ProjectTypeColumnDef[];
   groupedProjects: Record<ProjectTypeColumnKey, TicketProjectStatsDto[]>;
+  highlightPersonIds?: Set<string> | null;
 };
 
-const MobileProjectBoard = ({ columns, groupedProjects }: MobileProjectBoardProps) => {
+const MobileProjectBoard = ({
+  columns,
+  groupedProjects,
+  highlightPersonIds,
+}: MobileProjectBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
   const activeColumn = columns.find((col) => col.key === activeCol) ?? columns[0];
@@ -136,6 +142,7 @@ const MobileProjectBoard = ({ columns, groupedProjects }: MobileProjectBoardProp
               key={project.id}
               project={project}
               cardBorderClass={activeColors?.cardBorder ?? "border-l-slate-300"}
+              highlightPersonIds={highlightPersonIds}
             />
           ))
         )}
@@ -148,18 +155,41 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
   const dispatchAlert = useAlert();
   const isMobile = useIsMobile();
   const [projects, setProjects] = useState<TicketProjectStatsDto[]>([]);
+  const [userDepartmentById, setUserDepartmentById] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
 
-  const filters = useProjectStatisticsFilters(projects);
+  const filters = useProjectStatisticsFilters(projects, userDepartmentById);
+
+  const highlightPersonIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    if (filters.selectedPersonId !== "All") {
+      ids.add(filters.selectedPersonId);
+    }
+
+    if (filters.selectedDepartment !== "All") {
+      for (const [userId, department] of userDepartmentById) {
+        if (department === filters.selectedDepartment) {
+          ids.add(userId);
+        }
+      }
+    }
+
+    return ids.size > 0 ? ids : null;
+  }, [filters.selectedPersonId, filters.selectedDepartment, userDepartmentById]);
 
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await fetchProjectStatistics();
+      const [data, departmentMap] = await Promise.all([
+        fetchProjectStatistics(),
+        fetchUserDepartmentMap().catch(() => new Map<string, string>()),
+      ]);
       setProjects(data);
+      setUserDepartmentById(departmentMap);
       setHasLoaded(true);
     } catch {
       dispatchAlert({ message: "Proje istatistikleri getirilirken hata oluştu.", type: "Error" });
@@ -250,11 +280,10 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
           uniqueStatuses={filters.uniqueStatuses}
           selectedStatus={filters.selectedStatus}
           onStatusSelect={filters.handleStatusSelect}
-          dateFrom={filters.dateFrom}
-          dateTo={filters.dateTo}
-          onDateFromChange={filters.handleDateFromChange}
-          onDateToChange={filters.handleDateToChange}
-          onDateClear={filters.handleDateClear}
+          uniqueDepartments={filters.uniqueDepartments}
+          selectedDepartment={filters.selectedDepartment}
+          onDepartmentSelect={filters.handleDepartmentSelect}
+          departmentAllCount={filters.departmentAllCount}
           uniquePersons={filters.uniquePersons}
           selectedPersonId={filters.selectedPersonId}
           onPersonSelect={filters.handlePersonSelect}
@@ -297,7 +326,11 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
         {isLoading ? (
           <BoardSkeleton columnCount={columns.length} />
         ) : isMobile ? (
-          <MobileProjectBoard columns={columns} groupedProjects={groupedProjects} />
+          <MobileProjectBoard
+            columns={columns}
+            groupedProjects={groupedProjects}
+            highlightPersonIds={highlightPersonIds}
+          />
         ) : (
           <div className="overflow-x-auto pb-1">
             <div
@@ -312,6 +345,7 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
                   key={String(column.key)}
                   column={column}
                   projects={groupedProjects[column.key] ?? []}
+                  highlightPersonIds={highlightPersonIds}
                 />
               ))}
             </div>
