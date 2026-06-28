@@ -10,9 +10,14 @@ import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 type ProjectStatsKanbanColumnProps = {
   column: ProjectTypeColumnDef;
   projects: TicketProjectStatsDto[];
+  highlightPersonIds?: Set<string> | null;
 };
 
-const ProjectStatsKanbanColumn = ({ column, projects }: ProjectStatsKanbanColumnProps) => {
+const ProjectStatsKanbanColumn = ({
+  column,
+  projects,
+  highlightPersonIds,
+}: ProjectStatsKanbanColumnProps) => {
   const colors = getProjectTypeColumnColors(column.label);
 
   return (
@@ -49,6 +54,7 @@ const ProjectStatsKanbanColumn = ({ column, projects }: ProjectStatsKanbanColumn
               key={project.id}
               project={project}
               cardBorderClass={colors.cardBorder}
+              highlightPersonIds={highlightPersonIds}
             />
           ))
         ) : (
