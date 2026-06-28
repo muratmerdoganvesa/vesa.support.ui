@@ -103,12 +103,12 @@ const CrmModulDetailPage = () => {
             </div>
             <div>
               <h1 className="text-lg font-semibold text-slate-800 leading-tight">
-                {isEditMode ? "CRM Kaydını Düzenle" : "Yeni CRM Kaydı"}
+                {isEditMode ? "Müşteri Kaydını Düzenle" : "Potansiyel Müşteri Kaydı oluştur."}
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
                 {isEditMode
                   ? "Mevcut kayıt bilgilerini güncelleyin."
-                  : "Yeni bir CRM fırsat kaydı oluşturun."}
+                  : "Yeni bir potansiyel müşteri kaydı oluşturun."}
               </p>
             </div>
           </div>
