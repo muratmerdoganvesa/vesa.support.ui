@@ -1,0 +1,228 @@
+import { CrmModulNoteDto, CrmModulNotesApi } from "api/generated";
+import { Button } from "components/ui/button";
+import { Label } from "components/ui/label";
+import { Textarea } from "components/ui/textarea";
+import getConfiguration from "confiuration";
+import { useAlert } from "layouts/pages/hooks/useAlert";
+import { useBusy } from "layouts/pages/hooks/useBusy";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { Save, StickyNote, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { formatDateTr } from "../utils";
+
+type CrmModulNotePanelProps = {
+  crmModulId?: string;
+};
+
+const emptyForm = () => ({
+  nextAction: "",
+  notes: "",
+});
+
+export const CrmModulNotePanel = ({ crmModulId }: CrmModulNotePanelProps) => {
+  const dispatchAlert = useAlert();
+  const dispatchBusy = useBusy();
+  const [formValues, setFormValues] = useState(emptyForm);
+  const [noteItems, setNoteItems] = useState<CrmModulNoteDto[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchNotes = useCallback(async () => {
+    if (!crmModulId) {
+      setNoteItems([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const api = new CrmModulNotesApi(getConfiguration());
+      const response = await api.apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId);
+      setNoteItems(response.data ?? []);
+    } catch {
+      dispatchAlert({ message: "Notlar yüklenirken hata oluştu.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }, [crmModulId, dispatchAlert]);
+
+  useEffect(() => {
+    fetchNotes();
+  }, [fetchNotes]);
+
+  const handleSaveNote = async () => {
+    if (!crmModulId) {
+      dispatchAlert({ message: "Not eklemek için önce müşteri kaydını oluşturun.", type: "error" });
+      return;
+    }
+
+    if (!formValues.nextAction.trim() && !formValues.notes.trim()) {
+      dispatchAlert({
+        message: "Sonraki aksiyon veya not alanından en az biri doldurulmalıdır.",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      dispatchBusy({ isBusy: true });
+      const api = new CrmModulNotesApi(getConfiguration());
+      await api.apiCrmModulNotesPost({
+        crmModulId,
+        nextAction: formValues.nextAction.trim() || null,
+        notes: formValues.notes.trim() || null,
+      });
+      setFormValues(emptyForm());
+      dispatchAlert({ message: "Not başarıyla kaydedildi.", type: "success" });
+      await fetchNotes();
+    } catch {
+      dispatchAlert({ message: "Not kaydedilirken hata oluştu.", type: "error" });
+    } finally {
+      dispatchBusy({ isBusy: false });
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      dispatchBusy({ isBusy: true });
+      const api = new CrmModulNotesApi(getConfiguration());
+      await api.apiCrmModulNotesIdDelete(noteId);
+      dispatchAlert({ message: "Not silindi.", type: "success" });
+      await fetchNotes();
+    } catch {
+      dispatchAlert({ message: "Not silinirken hata oluştu.", type: "error" });
+    } finally {
+      dispatchBusy({ isBusy: false });
+    }
+  };
+
+  const formatNoteDate = (value?: string | null) => {
+    if (!value) return "—";
+    const datePart = value.slice(0, 10);
+    const formatted = formatDateTr(datePart);
+    if (formatted === "—") return "—";
+    try {
+      const time = format(new Date(value), "HH:mm", { locale: tr });
+      return `${formatted} ${time}`;
+    } catch {
+      return formatted;
+    }
+  };
+
+  const canSave = Boolean(crmModulId);
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <StickyNote className="size-4 text-slate-500" />
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+          Notlar
+        </h3>
+        <span className="text-xs text-slate-400">({noteItems.length})</span>
+      </div>
+
+      {!canSave ? (
+        <div className="rounded-lg border border-dashed border-slate-200 bg-white py-8 text-center">
+          <p className="text-sm text-slate-500">Not eklemek için önce müşteri kaydını oluşturun.</p>
+        </div>
+      ) : (
+        <>
+          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="crm-note-next-action">Sonraki Aksiyon</Label>
+                <Textarea
+                  id="crm-note-next-action"
+                  value={formValues.nextAction}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({ ...prev, nextAction: e.target.value }))
+                  }
+                  placeholder="Sonraki aksiyonu yazın..."
+                  rows={3}
+                  className="bg-white resize-none"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="crm-note-notes">Notlar</Label>
+                <Textarea
+                  id="crm-note-notes"
+                  value={formValues.notes}
+                  onChange={(e) => setFormValues((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Notları yazın..."
+                  rows={3}
+                  className="bg-white resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveNote}
+                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <Save className="size-4" />
+                Notu Kaydet
+              </Button>
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="text-sm text-slate-500 text-center py-6">Notlar yükleniyor...</p>
+          ) : noteItems.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-200 bg-white py-10 text-center">
+              <p className="text-sm text-slate-500">Henüz not eklenmedi.</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Sonraki aksiyon ve not bilgilerini yukarıdan ekleyin.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {noteItems.map((note) => (
+                <article
+                  key={note.id}
+                  className="rounded-lg border border-slate-200 bg-white p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xs text-slate-400 tabular-nums">
+                      {formatNoteDate(note.createdDate)}
+                    </p>
+                    {note.id && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteNote(note.id!)}
+                        className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                        title="Notu sil"
+                        aria-label="Notu sil"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Sonraki Aksiyon
+                      </p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
+                        {note.nextAction?.trim() || "—"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                        Notlar
+                      </p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
+                        {note.notes?.trim() || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+};

@@ -1,9 +1,56 @@
 import { format, isValid, parseISO, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CrmModulDto, WorkCompanyDto } from "api/generated";
+import { CrmModulDto, ListModuleDto, TypeCodes } from "api/generated";
+import { getTypeCodeLabel } from "./constants";
 
-export const formatDateTr = (value?: string | null): string => {
-  if (!value) return "—";
+export type CrmModulListAggregates = {
+  totalPersonCount: number;
+  uniqueModuleNames: string[];
+  uniqueTypeLabels: string[];
+};
+
+export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggregates => {
+  const subItems = row.crmSubItems ?? [];
+
+  const totalPersonCount = subItems.reduce(
+    (sum, item) => sum + (item.personCount ?? 0),
+    0
+  );
+
+  const moduleMap = new Map<string, string>();
+  subItems.forEach((item) => {
+    const ids = item.solutionModuleIds ?? [];
+    const names = item.solutionModuleNames ?? [];
+    ids.forEach((id, index) => {
+      if (!id || moduleMap.has(id)) return;
+      moduleMap.set(id, names[index]?.trim() || id);
+    });
+  });
+
+  const typeMap = new Map<TypeCodes, string>();
+  subItems.forEach((item) => {
+    if (item.typeCode == null || item.typeCode === TypeCodes.None) return;
+    if (!typeMap.has(item.typeCode)) {
+      typeMap.set(item.typeCode, getTypeCodeLabel(item.typeCode));
+    }
+  });
+
+  const uniqueModuleNames = Array.from(moduleMap.values()).sort((a, b) =>
+    a.localeCompare(b, "tr")
+  );
+  const uniqueTypeLabels = Array.from(typeMap.values()).sort((a, b) =>
+    a.localeCompare(b, "tr")
+  );
+
+  return { totalPersonCount, uniqueModuleNames, uniqueTypeLabels };
+};
+
+export const formatInlineList = (items: string[]): string => {
+  if (!items.length) return "—";
+  return items.join(", ");
+};
+
+export const formatDateTr = (value?: string | null): string => {  if (!value) return "—";
   const date = parseISO(value);
   if (!isValid(date)) return "—";
   return format(date, "dd.MM.yyyy", { locale: tr });
@@ -20,19 +67,62 @@ export const parseIsoDate = (value?: string | null): Date | undefined => {
   return isValid(date) ? date : undefined;
 };
 
-export const resolveCompanyName = (
-  row: CrmModulDto,
-  workCompanies: WorkCompanyDto[]
+export const resolveModuleNamesFromIds = (
+  ids: string[],
+  modules: { id?: string; name?: string | null }[]
 ): string => {
-  if (row.workCompanyId) {
-    const company = workCompanies.find((c) => c.id === row.workCompanyId);
-    if (company?.name) return company.name;
-  }
-  return row.partnerCompanyName?.trim() || "—";
+  if (!ids.length) return "—";
+  const nameMap = new Map(
+    modules.filter((m) => m.id).map((m) => [m.id as string, m.name ?? ""])
+  );
+  const names = ids.map((id) => nameMap.get(id) || id).filter(Boolean);
+  return names.length > 0 ? names.join(", ") : "—";
 };
 
-export const isDateInRange = (
-  value?: string | null,
+export const resolvePartnerCompanyName = (row: CrmModulDto): string =>
+  row.partnerCompanyName?.trim() || "—";
+
+export const formatSolutionModuleNames = (names?: string[] | null): string => {
+  if (!names?.length) return "—";
+  return names.join(", ");
+};
+
+export const mergeActiveModulesWithSelected = (
+  activeModules: ListModuleDto[],
+  crmData?: CrmModulDto | null
+): ListModuleDto[] => {
+  const merged = new Map<string, ListModuleDto>();
+
+  activeModules.forEach((module) => {
+    if (module.id) {
+      merged.set(module.id, module);
+    }
+  });
+
+  const selectedIds = [
+    ...(crmData?.solutionModuleIds ?? []),
+    ...(crmData?.crmSubItems?.flatMap((item) => item.solutionModuleIds ?? []) ?? []),
+  ];
+  const selectedNames = [
+    ...(crmData?.solutionModuleNames ?? []),
+    ...(crmData?.crmSubItems?.flatMap((item) => item.solutionModuleNames ?? []) ?? []),
+  ];
+
+  selectedIds.forEach((id, index) => {
+    if (!id || merged.has(id)) return;
+    merged.set(id, {
+      id,
+      name: selectedNames[index] ?? id,
+      isActive: false,
+    });
+  });
+
+  return Array.from(merged.values()).sort((a, b) =>
+    (a.name ?? "").localeCompare(b.name ?? "", "tr")
+  );
+};
+
+export const isDateInRange = (  value?: string | null,
   from?: Date,
   to?: Date
 ): boolean => {
