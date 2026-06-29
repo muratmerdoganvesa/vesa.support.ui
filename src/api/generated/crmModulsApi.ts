@@ -68,16 +68,9 @@ export const TypeCodes = {
 
 export type TypeCodes = (typeof TypeCodes)[keyof typeof TypeCodes];
 
-export interface CreateCrmModulDto {
-  partnerCompanyName?: string | null;
-  contactPerson?: string | null;
-  contactTitle?: string | null;
-  phoneNumber?: string | null;
-  email?: string | null;
-  leadSource?: LeadSource | null;
-  accountManager?: string | null;
+export interface CrmSubItemInputDto {
+  id?: string | null;
   solutionModuleIds?: string[] | null;
-  opportunityStage?: OpportunityStage;
   unitPrice?: number | null;
   personCount?: number | null;
   estimatedValue?: number | null;
@@ -89,16 +82,11 @@ export interface CreateCrmModulDto {
   typeCode?: TypeCodes | null;
 }
 
-export interface UpdateCrmModulDto {
-  partnerCompanyName?: string | null;
-  contactPerson?: string | null;
-  contactTitle?: string | null;
-  phoneNumber?: string | null;
-  email?: string | null;
-  leadSource?: LeadSource | null;
-  accountManager?: string | null;
+export interface CrmSubItemDto {
+  id?: string;
+  crmModulId?: string;
   solutionModuleIds?: string[] | null;
-  opportunityStage?: OpportunityStage;
+  solutionModuleNames?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
   estimatedValue?: number | null;
@@ -108,6 +96,33 @@ export interface UpdateCrmModulDto {
   notes?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
+  createdDate?: string;
+  updatedDate?: string | null;
+  uniqNumber?: number;
+}
+
+export interface CreateCrmModulDto {
+  partnerCompanyName?: string | null;
+  contactPerson?: string | null;
+  contactTitle?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  leadSource?: LeadSource | null;
+  accountManager?: string | null;
+  opportunityStage?: OpportunityStage;
+  crmSubItems?: CrmSubItemInputDto[] | null;
+}
+
+export interface UpdateCrmModulDto {
+  partnerCompanyName?: string | null;
+  contactPerson?: string | null;
+  contactTitle?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  leadSource?: LeadSource | null;
+  accountManager?: string | null;
+  opportunityStage?: OpportunityStage;
+  crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
 export interface CrmModulDto {
@@ -119,9 +134,10 @@ export interface CrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
+  opportunityStage?: OpportunityStage;
+  crmSubItems?: CrmSubItemDto[] | null;
   solutionModuleIds?: string[] | null;
   solutionModuleNames?: string[] | null;
-  opportunityStage?: OpportunityStage;
   unitPrice?: number | null;
   personCount?: number | null;
   estimatedValue?: number | null;
