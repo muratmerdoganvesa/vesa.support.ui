@@ -1,15 +1,15 @@
 import {
   CreateCrmModulDto,
+  CrmCurrencyType,
   CrmModulDto,
   LeadSource,
   OpportunityStage,
+  TypeCodes,
   UpdateCrmModulDto,
-  WorkCompanyDto,
 } from "api/generated";
 import { parseIsoDate, toIsoDateString, formatPhoneNumberTr } from "./utils";
 
 export type CrmModulFormValues = {
-  workCompany: WorkCompanyDto | null;
   partnerCompanyName: string;
   contactPerson: string;
   contactTitle: string;
@@ -17,8 +17,10 @@ export type CrmModulFormValues = {
   email: string;
   leadSource: LeadSource;
   accountManager: string;
-  solutionModule: string;
+  solutionModuleIds: string[];
   opportunityStage: OpportunityStage;
+  currencyType: CrmCurrencyType;
+  typeCode: TypeCodes;
   unitPrice: string;
   personCount: string;
   estimatedValue: string;
@@ -29,7 +31,6 @@ export type CrmModulFormValues = {
 };
 
 export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
-  workCompany: null,
   partnerCompanyName: "",
   contactPerson: "",
   contactTitle: "",
@@ -37,8 +38,10 @@ export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
   email: "",
   leadSource: LeadSource.None,
   accountManager: "",
-  solutionModule: "",
+  solutionModuleIds: [],
   opportunityStage: OpportunityStage.None,
+  currencyType: CrmCurrencyType.None,
+  typeCode: TypeCodes.None,
   unitPrice: "",
   personCount: "",
   estimatedValue: "",
@@ -74,16 +77,17 @@ export const calculateEstimatedValueString = (
 };
 
 export const toCreateDto = (values: CrmModulFormValues): CreateCrmModulDto => ({
-  workCompanyId: values.workCompany?.id ?? null,
-  partnerCompanyName: values.partnerCompanyName.trim() || values.workCompany?.name || null,
+  partnerCompanyName: values.partnerCompanyName.trim() || null,
   contactPerson: values.contactPerson.trim() || null,
   contactTitle: values.contactTitle.trim() || null,
   phoneNumber: formatPhoneNumberTr(values.phoneNumber) || null,
   email: values.email.trim() || null,
   leadSource: values.leadSource,
   accountManager: values.accountManager.trim() || null,
-  solutionModule: values.solutionModule.trim() || null,
+  solutionModuleIds: values.solutionModuleIds.length > 0 ? values.solutionModuleIds : null,
   opportunityStage: values.opportunityStage,
+  currencyType: values.currencyType,
+  typeCode: values.typeCode,
   unitPrice: parseOptionalNumber(values.unitPrice),
   personCount: parseOptionalInt(values.personCount),
   estimatedValue: parseOptionalNumber(
@@ -97,36 +101,26 @@ export const toCreateDto = (values: CrmModulFormValues): CreateCrmModulDto => ({
 
 export const toUpdateDto = (values: CrmModulFormValues): UpdateCrmModulDto => toCreateDto(values);
 
-export const crmModulDtoToFormValues = (
-  data: CrmModulDto,
-  workCompanies: WorkCompanyDto[]
-): CrmModulFormValues => {
-  const company =
-    workCompanies.find((c) => c.id === data.workCompanyId) ??
-    (data.workCompanyId
-      ? ({ id: data.workCompanyId, name: data.partnerCompanyName ?? "" } as WorkCompanyDto)
-      : null);
-
-  return {
-    workCompany: company,
-    partnerCompanyName: data.partnerCompanyName ?? "",
-    contactPerson: data.contactPerson ?? "",
-    contactTitle: data.contactTitle ?? "",
-    phoneNumber: formatPhoneNumberTr(data.phoneNumber ?? ""),
-    email: data.email ?? "",
-    leadSource: data.leadSource ?? LeadSource.None,
-    accountManager: data.accountManager ?? "",
-    solutionModule: data.solutionModule ?? "",
-    opportunityStage: data.opportunityStage ?? OpportunityStage.None,
-    unitPrice: data.unitPrice != null ? String(data.unitPrice) : "",
-    personCount: data.personCount != null ? String(data.personCount) : "",
-    estimatedValue: calculateEstimatedValueString(
-      data.unitPrice != null ? String(data.unitPrice) : "",
-      data.personCount != null ? String(data.personCount) : ""
-    ),
-    expectedCloseDate: parseIsoDate(data.expectedCloseDate),
-    lastContactDate: parseIsoDate(data.lastContactDate),
-    nextAction: data.nextAction ?? "",
-    notes: data.notes ?? "",
-  };
-};
+export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues => ({
+  partnerCompanyName: data.partnerCompanyName ?? "",
+  contactPerson: data.contactPerson ?? "",
+  contactTitle: data.contactTitle ?? "",
+  phoneNumber: formatPhoneNumberTr(data.phoneNumber ?? ""),
+  email: data.email ?? "",
+  leadSource: data.leadSource ?? LeadSource.None,
+  accountManager: data.accountManager ?? "",
+  solutionModuleIds: data.solutionModuleIds ?? [],
+  opportunityStage: data.opportunityStage ?? OpportunityStage.None,
+  currencyType: data.currencyType ?? CrmCurrencyType.None,
+  typeCode: data.typeCode ?? TypeCodes.None,
+  unitPrice: data.unitPrice != null ? String(data.unitPrice) : "",
+  personCount: data.personCount != null ? String(data.personCount) : "",
+  estimatedValue: calculateEstimatedValueString(
+    data.unitPrice != null ? String(data.unitPrice) : "",
+    data.personCount != null ? String(data.personCount) : ""
+  ),
+  expectedCloseDate: parseIsoDate(data.expectedCloseDate),
+  lastContactDate: parseIsoDate(data.lastContactDate),
+  nextAction: data.nextAction ?? "",
+  notes: data.notes ?? "",
+});

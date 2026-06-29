@@ -1,4 +1,4 @@
-import { CrmModulsApi, WorkCompanyApi, WorkCompanyDto } from "api/generated";
+import { CrmModulsApi, ListModuleDto, ModuleApi } from "api/generated";
 import { Button } from "components/ui/button";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -16,6 +16,7 @@ import {
   toUpdateDto,
   type CrmModulFormValues,
 } from "../formMappers";
+import { mergeActiveModulesWithSelected } from "../utils";
 
 const CrmModulDetailPage = () => {
   const { id } = useParams();
@@ -25,8 +26,8 @@ const CrmModulDetailPage = () => {
 
   const isEditMode = Boolean(id);
   const [formValues, setFormValues] = useState<CrmModulFormValues>(emptyCrmModulFormValues());
-  const [workCompanies, setWorkCompanies] = useState<WorkCompanyDto[]>([]);
-  const [loading, setLoading] = useState(isEditMode);
+  const [modules, setModules] = useState<ListModuleDto[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -34,16 +35,17 @@ const CrmModulDetailPage = () => {
         dispatchBusy({ isBusy: true });
         setLoading(true);
         const conf = getConfiguration();
-        const companyApi = new WorkCompanyApi(conf);
-        const companyResponse = await companyApi.apiWorkCompanyGet();
-        const companies = companyResponse.data ?? [];
-        setWorkCompanies(companies);
+        const moduleApi = new ModuleApi(conf);
+        const modulesResponse = await moduleApi.apiModuleGetActiveModulesGet();
+        const activeModules = modulesResponse.data ?? [];
 
         if (id) {
           const crmApi = new CrmModulsApi(conf);
           const response = await crmApi.apiCrmModulsIdGet(id);
-          setFormValues(crmModulDtoToFormValues(response.data, companies));
+          setModules(mergeActiveModulesWithSelected(activeModules, response.data));
+          setFormValues(crmModulDtoToFormValues(response.data));
         } else {
+          setModules(activeModules);
           setFormValues(emptyCrmModulFormValues());
         }
       } catch {
@@ -66,8 +68,8 @@ const CrmModulDetailPage = () => {
   }, [id]);
 
   const handleSave = async () => {
-    if (!formValues.workCompany?.id) {
-      dispatchAlert({ message: "Şirket seçimi zorunludur.", type: "error" });
+    if (!formValues.partnerCompanyName.trim()) {
+      dispatchAlert({ message: "Şirket adı zorunludur.", type: "error" });
       return;
     }
 
@@ -90,6 +92,8 @@ const CrmModulDetailPage = () => {
       dispatchBusy({ isBusy: false });
     }
   };
+
+  const canSave = !loading && Boolean(formValues.partnerCompanyName.trim());
 
   return (
     <DashboardLayout>
@@ -119,7 +123,7 @@ const CrmModulDetailPage = () => {
             ) : (
               <CrmModulFormFields
                 values={formValues}
-                workCompanies={workCompanies}
+                modules={modules}
                 onChange={setFormValues}
               />
             )}
@@ -138,7 +142,7 @@ const CrmModulDetailPage = () => {
             <Button
               type="button"
               onClick={handleSave}
-              disabled={loading || !formValues.workCompany?.id}
+              disabled={!canSave}
               className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200 transition-all hover:-translate-y-0.5"
             >
               <Save className="size-4" />

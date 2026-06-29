@@ -1,4 +1,10 @@
-import { LeadSource, OpportunityStage, WorkCompanyDto } from "api/generated";
+import {
+  CrmCurrencyType,
+  LeadSource,
+  ListModuleDto,
+  OpportunityStage,
+  TypeCodes,
+} from "api/generated";
 import { type ReactNode } from "react";
 import { Button } from "components/ui/button";
 import { Calendar } from "components/ui/calendar";
@@ -22,15 +28,21 @@ import { Textarea } from "components/ui/textarea";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarDays } from "lucide-react";
-import { SearchableSelect } from "layouts/pages/userProjects/components/SearchableSelect";
 import { cn } from "lib/utils";
-import { OPPORTUNITY_STAGE_OPTIONS, LEAD_SOURCE_OPTIONS } from "../constants";
+import {
+  CURRENCY_TYPE_OPTIONS,
+  getCurrencySymbol,
+  LEAD_SOURCE_OPTIONS,
+  OPPORTUNITY_STAGE_OPTIONS,
+  TYPE_CODE_OPTIONS,
+} from "../constants";
 import { calculateEstimatedValueString, type CrmModulFormValues } from "../formMappers";
 import { formatPhoneNumberTr } from "../utils";
+import { ModuleMultiSelect } from "./ModuleMultiSelect";
 
 type CrmModulFormFieldsProps = {
   values: CrmModulFormValues;
-  workCompanies: WorkCompanyDto[];
+  modules: ListModuleDto[];
   onChange: (values: CrmModulFormValues) => void;
 };
 
@@ -109,10 +121,11 @@ const DatePickerField = ({
   </Field>
 );
 
-const EuroInput = ({
+const CurrencyInput = ({
   id,
   value,
   onChange,
+  currencyType,
   placeholder,
   readOnly = false,
   disabled = false,
@@ -120,13 +133,14 @@ const EuroInput = ({
   id: string;
   value: string;
   onChange?: (value: string) => void;
+  currencyType: CrmCurrencyType;
   placeholder?: string;
   readOnly?: boolean;
   disabled?: boolean;
 }) => (
   <InputGroup className="h-10 bg-white">
     <InputGroupAddon>
-      <InputGroupText>€</InputGroupText>
+      <InputGroupText>{getCurrencySymbol(currencyType)}</InputGroupText>
     </InputGroupAddon>
     <InputGroupInput
       id={id}
@@ -144,24 +158,12 @@ const EuroInput = ({
   </InputGroup>
 );
 
-export const CrmModulFormFields = ({
-  values,
-  workCompanies,
-  onChange,
-}: CrmModulFormFieldsProps) => {
+export const CrmModulFormFields = ({ values, modules, onChange }: CrmModulFormFieldsProps) => {
   const handleFieldChange = <K extends keyof CrmModulFormValues>(
     key: K,
     value: CrmModulFormValues[K]
   ) => {
     onChange({ ...values, [key]: value });
-  };
-
-  const handleWorkCompanyChange = (company: WorkCompanyDto | null) => {
-    onChange({
-      ...values,
-      workCompany: company,
-      partnerCompanyName: company?.name ?? values.partnerCompanyName,
-    });
   };
 
   const handlePhoneChange = (raw: string) => {
@@ -184,30 +186,55 @@ export const CrmModulFormFields = ({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-      {/* Sol kolon */}
       <div className="flex flex-col gap-5">
         <SectionCard title="Şirket Bilgileri">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Şirket" required className="md:col-span-1">
-              <SearchableSelect
-                options={workCompanies}
-                value={values.workCompany}
-                getLabel={(c) => c.name ?? ""}
-                getId={(c) => c.id ?? ""}
-                onChange={handleWorkCompanyChange}
-                placeholder="Şirket seçin..."
-                searchPlaceholder="Şirket ara..."
-                className="max-w-full"
-              />
-            </Field>
-            <Field label="Partner Şirket Adı" htmlFor="crm-partner-company">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Şirket Adı" htmlFor="crm-partner-company" required className="sm:col-span-2">
               <Input
                 id="crm-partner-company"
                 value={values.partnerCompanyName}
                 onChange={(e) => handleFieldChange("partnerCompanyName", e.target.value)}
-                placeholder="Partner şirket adı"
+                placeholder="Şirket Adı"
                 className="h-10 bg-white"
               />
+            </Field>
+            <Field label="Lead Kaynağı">
+              <Select
+                value={String(values.leadSource)}
+                onValueChange={(v) =>
+                  handleFieldChange("leadSource", Number(v) as LeadSource)
+                }
+              >
+                <SelectTrigger className="h-10 bg-white">
+                  <SelectValue placeholder="Lead kaynağı seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LEAD_SOURCE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Fırsat Aşaması">
+              <Select
+                value={String(values.opportunityStage)}
+                onValueChange={(v) =>
+                  handleFieldChange("opportunityStage", Number(v) as OpportunityStage)
+                }
+              >
+                <SelectTrigger className="h-10 bg-white">
+                  <SelectValue placeholder="Aşama seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPPORTUNITY_STAGE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={String(opt.value)}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
         </SectionCard>
@@ -259,29 +286,9 @@ export const CrmModulFormFields = ({
         </SectionCard>
       </div>
 
-      {/* Sağ kolon */}
       <div className="flex flex-col gap-5">
         <SectionCard title="Fırsat & Satış">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Lead Kaynağı">
-              <Select
-                value={String(values.leadSource)}
-                onValueChange={(v) =>
-                  handleFieldChange("leadSource", Number(v) as LeadSource)
-                }
-              >
-                <SelectTrigger className="h-10 bg-white">
-                  <SelectValue placeholder="Lead kaynağı seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEAD_SOURCE_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={String(opt.value)}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
             <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager">
               <Input
                 id="crm-account-manager"
@@ -291,27 +298,26 @@ export const CrmModulFormFields = ({
                 className="h-10 bg-white"
               />
             </Field>
-            <Field label="Çözüm Modülü" htmlFor="crm-solution-module">
-              <Input
-                id="crm-solution-module"
-                value={values.solutionModule}
-                onChange={(e) => handleFieldChange("solutionModule", e.target.value)}
-                placeholder="Çözüm modülü"
-                className="h-10 bg-white"
+            <Field label="SuccessFactors Modülü" className="sm:col-span-2">
+              <ModuleMultiSelect
+                options={modules}
+                value={values.solutionModuleIds}
+                onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
+                placeholder="SuccessFactors modülü seçin..."
               />
             </Field>
-            <Field label="Fırsat Aşaması">
+            <Field label="Tip">
               <Select
-                value={String(values.opportunityStage)}
+                value={String(values.typeCode)}
                 onValueChange={(v) =>
-                  handleFieldChange("opportunityStage", Number(v) as OpportunityStage)
+                  handleFieldChange("typeCode", Number(v) as TypeCodes)
                 }
               >
                 <SelectTrigger className="h-10 bg-white">
-                  <SelectValue placeholder="Aşama seçin" />
+                  <SelectValue placeholder="Tip seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {OPPORTUNITY_STAGE_OPTIONS.map((opt) => (
+                  {TYPE_CODE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={String(opt.value)}>
                       {opt.label}
                     </SelectItem>
@@ -321,44 +327,70 @@ export const CrmModulFormFields = ({
             </Field>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1 border-t border-slate-200/80">
-            <Field label="Birim Fiyat" htmlFor="crm-unit-price">
-              <EuroInput
-                id="crm-unit-price"
-                value={values.unitPrice}
-                onChange={(unitPrice) =>
-                  handlePricingChange(unitPrice, values.personCount)
-                }
-                placeholder="0.00"
-              />
-            </Field>
-            <Field label="Kişi Sayısı" htmlFor="crm-person-count">
-              <Input
-                id="crm-person-count"
-                type="number"
-                min="0"
-                step="1"
-                value={values.personCount}
-                onChange={(e) =>
-                  handlePricingChange(values.unitPrice, e.target.value)
-                }
-                placeholder="0"
-                className="h-10 bg-white"
-              />
-            </Field>
-            <Field label="Tahmini Değer" htmlFor="crm-estimated-value">
-              <EuroInput
-                id="crm-estimated-value"
-                value={estimatedValueDisplay}
-                placeholder="—"
-                readOnly
-                disabled
-              />
-            </Field>
+          <div className="space-y-4 pt-4 border-t border-slate-200/80">
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Fiyat
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <Field label="Para Birimi">
+                <Select
+                  value={String(values.currencyType)}
+                  onValueChange={(v) =>
+                    handleFieldChange("currencyType", Number(v) as CrmCurrencyType)
+                  }
+                >
+                  <SelectTrigger className="h-10 bg-white">
+                    <SelectValue placeholder="Para birimi seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_TYPE_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={String(opt.value)}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Birim Fiyat" htmlFor="crm-unit-price">
+                <CurrencyInput
+                  id="crm-unit-price"
+                  value={values.unitPrice}
+                  currencyType={values.currencyType}
+                  onChange={(unitPrice) =>
+                    handlePricingChange(unitPrice, values.personCount)
+                  }
+                  placeholder="0.00"
+                />
+              </Field>
+              <Field label="Kişi Sayısı" htmlFor="crm-person-count">
+                <Input
+                  id="crm-person-count"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={values.personCount}
+                  onChange={(e) =>
+                    handlePricingChange(values.unitPrice, e.target.value)
+                  }
+                  placeholder="0"
+                  className="h-10 bg-white"
+                />
+              </Field>
+              <Field label="Tahmini Değer" htmlFor="crm-estimated-value">
+                <CurrencyInput
+                  id="crm-estimated-value"
+                  value={estimatedValueDisplay}
+                  currencyType={values.currencyType}
+                  placeholder="—"
+                  readOnly
+                  disabled
+                />
+              </Field>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tahmini değer otomatik: birim fiyat × kişi sayısı
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground -mt-1">
-            Tahmini değer otomatik: birim fiyat × kişi sayısı
-          </p>
         </SectionCard>
 
         <SectionCard title="Tarihler">
@@ -377,7 +409,6 @@ export const CrmModulFormFields = ({
         </SectionCard>
       </div>
 
-      {/* Alt tam genişlik */}
       <SectionCard title="Diğer" className="xl:col-span-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Sonraki Aksiyon" htmlFor="crm-next-action">

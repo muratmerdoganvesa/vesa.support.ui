@@ -1,9 +1,8 @@
 import { format, isValid, parseISO, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CrmModulDto, WorkCompanyDto } from "api/generated";
+import { CrmModulDto, ListModuleDto } from "api/generated";
 
-export const formatDateTr = (value?: string | null): string => {
-  if (!value) return "—";
+export const formatDateTr = (value?: string | null): string => {  if (!value) return "—";
   const date = parseISO(value);
   if (!isValid(date)) return "—";
   return format(date, "dd.MM.yyyy", { locale: tr });
@@ -20,19 +19,44 @@ export const parseIsoDate = (value?: string | null): Date | undefined => {
   return isValid(date) ? date : undefined;
 };
 
-export const resolveCompanyName = (
-  row: CrmModulDto,
-  workCompanies: WorkCompanyDto[]
-): string => {
-  if (row.workCompanyId) {
-    const company = workCompanies.find((c) => c.id === row.workCompanyId);
-    if (company?.name) return company.name;
-  }
-  return row.partnerCompanyName?.trim() || "—";
+export const resolvePartnerCompanyName = (row: CrmModulDto): string =>
+  row.partnerCompanyName?.trim() || "—";
+
+export const formatSolutionModuleNames = (names?: string[] | null): string => {
+  if (!names?.length) return "—";
+  return names.join(", ");
 };
 
-export const isDateInRange = (
-  value?: string | null,
+export const mergeActiveModulesWithSelected = (
+  activeModules: ListModuleDto[],
+  crmData?: CrmModulDto | null
+): ListModuleDto[] => {
+  const merged = new Map<string, ListModuleDto>();
+
+  activeModules.forEach((module) => {
+    if (module.id) {
+      merged.set(module.id, module);
+    }
+  });
+
+  const selectedIds = crmData?.solutionModuleIds ?? [];
+  const selectedNames = crmData?.solutionModuleNames ?? [];
+
+  selectedIds.forEach((id, index) => {
+    if (!id || merged.has(id)) return;
+    merged.set(id, {
+      id,
+      name: selectedNames[index] ?? id,
+      isActive: false,
+    });
+  });
+
+  return Array.from(merged.values()).sort((a, b) =>
+    (a.name ?? "").localeCompare(b.name ?? "", "tr")
+  );
+};
+
+export const isDateInRange = (  value?: string | null,
   from?: Date,
   to?: Date
 ): boolean => {

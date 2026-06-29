@@ -18,6 +18,11 @@ import {
 import type { RequestArgs } from "./base";
 import { BaseAPI } from "./base";
 
+export interface EnumOptionDto {
+  key?: number;
+  description?: string | null;
+}
+
 export const OpportunityStage = {
   None: 0,
   New: 1,
@@ -40,14 +45,30 @@ export const LeadSource = {
   Partner: 4,
   Event: 5,
   SAP: 6,
-  Arete: 7,
-  Other: 8,
+  Other: 7,
 } as const;
 
 export type LeadSource = (typeof LeadSource)[keyof typeof LeadSource];
 
+export const CrmCurrencyType = {
+  None: 0,
+  TRY: 1,
+  USD: 2,
+  EUR: 3,
+} as const;
+
+export type CrmCurrencyType = (typeof CrmCurrencyType)[keyof typeof CrmCurrencyType];
+
+export const TypeCodes = {
+  None: 0,
+  Lisance: 1,
+  Consulting: 2,
+  MSP: 3,
+} as const;
+
+export type TypeCodes = (typeof TypeCodes)[keyof typeof TypeCodes];
+
 export interface CreateCrmModulDto {
-  workCompanyId?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -55,7 +76,7 @@ export interface CreateCrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  solutionModule?: string | null;
+  solutionModuleIds?: string[] | null;
   opportunityStage?: OpportunityStage;
   unitPrice?: number | null;
   personCount?: number | null;
@@ -64,10 +85,11 @@ export interface CreateCrmModulDto {
   lastContactDate?: string | null;
   nextAction?: string | null;
   notes?: string | null;
+  currencyType?: CrmCurrencyType | null;
+  typeCode?: TypeCodes | null;
 }
 
 export interface UpdateCrmModulDto {
-  workCompanyId?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -75,7 +97,7 @@ export interface UpdateCrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  solutionModule?: string | null;
+  solutionModuleIds?: string[] | null;
   opportunityStage?: OpportunityStage;
   unitPrice?: number | null;
   personCount?: number | null;
@@ -84,11 +106,12 @@ export interface UpdateCrmModulDto {
   lastContactDate?: string | null;
   nextAction?: string | null;
   notes?: string | null;
+  currencyType?: CrmCurrencyType | null;
+  typeCode?: TypeCodes | null;
 }
 
 export interface CrmModulDto {
   id?: string;
-  workCompanyId?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -96,7 +119,8 @@ export interface CrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  solutionModule?: string | null;
+  solutionModuleIds?: string[] | null;
+  solutionModuleNames?: string[] | null;
   opportunityStage?: OpportunityStage;
   unitPrice?: number | null;
   personCount?: number | null;
@@ -105,6 +129,8 @@ export interface CrmModulDto {
   lastContactDate?: string | null;
   nextAction?: string | null;
   notes?: string | null;
+  currencyType?: CrmCurrencyType | null;
+  typeCode?: TypeCodes | null;
   createdDate?: string;
   updatedDate?: string | null;
   uniqNumber?: number;
@@ -114,6 +140,72 @@ export const CrmModulsApiAxiosParamCreator = function (configuration?: Configura
   return {
     apiCrmModulsGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
       const localVarPath = `/api/CrmModuls`;
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      const baseOptions = configuration?.baseOptions;
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options };
+      const localVarHeaderParameter = {} as Record<string, string>;
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, {});
+      const headersFromBaseOptions = baseOptions?.headers ?? {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
+    },
+    apiCrmModulsLeadSourcesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+      const localVarPath = `/api/CrmModuls/LeadSources`;
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      const baseOptions = configuration?.baseOptions;
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options };
+      const localVarHeaderParameter = {} as Record<string, string>;
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, {});
+      const headersFromBaseOptions = baseOptions?.headers ?? {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
+    },
+    apiCrmModulsOpportunityStagesGet: async (
+      options: RawAxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      const localVarPath = `/api/CrmModuls/OpportunityStages`;
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      const baseOptions = configuration?.baseOptions;
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options };
+      const localVarHeaderParameter = {} as Record<string, string>;
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, {});
+      const headersFromBaseOptions = baseOptions?.headers ?? {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
+    },
+    apiCrmModulsCurrencyTypesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+      const localVarPath = `/api/CrmModuls/CurrencyTypes`;
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      const baseOptions = configuration?.baseOptions;
+      const localVarRequestOptions = { method: "GET", ...baseOptions, ...options };
+      const localVarHeaderParameter = {} as Record<string, string>;
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      setSearchParams(localVarUrlObj, {});
+      const headersFromBaseOptions = baseOptions?.headers ?? {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
+    },
+    apiCrmModulsTypeCodesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+      const localVarPath = `/api/CrmModuls/TypeCodes`;
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       const baseOptions = configuration?.baseOptions;
       const localVarRequestOptions = { method: "GET", ...baseOptions, ...options };
@@ -228,6 +320,30 @@ export const CrmModulsApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsGet(options);
       return createRequestFunction(localVarAxiosArgs, configuration);
     },
+    async apiCrmModulsLeadSourcesGet(
+      options?: RawAxiosRequestConfig
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsLeadSourcesGet(options);
+      return createRequestFunction(localVarAxiosArgs, configuration);
+    },
+    async apiCrmModulsOpportunityStagesGet(
+      options?: RawAxiosRequestConfig
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsOpportunityStagesGet(options);
+      return createRequestFunction(localVarAxiosArgs, configuration);
+    },
+    async apiCrmModulsCurrencyTypesGet(
+      options?: RawAxiosRequestConfig
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsCurrencyTypesGet(options);
+      return createRequestFunction(localVarAxiosArgs, configuration);
+    },
+    async apiCrmModulsTypeCodesGet(
+      options?: RawAxiosRequestConfig
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsTypeCodesGet(options);
+      return createRequestFunction(localVarAxiosArgs, configuration);
+    },
     async apiCrmModulsIdGet(
       id: string,
       options?: RawAxiosRequestConfig
@@ -264,6 +380,30 @@ export class CrmModulsApi extends BaseAPI {
   public apiCrmModulsGet(options?: RawAxiosRequestConfig) {
     return CrmModulsApiFp(this.configuration)
       .apiCrmModulsGet(options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  public apiCrmModulsLeadSourcesGet(options?: RawAxiosRequestConfig) {
+    return CrmModulsApiFp(this.configuration)
+      .apiCrmModulsLeadSourcesGet(options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  public apiCrmModulsOpportunityStagesGet(options?: RawAxiosRequestConfig) {
+    return CrmModulsApiFp(this.configuration)
+      .apiCrmModulsOpportunityStagesGet(options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  public apiCrmModulsCurrencyTypesGet(options?: RawAxiosRequestConfig) {
+    return CrmModulsApiFp(this.configuration)
+      .apiCrmModulsCurrencyTypesGet(options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  public apiCrmModulsTypeCodesGet(options?: RawAxiosRequestConfig) {
+    return CrmModulsApiFp(this.configuration)
+      .apiCrmModulsTypeCodesGet(options)
       .then((request) => request(this.axios, this.basePath));
   }
 
