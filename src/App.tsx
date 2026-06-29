@@ -315,9 +315,7 @@ export default function App() {
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
-                    <Route path="/crmModul" element={<CrmModulPage />} />
-            <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
-            <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
+         
 
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
@@ -333,7 +331,9 @@ export default function App() {
             <Route path="/webEvents" element={<WebEvents />} />
             <Route path="/webEvents/detail" element={<WebEventsCE />} />
             <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
- 
+            <Route path="/crmModul" element={<CrmModulPage />} />
+            <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
+            <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}
