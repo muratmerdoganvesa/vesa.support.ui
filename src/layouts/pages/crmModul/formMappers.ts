@@ -33,8 +33,6 @@ export type CrmSubItemFormValues = {
   estimatedValue: string;
   expectedCloseDate?: Date;
   lastContactDate?: Date;
-  nextAction: string;
-  notes: string;
 };
 
 export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
@@ -58,8 +56,6 @@ export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
   estimatedValue: "",
   expectedCloseDate: undefined,
   lastContactDate: undefined,
-  nextAction: "",
-  notes: "",
 });
 
 const parseOptionalNumber = (value: string): number | null => {
@@ -99,8 +95,6 @@ const toSubItemInputDto = (item: CrmSubItemFormValues): CrmSubItemInputDto => ({
   ),
   expectedCloseDate: toIsoDateString(item.expectedCloseDate),
   lastContactDate: toIsoDateString(item.lastContactDate),
-  nextAction: item.nextAction.trim() || null,
-  notes: item.notes.trim() || null,
 });
 
 export const toCreateDto = (
@@ -149,6 +143,4 @@ export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFo
     ),
     expectedCloseDate: parseIsoDate(item.expectedCloseDate),
     lastContactDate: parseIsoDate(item.lastContactDate),
-    nextAction: item.nextAction ?? "",
-    notes: item.notes ?? "",
   }));

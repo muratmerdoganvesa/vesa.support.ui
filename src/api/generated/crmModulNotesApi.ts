@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * CrmSubItems API — OpenAPI Generator uyumlu client
+ * CrmModulNotes API — OpenAPI Generator uyumlu client
  */
 
 import type { Configuration } from "./configuration";
@@ -17,40 +17,36 @@ import {
 } from "./common";
 import type { RequestArgs } from "./base";
 import { BaseAPI } from "./base";
-import type { CrmSubItemDto } from "./crmModulsApi";
-import type { CrmCurrencyType, TypeCodes } from "./crmModulsApi";
 
-export interface CreateCrmSubItemDto {
+export interface CrmModulNoteDto {
+  id?: string;
+  crmModulId?: string;
+  nextAction?: string | null;
+  notes?: string | null;
+  createdDate?: string;
+  updatedDate?: string | null;
+  uniqNumber?: number;
+}
+
+export interface CreateCrmModulNoteDto {
   crmModulId: string;
-  solutionModuleIds?: string[] | null;
-  unitPrice?: number | null;
-  personCount?: number | null;
-  estimatedValue?: number | null;
-  expectedCloseDate?: string | null;
-  lastContactDate?: string | null;
-  currencyType?: CrmCurrencyType | null;
-  typeCode?: TypeCodes | null;
+  nextAction?: string | null;
+  notes?: string | null;
 }
 
-export interface UpdateCrmSubItemDto {
-  solutionModuleIds?: string[] | null;
-  unitPrice?: number | null;
-  personCount?: number | null;
-  estimatedValue?: number | null;
-  expectedCloseDate?: string | null;
-  lastContactDate?: string | null;
-  currencyType?: CrmCurrencyType | null;
-  typeCode?: TypeCodes | null;
+export interface UpdateCrmModulNoteDto {
+  nextAction?: string | null;
+  notes?: string | null;
 }
 
-export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configuration) {
+export const CrmModulNotesApiAxiosParamCreator = function (configuration?: Configuration) {
   return {
-    apiCrmSubItemsByCrmModulCrmModulIdGet: async (
+    apiCrmModulNotesByCrmModulCrmModulIdGet: async (
       crmModulId: string,
       options: RawAxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
-      assertParamExists("apiCrmSubItemsByCrmModulCrmModulIdGet", "crmModulId", crmModulId);
-      const localVarPath = `/api/CrmSubItems/ByCrmModul/{crmModulId}`.replace(
+      assertParamExists("apiCrmModulNotesByCrmModulCrmModulIdGet", "crmModulId", crmModulId);
+      const localVarPath = `/api/CrmModulNotes/ByCrmModul/{crmModulId}`.replace(
         `{${"crmModulId"}}`,
         encodeURIComponent(String(crmModulId))
       );
@@ -68,9 +64,9 @@ export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configu
       };
       return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
     },
-    apiCrmSubItemsIdGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-      assertParamExists("apiCrmSubItemsIdGet", "id", id);
-      const localVarPath = `/api/CrmSubItems/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(id)));
+    apiCrmModulNotesIdGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+      assertParamExists("apiCrmModulNotesIdGet", "id", id);
+      const localVarPath = `/api/CrmModulNotes/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(id)));
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       const baseOptions = configuration?.baseOptions;
       const localVarRequestOptions = { method: "GET", ...baseOptions, ...options };
@@ -85,59 +81,54 @@ export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configu
       };
       return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
     },
-    apiCrmSubItemsPost: async (
-      createCrmSubItemDto?: CreateCrmSubItemDto,
+    apiCrmModulNotesPost: async (
+      createCrmModulNoteDto?: CreateCrmModulNoteDto,
       options: RawAxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
-      const localVarPath = `/api/CrmSubItems`;
+      const localVarPath = `/api/CrmModulNotes`;
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       const baseOptions = configuration?.baseOptions;
       const localVarRequestOptions = { method: "POST", ...baseOptions, ...options };
       const localVarHeaderParameter = {} as Record<string, string>;
+      const localVarQueryParameter = {} as Record<string, unknown>;
       await setBearerAuthToObject(localVarHeaderParameter, configuration);
       localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
       const headersFromBaseOptions = baseOptions?.headers ?? {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
         ...options.headers,
       };
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        createCrmSubItemDto,
-        localVarRequestOptions,
-        configuration
-      );
+      localVarRequestOptions.data = serializeDataIfNeeded(createCrmModulNoteDto, localVarRequestOptions, configuration);
       return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
     },
-    apiCrmSubItemsIdPut: async (
+    apiCrmModulNotesIdPut: async (
       id: string,
-      updateCrmSubItemDto?: UpdateCrmSubItemDto,
+      updateCrmModulNoteDto?: UpdateCrmModulNoteDto,
       options: RawAxiosRequestConfig = {}
     ): Promise<RequestArgs> => {
-      assertParamExists("apiCrmSubItemsIdPut", "id", id);
-      const localVarPath = `/api/CrmSubItems/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(id)));
+      assertParamExists("apiCrmModulNotesIdPut", "id", id);
+      const localVarPath = `/api/CrmModulNotes/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(id)));
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       const baseOptions = configuration?.baseOptions;
       const localVarRequestOptions = { method: "PUT", ...baseOptions, ...options };
       const localVarHeaderParameter = {} as Record<string, string>;
       await setBearerAuthToObject(localVarHeaderParameter, configuration);
       localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, {});
       const headersFromBaseOptions = baseOptions?.headers ?? {};
       localVarRequestOptions.headers = {
         ...localVarHeaderParameter,
         ...headersFromBaseOptions,
         ...options.headers,
       };
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        updateCrmSubItemDto,
-        localVarRequestOptions,
-        configuration
-      );
+      localVarRequestOptions.data = serializeDataIfNeeded(updateCrmModulNoteDto, localVarRequestOptions, configuration);
       return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
     },
-    apiCrmSubItemsIdDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
-      assertParamExists("apiCrmSubItemsIdDelete", "id", id);
-      const localVarPath = `/api/CrmSubItems/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(id)));
+    apiCrmModulNotesIdDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+      assertParamExists("apiCrmModulNotesIdDelete", "id", id);
+      const localVarPath = `/api/CrmModulNotes/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(id)));
       const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
       const baseOptions = configuration?.baseOptions;
       const localVarRequestOptions = { method: "DELETE", ...baseOptions, ...options };
@@ -155,83 +146,90 @@ export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configu
   };
 };
 
-export const CrmSubItemsApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator = CrmSubItemsApiAxiosParamCreator(configuration);
+export const CrmModulNotesApiFp = function (configuration?: Configuration) {
+  const localVarAxiosParamCreator = CrmModulNotesApiAxiosParamCreator(configuration);
   return {
-    async apiCrmSubItemsByCrmModulCrmModulIdGet(
+    async apiCrmModulNotesByCrmModulCrmModulIdGet(
       crmModulId: string,
       options?: RawAxiosRequestConfig
-    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<CrmSubItemDto>>> {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsByCrmModulCrmModulIdGet(
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmModulNoteDto[]>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesByCrmModulCrmModulIdGet(
         crmModulId,
         options
       );
       return createRequestFunction(localVarAxiosArgs, configuration);
     },
-    async apiCrmSubItemsIdGet(
+    async apiCrmModulNotesIdGet(
       id: string,
       options?: RawAxiosRequestConfig
-    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmSubItemDto>> {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsIdGet(id, options);
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmModulNoteDto>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesIdGet(id, options);
       return createRequestFunction(localVarAxiosArgs, configuration);
     },
-    async apiCrmSubItemsPost(
-      createCrmSubItemDto?: CreateCrmSubItemDto,
+    async apiCrmModulNotesPost(
+      createCrmModulNoteDto?: CreateCrmModulNoteDto,
       options?: RawAxiosRequestConfig
     ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsPost(createCrmSubItemDto, options);
-      return createRequestFunction(localVarAxiosArgs, configuration);
-    },
-    async apiCrmSubItemsIdPut(
-      id: string,
-      updateCrmSubItemDto?: UpdateCrmSubItemDto,
-      options?: RawAxiosRequestConfig
-    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsIdPut(
-        id,
-        updateCrmSubItemDto,
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesPost(
+        createCrmModulNoteDto,
         options
       );
       return createRequestFunction(localVarAxiosArgs, configuration);
     },
-    async apiCrmSubItemsIdDelete(
+    async apiCrmModulNotesIdPut(
+      id: string,
+      updateCrmModulNoteDto?: UpdateCrmModulNoteDto,
+      options?: RawAxiosRequestConfig
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesIdPut(
+        id,
+        updateCrmModulNoteDto,
+        options
+      );
+      return createRequestFunction(localVarAxiosArgs, configuration);
+    },
+    async apiCrmModulNotesIdDelete(
       id: string,
       options?: RawAxiosRequestConfig
     ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsIdDelete(id, options);
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesIdDelete(id, options);
       return createRequestFunction(localVarAxiosArgs, configuration);
     },
   };
 };
 
-export class CrmSubItemsApi extends BaseAPI {
-  public apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig) {
-    return CrmSubItemsApiFp(this.configuration)
-      .apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId, options)
+export class CrmModulNotesApi extends BaseAPI {
+  public apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig) {
+    return CrmModulNotesApiFp(this.configuration)
+      .apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId, options)
       .then((request) => request(this.axios, this.basePath));
   }
 
-  public apiCrmSubItemsIdGet(id: string, options?: RawAxiosRequestConfig) {
-    return CrmSubItemsApiFp(this.configuration)
-      .apiCrmSubItemsIdGet(id, options)
+  public apiCrmModulNotesIdGet(id: string, options?: RawAxiosRequestConfig) {
+    return CrmModulNotesApiFp(this.configuration)
+      .apiCrmModulNotesIdGet(id, options)
       .then((request) => request(this.axios, this.basePath));
   }
 
-  public apiCrmSubItemsPost(createCrmSubItemDto?: CreateCrmSubItemDto, options?: RawAxiosRequestConfig) {
-    return CrmSubItemsApiFp(this.configuration)
-      .apiCrmSubItemsPost(createCrmSubItemDto, options)
+  public apiCrmModulNotesPost(createCrmModulNoteDto?: CreateCrmModulNoteDto, options?: RawAxiosRequestConfig) {
+    return CrmModulNotesApiFp(this.configuration)
+      .apiCrmModulNotesPost(createCrmModulNoteDto, options)
       .then((request) => request(this.axios, this.basePath));
   }
 
-  public apiCrmSubItemsIdPut(id: string, updateCrmSubItemDto?: UpdateCrmSubItemDto, options?: RawAxiosRequestConfig) {
-    return CrmSubItemsApiFp(this.configuration)
-      .apiCrmSubItemsIdPut(id, updateCrmSubItemDto, options)
+  public apiCrmModulNotesIdPut(
+    id: string,
+    updateCrmModulNoteDto?: UpdateCrmModulNoteDto,
+    options?: RawAxiosRequestConfig
+  ) {
+    return CrmModulNotesApiFp(this.configuration)
+      .apiCrmModulNotesIdPut(id, updateCrmModulNoteDto, options)
       .then((request) => request(this.axios, this.basePath));
   }
 
-  public apiCrmSubItemsIdDelete(id: string, options?: RawAxiosRequestConfig) {
-    return CrmSubItemsApiFp(this.configuration)
-      .apiCrmSubItemsIdDelete(id, options)
+  public apiCrmModulNotesIdDelete(id: string, options?: RawAxiosRequestConfig) {
+    return CrmModulNotesApiFp(this.configuration)
+      .apiCrmModulNotesIdDelete(id, options)
       .then((request) => request(this.axios, this.basePath));
   }
 }

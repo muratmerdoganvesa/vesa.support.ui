@@ -8,10 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "components/ui/table";
-import { cn } from "lib/utils";
 import { ListOrdered, Pencil, Plus, Trash2 } from "lucide-react";
-import { useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   getCurrencySymbol,
   getCurrencyTypeLabel,
@@ -26,139 +23,6 @@ type CrmSubItemListProps = {
   onAdd: () => void;
   onEdit: (clientKey: string) => void;
   onDelete: (clientKey: string) => void;
-};
-
-const DetailBlock = ({ label, value }: { label: string; value: string }) => (
-  <div className="space-y-1">
-    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-    <p className="text-sm text-slate-700 whitespace-pre-wrap break-words leading-relaxed">
-      {value.trim() || "—"}
-    </p>
-  </div>
-);
-
-type ModuleRowProps = {
-  item: CrmSubItemFormValues;
-  index: number;
-  modules: ListModuleDto[];
-  onEdit: (clientKey: string) => void;
-  onDelete: (clientKey: string) => void;
-};
-
-const ModuleRow = ({ item, index, modules, onEdit, onDelete }: ModuleRowProps) => {
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const estimated = calculateEstimatedValueString(item.unitPrice, item.personCount);
-  const symbol = getCurrencySymbol(item.currencyType);
-  const expectedCloseLabel = formatDateTr(toIsoDateString(item.expectedCloseDate));
-  const lastContactLabel = formatDateTr(toIsoDateString(item.lastContactDate));
-  const hasHoverDetails = Boolean(item.nextAction.trim() || item.notes.trim());
-
-  const openDetails = (target: HTMLElement) => {
-    const rect = target.getBoundingClientRect();
-    setPosition({ x: rect.left + rect.width / 2, y: rect.bottom });
-    setShowDetails(true);
-  };
-
-  const handleRowMouseEnter = (e: React.MouseEvent<HTMLTableRowElement>) => {
-    if (!hasHoverDetails) return;
-    openDetails(e.currentTarget);
-  };
-
-  const handleRowMouseLeave = (e: React.MouseEvent<HTMLTableRowElement>) => {
-    const related = e.relatedTarget as Node | null;
-    if (popoverRef.current?.contains(related)) return;
-    setShowDetails(false);
-  };
-
-  const handlePopoverMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
-    const related = e.relatedTarget as Node | null;
-    if (e.currentTarget.contains(related)) return;
-    setShowDetails(false);
-  };
-
-  return (
-    <>
-      <TableRow
-        className={cn("hover:bg-indigo-50/20", hasHoverDetails && "cursor-help")}
-        onMouseEnter={handleRowMouseEnter}
-        onMouseLeave={handleRowMouseLeave}
-      >
-        <TableCell className="text-sm text-slate-700 max-w-[280px]">
-          <span
-            className="line-clamp-2"
-            title={resolveModuleNamesFromIds(item.solutionModuleIds, modules)}
-          >
-            {resolveModuleNamesFromIds(item.solutionModuleIds, modules)}
-          </span>
-        </TableCell>
-        <TableCell className="text-sm text-slate-600 whitespace-nowrap">
-          {getTypeCodeLabel(item.typeCode)}
-        </TableCell>
-        <TableCell className="text-sm text-slate-600 whitespace-nowrap">
-          {getCurrencyTypeLabel(item.currencyType)}
-        </TableCell>
-        <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
-          {item.unitPrice ? `${symbol} ${item.unitPrice}` : "—"}
-        </TableCell>
-        <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
-          {item.personCount || "—"}
-        </TableCell>
-        <TableCell className="text-sm text-slate-700 font-medium tabular-nums whitespace-nowrap">
-          {estimated ? `${symbol} ${estimated}` : "—"}
-        </TableCell>
-        <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
-          {expectedCloseLabel}
-        </TableCell>
-        <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
-          {lastContactLabel}
-        </TableCell>
-        <TableCell>
-          <div className="flex items-center justify-end gap-1">
-            <button
-              type="button"
-              onClick={() => onEdit(item.clientKey)}
-              className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-              title={`Modül ${index + 1} düzenle`}
-              aria-label={`Modül ${index + 1} düzenle`}
-            >
-              <Pencil className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(item.clientKey)}
-              className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-              title={`Modül ${index + 1} sil`}
-              aria-label={`Modül ${index + 1} sil`}
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        </TableCell>
-      </TableRow>
-
-      {showDetails &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            role="tooltip"
-            className="fixed z-[1200] w-80 rounded-lg border border-slate-200 bg-white p-3 shadow-lg space-y-3 pointer-events-auto"
-            style={{
-              left: position.x,
-              top: position.y + 6,
-              transform: "translateX(-50%)",
-            }}
-            onMouseLeave={handlePopoverMouseLeave}
-          >
-            <DetailBlock label="Sonraki Aksiyon" value={item.nextAction} />
-            <DetailBlock label="Notlar" value={item.notes} />
-          </div>,
-          document.body
-        )}
-    </>
-  );
 };
 
 export const CrmSubItemList = ({
@@ -220,16 +84,68 @@ export const CrmSubItemList = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((item, index) => (
-              <ModuleRow
-                key={item.clientKey}
-                item={item}
-                index={index}
-                modules={modules}
-                onEdit={onEdit}
-                onDelete={onDelete}
-              />
-            ))}
+            {items.map((item, index) => {
+              const estimated = calculateEstimatedValueString(item.unitPrice, item.personCount);
+              const symbol = getCurrencySymbol(item.currencyType);
+              const expectedCloseLabel = formatDateTr(toIsoDateString(item.expectedCloseDate));
+              const lastContactLabel = formatDateTr(toIsoDateString(item.lastContactDate));
+
+              return (
+                <TableRow key={item.clientKey} className="hover:bg-indigo-50/20">
+                  <TableCell className="text-sm text-slate-700 max-w-[280px]">
+                    <span
+                      className="line-clamp-2"
+                      title={resolveModuleNamesFromIds(item.solutionModuleIds, modules)}
+                    >
+                      {resolveModuleNamesFromIds(item.solutionModuleIds, modules)}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                    {getTypeCodeLabel(item.typeCode)}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                    {getCurrencyTypeLabel(item.currencyType)}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                    {item.unitPrice ? `${symbol} ${item.unitPrice}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                    {item.personCount || "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-700 font-medium tabular-nums whitespace-nowrap">
+                    {estimated ? `${symbol} ${estimated}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                    {expectedCloseLabel}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                    {lastContactLabel}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(item.clientKey)}
+                        className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        title={`Modül ${index + 1} düzenle`}
+                        aria-label={`Modül ${index + 1} düzenle`}
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(item.clientKey)}
+                        className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title={`Modül ${index + 1} sil`}
+                        aria-label={`Modül ${index + 1} sil`}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

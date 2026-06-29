@@ -76,8 +76,6 @@ export interface CrmSubItemInputDto {
   estimatedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
-  nextAction?: string | null;
-  notes?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
 }
@@ -92,8 +90,6 @@ export interface CrmSubItemDto {
   estimatedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
-  nextAction?: string | null;
-  notes?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
   createdDate?: string;
@@ -143,8 +139,6 @@ export interface CrmModulDto {
   estimatedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
-  nextAction?: string | null;
-  notes?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
   createdDate?: string;

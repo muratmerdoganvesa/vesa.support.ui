@@ -28,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "components/ui/select";
-import { Textarea } from "components/ui/textarea";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { CalendarDays } from "lucide-react";
@@ -271,28 +270,6 @@ export const CrmSubItemDialog = ({
                 />
               </PopoverContent>
             </Popover>
-          </Field>
-
-          <Field label="Sonraki Aksiyon" htmlFor="sub-next-action" className="sm:col-span-2">
-            <Textarea
-              id="sub-next-action"
-              value={values.nextAction}
-              onChange={(e) => handleFieldChange("nextAction", e.target.value)}
-              placeholder="Sonraki aksiyon"
-              rows={2}
-              className="bg-white resize-none"
-            />
-          </Field>
-
-          <Field label="Notlar" htmlFor="sub-notes" className="sm:col-span-2">
-            <Textarea
-              id="sub-notes"
-              value={values.notes}
-              onChange={(e) => handleFieldChange("notes", e.target.value)}
-              placeholder="Notlar"
-              rows={2}
-              className="bg-white resize-none"
-            />
           </Field>
         </div>
 

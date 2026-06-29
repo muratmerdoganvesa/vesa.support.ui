@@ -9,6 +9,7 @@ import { ArrowLeft, Handshake, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CrmModulFormFields } from "../components/CrmModulForm";
+import { CrmModulNotePanel } from "../components/CrmModulNotePanel";
 import { CrmSubItemDialog } from "../components/CrmSubItemDialog";
 import { CrmSubItemList } from "../components/CrmSubItemList";
 import {
@@ -150,7 +151,7 @@ const CrmModulDetailPage = () => {
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
                 {isEditMode
-                  ? "Üst bölümde şirket bilgilerini, alt bölümde modülleri yönetin."
+                  ? "Üst bölümde şirket bilgilerini, alt bölümde modülleri ve notları yönetin."
                   : "Şirket bilgilerini girin ve modüller ekleyin."}
               </p>
             </div>
@@ -170,6 +171,8 @@ const CrmModulDetailPage = () => {
                   onEdit={handleEditItem}
                   onDelete={handleDeleteItem}
                 />
+
+                <CrmModulNotePanel crmModulId={id} />
               </>
             )}
           </div>
