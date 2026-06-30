@@ -78,6 +78,7 @@ import {
   Pencil,
   BookmarkPlus,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -492,15 +493,15 @@ const SearchResultsTable = ({
 
   return (
     <Table className="min-w-[700px]">
-      <TableHeader>
-        <TableRow className="hover:bg-transparent border-slate-100">
-          <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/60 w-32">
+      <TableHeader className="sticky top-0 z-10 bg-slate-50">
+        <TableRow className="border-b border-slate-200 hover:bg-slate-50">
+          <TableHead className="px-4 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap w-36">
             İşlemler
           </TableHead>
           {cols.map((c) => (
             <TableHead
               key={c.key}
-              className="text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50/60"
+              className="px-4 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap"
             >
               {c.label}
             </TableHead>
@@ -509,8 +510,11 @@ const SearchResultsTable = ({
       </TableHeader>
       <TableBody>
         {rows.map((row, i) => (
-          <TableRow key={i} className="border-slate-50 hover:bg-blue-50/30 transition-colors">
-            <TableCell>
+          <TableRow
+            key={i}
+            className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors"
+          >
+            <TableCell className="px-4 py-2.5 align-middle">
               <div className="flex items-center gap-0.5">
                 <TipBtn tip="Onay Geçmişi" onClick={() => onAprHistory(row.workFlowHeadId)}>
                   <History className="w-3.5 h-3.5" />
@@ -527,7 +531,10 @@ const SearchResultsTable = ({
               </div>
             </TableCell>
             {cols.map((c) => (
-              <TableCell key={c.key} className="text-sm text-slate-700 align-middle">
+              <TableCell
+                key={c.key}
+                className="px-4 py-2.5 text-sm text-slate-700 align-middle whitespace-nowrap"
+              >
                 <GlobalCell value={row[c.key]} statusId={row.status} columnName={c.key} testRow={row} />
               </TableCell>
             ))}
@@ -613,6 +620,7 @@ function FilterTableMethod({
   const [loginUserCompany, setLoginUserCompany] = useState("");
   const [excelData, setExcelData] = useState<any>(null);
   const [searchTalepBaslik, setSearchTalepBaslik] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // ── Search dialog state ────────────────────────────────────────────────────
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
@@ -966,11 +974,13 @@ function FilterTableMethod({
       dispatchAlert({ message: "Lütfen talep numarası girin..!", type: "Warning" });
       return;
     }
+    setLoading(true);
     const conf = getConfiguration();
     const api = new TicketApi(conf);
     const data = await api.apiTicketSearchTicketGet(pageDesc, searchTalepNo, skip, 10);
     setSearchedData(data.data.ticketList);
     setSearchMsj(data.data.ticketList.length === 0 ? "Girilen talep numarasına ait kayıt bulunamadı." : "");
+    setLoading(false);
   };
 
   const handleSearchNavigate = (id: string, review: boolean) => {
@@ -1346,55 +1356,83 @@ function FilterTableMethod({
 
       {/* ── Search Dialog ── */}
       <Dialog open={openSearchDialog} onOpenChange={(open) => !open && onCloseSearchDialog()}>
-        <DialogContent className="w-[92vw] max-w-[92vw] sm:max-w-[92vw]">
-          <DialogHeader>
-            <DialogTitle>{t("ns1:TicketPage.TicketTablePage.AramaYapin")}</DialogTitle>
+        <DialogContent className="w-[95vw] max-w-7xl p-0 gap-0 overflow-hidden sm:max-w-7xl">
+          <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/40">
+            <DialogTitle className="text-base font-semibold text-[#344767] tracking-tight">
+              {t("ns1:TicketPage.TicketTablePage.AramaYapin")}
+            </DialogTitle>
+            <p className="text-sm text-slate-500 font-normal leading-relaxed pt-1">
+              Talep numarası girerek arama yapabilirsiniz.
+            </p>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4">
-            <div className="max-w-sm">
+          <div className="flex flex-col gap-5 px-6 py-5">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-4 max-w-md">
               <FilterField label={t("ns1:TicketPage.TicketTablePage.TalepNumarasi")}>
                 <Input
                   placeholder={t("ns1:TicketPage.TicketTablePage.TalepNumarasi")}
                   value={searchTalepNo}
-                  onChange={(e) => setSearchTalepNo(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTalepNo(e.target.value);
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && onSearchButton()}
-                  className="rounded-xl border-slate-200 bg-white focus-visible:border-slate-400"
+                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-slate-100"
                 />
               </FilterField>
             </div>
 
-            {searchMsj && (
-              <p className="text-sm text-slate-500 text-center py-6">{searchMsj}</p>
+            {searchMsj && !loading && searchedData.length === 0 && (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/40 px-6 py-12 text-center">
+                <p className="text-sm font-medium text-slate-600">{searchMsj}</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Farklı bir talep numarası ile tekrar deneyebilirsiniz.
+                </p>
+              </div>
             )}
 
-            {searchedData.length > 0 && (
-              <div className="overflow-x-auto rounded-xl border border-slate-100 max-h-[60vh] overflow-y-auto">
-                <SearchResultsTable
-                  rows={searchedData}
-                  pageDesc={pageDesc}
-                  onAprHistory={(id) => { setSelectedAprHis(id); setAprHistoryOpen(true); }}
-                  onTicketHistory={(id) => { setSelectedTicket(id); setHistoryDialogOpen(true); }}
-                  onView={(id) => handleSearchNavigate(id, true)}
-                  onEdit={(id) => handleSearchNavigate(id, false)}
-                />
+            {loading ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white py-16">
+                <Loader2 className="size-5 animate-spin text-slate-400" />
+                <p className="text-sm text-slate-500">Aranıyor...</p>
+              </div>
+            ) : searchedData.length > 0 && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-slate-700">
+                    Arama Sonuçları
+                  </p>
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                    {searchedData.length} kayıt
+                  </span>
+                </div>
+
+                <div className="overflow-auto rounded-xl border border-slate-200 max-h-[60vh] shadow-sm">
+                  <SearchResultsTable
+                    rows={searchedData}
+                    pageDesc={pageDesc}
+                    onAprHistory={(id) => { setSelectedAprHis(id); setAprHistoryOpen(true); }}
+                    onTicketHistory={(id) => { setSelectedTicket(id); setHistoryDialogOpen(true); }}
+                    onView={(id) => handleSearchNavigate(id, true)}
+                    onEdit={(id) => handleSearchNavigate(id, false)}
+                  />
+                </div>
               </div>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="px-6 mb-1 py-3 border-t border-slate-100 bg-slate-50/60 gap-2 sm:gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={onCloseSearchDialog}
-              className="gap-2 border-slate-200"
+              className="h-9 gap-2 border-slate-200 text-slate-600 hover:bg-white"
             >
               {t("ns1:TicketPage.TicketTablePage.Kapat")}
             </Button>
             <Button
               size="sm"
               onClick={onSearchButton}
-              className="gap-2 bg-[#3e5d8f] hover:bg-[#324d7a] text-white"
+              className="h-9 gap-2 bg-[#3e5d8f] hover:bg-[#324d7a] text-white font-medium shadow-sm shadow-[#3e5d8f]/20"
             >
               <Search className="w-3.5 h-3.5" />
               {t("ns1:TicketPage.TicketTablePage.AramaYap")}
