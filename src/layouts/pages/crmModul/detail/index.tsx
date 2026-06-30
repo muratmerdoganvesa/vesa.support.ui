@@ -1,4 +1,4 @@
-import { CrmModulsApi, WorkCompanyApi, WorkCompanyDto } from "api/generated";
+import { CrmModulsApi, ListModuleDto, ModuleApi } from "api/generated";
 import { Button } from "components/ui/button";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -9,13 +9,19 @@ import { ArrowLeft, Handshake, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { CrmModulFormFields } from "../components/CrmModulForm";
+import { CrmModulNotePanel } from "../components/CrmModulNotePanel";
+import { CrmSubItemDialog } from "../components/CrmSubItemDialog";
+import { CrmSubItemList } from "../components/CrmSubItemList";
 import {
   crmModulDtoToFormValues,
+  crmSubItemDtosToFormValues,
   emptyCrmModulFormValues,
   toCreateDto,
   toUpdateDto,
   type CrmModulFormValues,
+  type CrmSubItemFormValues,
 } from "../formMappers";
+import { mergeActiveModulesWithSelected } from "../utils";
 
 const CrmModulDetailPage = () => {
   const { id } = useParams();
@@ -24,9 +30,13 @@ const CrmModulDetailPage = () => {
   const dispatchBusy = useBusy();
 
   const isEditMode = Boolean(id);
-  const [formValues, setFormValues] = useState<CrmModulFormValues>(emptyCrmModulFormValues());
-  const [workCompanies, setWorkCompanies] = useState<WorkCompanyDto[]>([]);
-  const [loading, setLoading] = useState(isEditMode);
+  const [modulValues, setModulValues] = useState<CrmModulFormValues>(emptyCrmModulFormValues());
+  const [subItems, setSubItems] = useState<CrmSubItemFormValues[]>([]);
+  const [modules, setModules] = useState<ListModuleDto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<CrmSubItemFormValues | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -34,17 +44,21 @@ const CrmModulDetailPage = () => {
         dispatchBusy({ isBusy: true });
         setLoading(true);
         const conf = getConfiguration();
-        const companyApi = new WorkCompanyApi(conf);
-        const companyResponse = await companyApi.apiWorkCompanyGet();
-        const companies = companyResponse.data ?? [];
-        setWorkCompanies(companies);
+        const moduleApi = new ModuleApi(conf);
+        const modulesResponse = await moduleApi.apiModuleGetActiveModulesGet();
+        const activeModules = modulesResponse.data ?? [];
 
         if (id) {
           const crmApi = new CrmModulsApi(conf);
           const response = await crmApi.apiCrmModulsIdGet(id);
-          setFormValues(crmModulDtoToFormValues(response.data, companies));
+          const data = response.data;
+          setModules(mergeActiveModulesWithSelected(activeModules, data));
+          setModulValues(crmModulDtoToFormValues(data));
+          setSubItems(crmSubItemDtosToFormValues(data.crmSubItems ?? []));
         } else {
-          setFormValues(emptyCrmModulFormValues());
+          setModules(activeModules);
+          setModulValues(emptyCrmModulFormValues());
+          setSubItems([]);
         }
       } catch {
         dispatchAlert({
@@ -65,9 +79,37 @@ const CrmModulDetailPage = () => {
     loadData();
   }, [id]);
 
+  const handleAddItem = () => {
+    setEditingItem(null);
+    setDialogOpen(true);
+  };
+
+  const handleEditItem = (clientKey: string) => {
+    const item = subItems.find((i) => i.clientKey === clientKey);
+    if (!item) return;
+    setEditingItem(item);
+    setDialogOpen(true);
+  };
+
+  const handleDeleteItem = (clientKey: string) => {
+    setSubItems((prev) => prev.filter((i) => i.clientKey !== clientKey));
+  };
+
+  const handleSaveItem = (values: CrmSubItemFormValues) => {
+    setSubItems((prev) => {
+      const existingIndex = prev.findIndex((i) => i.clientKey === values.clientKey);
+      if (existingIndex >= 0) {
+        const next = [...prev];
+        next[existingIndex] = values;
+        return next;
+      }
+      return [...prev, values];
+    });
+  };
+
   const handleSave = async () => {
-    if (!formValues.workCompany?.id) {
-      dispatchAlert({ message: "Şirket seçimi zorunludur.", type: "error" });
+    if (!modulValues.partnerCompanyName.trim()) {
+      dispatchAlert({ message: "Şirket adı zorunludur.", type: "error" });
       return;
     }
 
@@ -76,10 +118,10 @@ const CrmModulDetailPage = () => {
       const api = new CrmModulsApi(getConfiguration());
 
       if (id) {
-        await api.apiCrmModulsIdPut(id, toUpdateDto(formValues));
+        await api.apiCrmModulsIdPut(id, toUpdateDto(modulValues, subItems));
         dispatchAlert({ message: "CRM kaydı başarıyla güncellendi.", type: "success" });
       } else {
-        await api.apiCrmModulsPost(toCreateDto(formValues));
+        await api.apiCrmModulsPost(toCreateDto(modulValues, subItems));
         dispatchAlert({ message: "CRM kaydı başarıyla oluşturuldu.", type: "success" });
       }
 
@@ -91,11 +133,13 @@ const CrmModulDetailPage = () => {
     }
   };
 
+  const canSave = !loading && Boolean(modulValues.partnerCompanyName.trim());
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="mt-4 mx-auto pb-6 max-w-6xl px-1">
+      <div className="mt-4 mx-auto pb-6 max-w-[1400px] w-full px-4">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100 bg-linear-to-r from-slate-50 to-white">
             <div className="size-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shrink-0">
@@ -107,21 +151,29 @@ const CrmModulDetailPage = () => {
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
                 {isEditMode
-                  ? "Mevcut kayıt bilgilerini güncelleyin."
-                  : "Yeni bir potansiyel müşteri kaydı oluşturun."}
+                  ? "Üst bölümde şirket bilgilerini, alt bölümde modülleri ve notları yönetin."
+                  : "Şirket bilgilerini girin ve modüller ekleyin."}
               </p>
             </div>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 space-y-6">
             {loading ? (
               <p className="text-sm text-slate-500 text-center py-12">Yükleniyor...</p>
             ) : (
-              <CrmModulFormFields
-                values={formValues}
-                workCompanies={workCompanies}
-                onChange={setFormValues}
-              />
+              <>
+                <CrmModulFormFields values={modulValues} onChange={setModulValues} />
+
+                <CrmSubItemList
+                  items={subItems}
+                  modules={modules}
+                  onAdd={handleAddItem}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
+                />
+
+                <CrmModulNotePanel crmModulId={id} />
+              </>
             )}
           </div>
 
@@ -138,7 +190,7 @@ const CrmModulDetailPage = () => {
             <Button
               type="button"
               onClick={handleSave}
-              disabled={loading || !formValues.workCompany?.id}
+              disabled={!canSave}
               className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200 transition-all hover:-translate-y-0.5"
             >
               <Save className="size-4" />
@@ -147,6 +199,15 @@ const CrmModulDetailPage = () => {
           </div>
         </div>
       </div>
+
+      <CrmSubItemDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        initialValues={editingItem}
+        isEditMode={Boolean(editingItem)}
+        modules={modules}
+        onSave={handleSaveItem}
+      />
     </DashboardLayout>
   );
 };

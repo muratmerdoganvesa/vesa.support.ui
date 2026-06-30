@@ -15,5 +15,7 @@
 
 export * from "./api";
 export * from "./configuration";
+export * from "./crmModulNotesApi";
 export * from "./crmModulsApi";
+export * from "./crmSubItemsApi";
 

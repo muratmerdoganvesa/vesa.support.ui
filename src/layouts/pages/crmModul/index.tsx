@@ -1,9 +1,4 @@
-import {
-  CrmModulDto,
-  CrmModulsApi,
-  WorkCompanyApi,
-  WorkCompanyDto,
-} from "api/generated";
+import { CrmModulDto, CrmModulsApi } from "api/generated";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { CrmModulFilters, CrmModulFilterValues } from "./components/CrmModulFilters";
 import { CrmModulTable } from "./components/CrmModulTable";
 import { ROWS_PER_PAGE } from "./constants";
-import { isDateInRange, resolveCompanyName } from "./utils";
+import { isDateInRange, resolvePartnerCompanyName } from "./utils";
 
 const defaultFilters: CrmModulFilterValues = {
   companySearch: "",
@@ -42,7 +37,6 @@ const CrmModulPage = () => {
   const dispatchBusy = useBusy();
 
   const [crmData, setCrmData] = useState<CrmModulDto[]>([]);
-  const [workCompanies, setWorkCompanies] = useState<WorkCompanyDto[]>([]);
   const [draftFilters, setDraftFilters] = useState<CrmModulFilterValues>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<CrmModulFilterValues>(defaultFilters);
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,17 +47,9 @@ const CrmModulPage = () => {
   const fetchData = useCallback(async () => {
     try {
       dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const crmApi = new CrmModulsApi(conf);
-      const companyApi = new WorkCompanyApi(conf);
-
-      const [crmResponse, companyResponse] = await Promise.all([
-        crmApi.apiCrmModulsGet(),
-        companyApi.apiWorkCompanyGet(),
-      ]);
-
+      const crmApi = new CrmModulsApi(getConfiguration());
+      const crmResponse = await crmApi.apiCrmModulsGet();
       setCrmData(crmResponse.data ?? []);
-      setWorkCompanies(companyResponse.data ?? []);
     } catch {
       dispatchAlert({ message: "CRM kayıtları getirilirken hata oluştu.", type: "error" });
     } finally {
@@ -84,7 +70,7 @@ const CrmModulPage = () => {
     const contactQ = appliedFilters.contactSearch.trim().toLowerCase();
 
     return crmData.filter((row) => {
-      const companyName = resolveCompanyName(row, workCompanies).toLowerCase();
+      const companyName = resolvePartnerCompanyName(row).toLowerCase();
       const contactPerson = (row.contactPerson ?? "").toLowerCase();
 
       if (companyQ && !companyName.includes(companyQ)) return false;
@@ -100,7 +86,7 @@ const CrmModulPage = () => {
       }
       return true;
     });
-  }, [crmData, workCompanies, appliedFilters]);
+  }, [crmData, appliedFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
 
@@ -193,7 +179,6 @@ const CrmModulPage = () => {
 
           <CrmModulTable
             rows={paginatedRows}
-            workCompanies={workCompanies}
             currentPage={currentPage}
             totalPages={totalPages}
             totalCount={filteredRows.length}
