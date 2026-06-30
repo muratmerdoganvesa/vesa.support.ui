@@ -135,7 +135,7 @@ export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFo
   items.map((item) => ({
     clientKey: item.id ?? crypto.randomUUID(),
     id: item.id,
-    solutionModuleIds: item.solutionModuleIds ?? [],
+    solutionModuleIds: (item.solutionModuleIds ?? []).slice(0, 1),
     typeCode: item.typeCode ?? TypeCodes.NUMBER_0,
     currencyType: item.currencyType ?? CurrencyType.NUMBER_0,
     unitPrice: item.unitPrice != null ? String(item.unitPrice) : "",

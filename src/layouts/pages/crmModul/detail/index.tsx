@@ -1,17 +1,18 @@
 import { CrmModulsApi, ListModuleDto, ModuleApi } from "api/generated";
-import { Button } from "components/ui/button";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { useBusy } from "layouts/pages/hooks/useBusy";
-import { ArrowLeft, Handshake, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { CrmDetailSummary } from "../components/CrmDetailSummary";
 import { CrmModulFormFields } from "../components/CrmModulForm";
 import { CrmModulNotePanel } from "../components/CrmModulNotePanel";
-import { CrmSubItemDialog } from "../components/CrmSubItemDialog";
-import { CrmSubItemList } from "../components/CrmSubItemList";
+import {
+  createNewOpportunityItem,
+  CrmOpportunityList,
+} from "../components/CrmOpportunityList";
 import {
   crmModulDtoToFormValues,
   crmSubItemDtosToFormValues,
@@ -33,10 +34,9 @@ const CrmModulDetailPage = () => {
   const [modulValues, setModulValues] = useState<CrmModulFormValues>(emptyCrmModulFormValues());
   const [subItems, setSubItems] = useState<CrmSubItemFormValues[]>([]);
   const [modules, setModules] = useState<ListModuleDto[]>([]);
+  const [uniqNumber, setUniqNumber] = useState<number | undefined>();
   const [loading, setLoading] = useState(true);
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<CrmSubItemFormValues | null>(null);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -55,10 +55,12 @@ const CrmModulDetailPage = () => {
           setModules(mergeActiveModulesWithSelected(activeModules, data));
           setModulValues(crmModulDtoToFormValues(data));
           setSubItems(crmSubItemDtosToFormValues(data.crmSubItems ?? []));
+          setUniqNumber(data.uniqNumber);
         } else {
           setModules(activeModules);
           setModulValues(emptyCrmModulFormValues());
           setSubItems([]);
+          setUniqNumber(undefined);
         }
       } catch {
         dispatchAlert({
@@ -80,31 +82,22 @@ const CrmModulDetailPage = () => {
   }, [id]);
 
   const handleAddItem = () => {
-    setEditingItem(null);
-    setDialogOpen(true);
+    const newItem = createNewOpportunityItem();
+    setSubItems((prev) => [...prev, newItem]);
+    setExpandedKey(newItem.clientKey);
   };
 
-  const handleEditItem = (clientKey: string) => {
-    const item = subItems.find((i) => i.clientKey === clientKey);
-    if (!item) return;
-    setEditingItem(item);
-    setDialogOpen(true);
+  const handleChangeItem = (values: CrmSubItemFormValues) => {
+    setSubItems((prev) =>
+      prev.map((item) => (item.clientKey === values.clientKey ? values : item))
+    );
   };
 
   const handleDeleteItem = (clientKey: string) => {
     setSubItems((prev) => prev.filter((i) => i.clientKey !== clientKey));
-  };
-
-  const handleSaveItem = (values: CrmSubItemFormValues) => {
-    setSubItems((prev) => {
-      const existingIndex = prev.findIndex((i) => i.clientKey === values.clientKey);
-      if (existingIndex >= 0) {
-        const next = [...prev];
-        next[existingIndex] = values;
-        return next;
-      }
-      return [...prev, values];
-    });
+    if (expandedKey === clientKey) {
+      setExpandedKey(null);
+    }
   };
 
   const handleSave = async () => {
@@ -139,75 +132,47 @@ const CrmModulDetailPage = () => {
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="mt-4 mx-auto pb-6 max-w-[1400px] w-full px-4">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-100 bg-linear-to-r from-slate-50 to-white">
-            <div className="size-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shrink-0">
-              <Handshake className="size-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-800 leading-tight">
-                {isEditMode ? "Müşteri Kaydını Düzenle" : "Potansiyel Müşteri Kaydı oluştur."}
-              </h1>
-              <p className="text-sm text-slate-500 mt-0.5">
-                {isEditMode
-                  ? "Üst bölümde şirket bilgilerini, alt bölümde modülleri ve notları yönetin."
-                  : "Şirket bilgilerini girin ve modüller ekleyin."}
-              </p>
-            </div>
+      <div className="-m-6 min-h-full bg-slate-100/80 p-4">
+        {loading ? (
+          <p className="text-sm text-slate-500 text-center py-24">Yükleniyor...</p>
+        ) : (
+          <div className="space-y-4 pb-6">
+            <CrmDetailSummary
+              modulValues={modulValues}
+              subItems={subItems}
+              uniqNumber={uniqNumber}
+              isEditMode={isEditMode}
+              canSave={canSave}
+              onBack={() => navigate("/crmModul")}
+              onSave={handleSave}
+            />
+
+            <CrmModulFormFields
+              values={modulValues}
+              onChange={setModulValues}
+              variant="detail"
+            />
+
+            <CrmOpportunityList
+              items={subItems}
+              modules={modules}
+              expandedKey={expandedKey}
+              onExpandedKeyChange={setExpandedKey}
+              onChange={handleChangeItem}
+              onDelete={handleDeleteItem}
+              onAdd={handleAddItem}
+            />
+
+            <CrmModulNotePanel
+              crmModulId={id}
+              nextAction={modulValues.nextAction}
+              onNextActionChange={(value) =>
+                setModulValues((prev) => ({ ...prev, nextAction: value }))
+              }
+            />
           </div>
-
-          <div className="p-6 space-y-6">
-            {loading ? (
-              <p className="text-sm text-slate-500 text-center py-12">Yükleniyor...</p>
-            ) : (
-              <>
-                <CrmModulFormFields values={modulValues} onChange={setModulValues} />
-
-                <CrmSubItemList
-                  items={subItems}
-                  modules={modules}
-                  onAdd={handleAddItem}
-                  onEdit={handleEditItem}
-                  onDelete={handleDeleteItem}
-                />
-
-                <CrmModulNotePanel crmModulId={id} />
-              </>
-            )}
-          </div>
-
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/40">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate("/crmModul")}
-              className="gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-100"
-            >
-              <ArrowLeft className="size-4" />
-              İptal
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={!canSave}
-              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200 transition-all hover:-translate-y-0.5"
-            >
-              <Save className="size-4" />
-              Kaydet
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
-
-      <CrmSubItemDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initialValues={editingItem}
-        isEditMode={Boolean(editingItem)}
-        modules={modules}
-        onSave={handleSaveItem}
-      />
     </DashboardLayout>
   );
 };

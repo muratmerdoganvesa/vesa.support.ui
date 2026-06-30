@@ -2,7 +2,6 @@ import { LeadSource } from "api/generated";
 import { type ReactNode } from "react";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
-import { Textarea } from "components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -18,20 +17,25 @@ import { formatPhoneNumberTr } from "../utils";
 type CrmModulFormFieldsProps = {
   values: CrmModulFormValues;
   onChange: (values: CrmModulFormValues) => void;
+  variant?: "default" | "detail";
 };
 
 const SectionCard = ({
   title,
   children,
   className,
+  variant = "default",
 }: {
   title: string;
   children: ReactNode;
   className?: string;
+  variant?: "default" | "detail";
 }) => (
   <section
     className={cn(
-      "rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-4",
+      variant === "detail"
+        ? "rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4"
+        : "rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-4",
       className
     )}
   >
@@ -56,7 +60,7 @@ const Field = ({
   className?: string;
 }) => (
   <div className={cn("flex flex-col gap-1.5", className)}>
-    <Label htmlFor={htmlFor}>
+    <Label htmlFor={htmlFor} className="text-xs font-medium text-slate-600">
       {label}
       {required && <span className="text-red-500 ml-0.5">*</span>}
     </Label>
@@ -64,7 +68,11 @@ const Field = ({
   </div>
 );
 
-export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps) => {
+export const CrmModulFormFields = ({
+  values,
+  onChange,
+  variant = "default",
+}: CrmModulFormFieldsProps) => {
   const handleFieldChange = <K extends keyof CrmModulFormValues>(
     key: K,
     value: CrmModulFormValues[K]
@@ -76,9 +84,11 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
     handleFieldChange("phoneNumber", formatPhoneNumberTr(raw));
   };
 
+  const inputClass = "h-10 bg-white border-slate-200";
+
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-      <SectionCard title="Şirket Bilgileri">
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <SectionCard title="Şirket Bilgileri" variant={variant}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Şirket Adı" htmlFor="crm-partner-company" required className="sm:col-span-2">
             <Input
@@ -86,7 +96,7 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               value={values.partnerCompanyName}
               onChange={(e) => handleFieldChange("partnerCompanyName", e.target.value)}
               placeholder="Şirket adı"
-              className="h-10 bg-white"
+              className={inputClass}
             />
           </Field>
           <Field label="Lead Kaynağı">
@@ -94,7 +104,7 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               value={String(values.leadSource)}
               onValueChange={(v) => handleFieldChange("leadSource", Number(v) as LeadSource)}
             >
-              <SelectTrigger className="h-10 bg-white">
+              <SelectTrigger className={inputClass}>
                 <SelectValue placeholder="Lead kaynağı seçin" />
               </SelectTrigger>
               <SelectContent>
@@ -106,19 +116,19 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager" className="sm:col-span-2">
+          <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager">
             <Input
               id="crm-account-manager"
               value={values.accountManager}
               onChange={(e) => handleFieldChange("accountManager", e.target.value)}
               placeholder="Hesap yöneticisi"
-              className="h-10 bg-white"
+              className={inputClass}
             />
           </Field>
         </div>
       </SectionCard>
 
-      <SectionCard title="İletişim Bilgileri">
+      <SectionCard title="İletişim Bilgileri" variant={variant}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="İlgili Kişi" htmlFor="crm-contact-person">
             <Input
@@ -126,7 +136,7 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               value={values.contactPerson}
               onChange={(e) => handleFieldChange("contactPerson", e.target.value)}
               placeholder="İlgili kişi"
-              className="h-10 bg-white"
+              className={inputClass}
             />
           </Field>
           <Field label="Pozisyon" htmlFor="crm-contact-title">
@@ -135,7 +145,7 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               value={values.contactTitle}
               onChange={(e) => handleFieldChange("contactTitle", e.target.value)}
               placeholder="Pozisyon"
-              className="h-10 bg-white"
+              className={inputClass}
             />
           </Field>
           <Field label="Telefon" htmlFor="crm-phone">
@@ -146,7 +156,7 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               value={values.phoneNumber}
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="0(5XX)-XXX-XX-XX"
-              className="h-10 bg-white font-mono tracking-wide"
+              className={cn(inputClass, "font-mono tracking-wide")}
               maxLength={16}
               aria-label="Telefon numarası"
             />
@@ -158,23 +168,10 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               value={values.email}
               onChange={(e) => handleFieldChange("email", e.target.value)}
               placeholder="email@ornek.com"
-              className="h-10 bg-white"
+              className={inputClass}
             />
           </Field>
         </div>
-      </SectionCard>
-
-      <SectionCard title="Sonraki Aksiyon" className="xl:col-span-2">
-        <Field label="Sonraki Aksiyon" htmlFor="crm-next-action">
-          <Textarea
-            id="crm-next-action"
-            value={values.nextAction}
-            onChange={(e) => handleFieldChange("nextAction", e.target.value)}
-            placeholder="Sonraki aksiyonu yazın..."
-            rows={3}
-            className="bg-white resize-none"
-          />
-        </Field>
       </SectionCard>
     </div>
   );

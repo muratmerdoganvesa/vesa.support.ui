@@ -9,6 +9,8 @@ type ModuleMultiSelectProps = {
   onChange: (ids: string[]) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** true ise yalnızca tek modül seçilebilir; backend uyumu için value yine string[] */
+  single?: boolean;
 };
 
 export const ModuleMultiSelect = ({
@@ -17,6 +19,7 @@ export const ModuleMultiSelect = ({
   onChange,
   placeholder = "Modül seçin...",
   disabled = false,
+  single = false,
 }: ModuleMultiSelectProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -39,11 +42,13 @@ export const ModuleMultiSelect = ({
   );
 
   const selectedModules = useMemo(
-    () =>
-      value
+    () => {
+      const ids = single ? value.slice(0, 1) : value;
+      return ids
         .map((id) => optionMap.get(id))
-        .filter((module): module is ListModuleDto => Boolean(module)),
-    [value, optionMap]
+        .filter((module): module is ListModuleDto => Boolean(module));
+    },
+    [value, optionMap, single]
   );
 
   const filteredOptions = useMemo(() => {
@@ -53,6 +58,17 @@ export const ModuleMultiSelect = ({
   }, [options, search]);
 
   const handleToggle = (moduleId: string) => {
+    if (single) {
+      if (value[0] === moduleId) {
+        onChange([]);
+        return;
+      }
+      onChange([moduleId]);
+      setOpen(false);
+      setSearch("");
+      return;
+    }
+
     if (value.includes(moduleId)) {
       onChange(value.filter((id) => id !== moduleId));
       return;
@@ -81,6 +97,8 @@ export const ModuleMultiSelect = ({
       >
         {selectedModules.length === 0 ? (
           <span className="text-muted-foreground">{placeholder}</span>
+        ) : single ? (
+          <span className="text-slate-800 truncate">{selectedModules[0]?.name}</span>
         ) : (
           selectedModules.map((module) => (
             <span
@@ -102,6 +120,19 @@ export const ModuleMultiSelect = ({
             </span>
           ))
         )}
+        {single && selectedModules.length > 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange([]);
+            }}
+            className="ml-1 text-slate-400 hover:text-slate-600 shrink-0"
+            aria-label="Modül seçimini temizle"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
         <ChevronDown
           className={cn(
             "size-4 text-slate-400 ml-auto shrink-0 transition-transform",
@@ -114,7 +145,7 @@ export const ModuleMultiSelect = ({
         <div
           className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden"
           role="listbox"
-          aria-multiselectable
+          aria-multiselectable={!single}
         >
           <div className="p-2 border-b border-slate-100">
             <div className="relative">
@@ -136,7 +167,9 @@ export const ModuleMultiSelect = ({
             ) : (
               filteredOptions.map((option) => {
                 const optionId = option.id ?? "";
-                const isSelected = value.includes(optionId);
+                const isSelected = single
+                  ? value[0] === optionId
+                  : value.includes(optionId);
                 return (
                   <li key={optionId}>
                     <button
@@ -151,13 +184,21 @@ export const ModuleMultiSelect = ({
                     >
                       <span
                         className={cn(
-                          "size-4 rounded border flex items-center justify-center shrink-0",
+                          "size-4 flex items-center justify-center shrink-0",
+                          single ? "rounded-full border-2" : "rounded border",
                           isSelected
-                            ? "bg-indigo-600 border-indigo-600 text-white"
+                            ? single
+                              ? "border-indigo-600"
+                              : "bg-indigo-600 border-indigo-600 text-white"
                             : "border-slate-300 bg-white"
                         )}
                       >
-                        {isSelected && <Check className="size-3" />}
+                        {isSelected &&
+                          (single ? (
+                            <span className="size-2 rounded-full bg-indigo-600" />
+                          ) : (
+                            <Check className="size-3" />
+                          ))}
                       </span>
                       <span className="truncate">{option.name}</span>
                     </button>

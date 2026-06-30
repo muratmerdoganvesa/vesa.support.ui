@@ -71,3 +71,59 @@ export const getTypeCodeLabel = (typeCode?: TypeCodes | null): string => {
 };
 
 export const ROWS_PER_PAGE = 15;
+
+/** Pipeline görselleştirmesinde gösterilen aktif aşamalar */
+export const PIPELINE_STAGE_FLOW: OpportunityStage[] = [
+  OpportunityStage.NUMBER_1,
+  OpportunityStage.NUMBER_2,
+  OpportunityStage.NUMBER_3,
+  OpportunityStage.NUMBER_4,
+  OpportunityStage.NUMBER_5,
+  OpportunityStage.NUMBER_6,
+];
+
+export const OPPORTUNITY_STAGE_PROBABILITY: Record<OpportunityStage, number> = {
+  [OpportunityStage.NUMBER_0]: 0,
+  [OpportunityStage.NUMBER_1]: 10,
+  [OpportunityStage.NUMBER_2]: 20,
+  [OpportunityStage.NUMBER_3]: 25,
+  [OpportunityStage.NUMBER_4]: 50,
+  [OpportunityStage.NUMBER_5]: 75,
+  [OpportunityStage.NUMBER_6]: 100,
+  [OpportunityStage.NUMBER_7]: 0,
+  [OpportunityStage.NUMBER_8]: 0,
+};
+
+export const CLOSED_OPPORTUNITY_STAGES: OpportunityStage[] = [
+  OpportunityStage.NUMBER_6,
+  OpportunityStage.NUMBER_7,
+  OpportunityStage.NUMBER_8,
+];
+
+export const getOpportunityStageProbability = (stage?: OpportunityStage | null): number => {
+  if (stage == null) return 0;
+  return OPPORTUNITY_STAGE_PROBABILITY[stage] ?? 0;
+};
+
+export const getOpportunityStageBadgeClass = (stage?: OpportunityStage | null): string => {
+  switch (stage) {
+    case OpportunityStage.NUMBER_1:
+      return "bg-slate-100 text-slate-700 border-slate-200";
+    case OpportunityStage.NUMBER_2:
+      return "bg-sky-50 text-sky-700 border-sky-200";
+    case OpportunityStage.NUMBER_3:
+      return "bg-amber-50 text-amber-800 border-amber-200";
+    case OpportunityStage.NUMBER_4:
+      return "bg-orange-50 text-orange-800 border-orange-200";
+    case OpportunityStage.NUMBER_5:
+      return "bg-violet-50 text-violet-700 border-violet-200";
+    case OpportunityStage.NUMBER_6:
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    case OpportunityStage.NUMBER_7:
+      return "bg-red-50 text-red-700 border-red-200";
+    case OpportunityStage.NUMBER_8:
+      return "bg-slate-100 text-slate-500 border-slate-200";
+    default:
+      return "bg-slate-50 text-slate-500 border-slate-200";
+  }
+};
