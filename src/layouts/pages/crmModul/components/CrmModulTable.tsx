@@ -13,7 +13,6 @@ import { Building2, ChevronLeft, ChevronRight, Handshake, Pencil, Trash2 } from 
 import { cn } from "lib/utils";
 import {
   getLeadSourceLabel,
-  getOpportunityStageLabel,
 } from "../constants";
 import {
   aggregateCrmModulSubItems,
@@ -109,6 +108,7 @@ export const CrmModulTable = ({
               const aggregates = aggregateCrmModulSubItems(row);
               const moduleListText = formatInlineList(aggregates.uniqueModuleNames);
               const typeListText = formatInlineList(aggregates.uniqueTypeLabels);
+              const stageListText = formatInlineList(aggregates.uniqueOpportunityStageLabels);
               const phoneDisplay = row.phoneNumber
                 ? formatPhoneNumberTr(row.phoneNumber)
                 : "—";
@@ -130,12 +130,16 @@ export const CrmModulTable = ({
                     {getLeadSourceLabel(row.leadSource)}
                   </TableCell>
                   <TableCell className="px-4 py-3.5 whitespace-nowrap">
-                    <Badge
-                      variant="outline"
-                      className="bg-indigo-50 text-indigo-700 border-indigo-200"
-                    >
-                      {getOpportunityStageLabel(row.opportunityStage)}
-                    </Badge>
+                    {stageListText !== "—" ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-indigo-50 text-indigo-700 border-indigo-200"
+                      >
+                        {stageListText}
+                      </Badge>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="px-4 py-3.5 text-sm text-slate-700 whitespace-nowrap">
                     {row.contactPerson || "—"}

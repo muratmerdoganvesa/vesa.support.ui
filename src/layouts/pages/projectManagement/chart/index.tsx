@@ -35,7 +35,7 @@ import {
   AddDialogFieldDirective,
 } from "@syncfusion/ej2-react-gantt";
 import { PdfFontStyle, PdfTrueTypeFont } from "@syncfusion/ej2-pdf-export";
-import { MultiSelect } from "@syncfusion/ej2-dropdowns";
+import { MultiSelect, DropDownList } from "@syncfusion/ej2-dropdowns";
 import "@syncfusion/ej2-base/styles/material.css";
 import "@syncfusion/ej2-buttons/styles/material.css";
 import "@syncfusion/ej2-calendars/styles/material.css";
@@ -86,10 +86,16 @@ import getConfiguration from "confiuration";
 import {
   ModuleApi,
   ProjectTasksApi,
-  ProjectTasksInsertDto, ProjectTasksUpdateDto,
+  ProjectTasksInsertDto,
+  ProjectTasksUpdateDto,
+  ProjectTypes,
   UserAppDtoOnlyNameId,
-  WorkCompanyDto
+  WorkCompanyDto,
 } from "api/generated";
+import {
+  getProjectStatusLabel,
+  projectTypeOptions,
+} from "layouts/pages/ticketProjects/projectTypeHelpers";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
@@ -161,6 +167,30 @@ function extractModulesFromApiTask(task: any): string[] {
     return t ? [t] : [];
   }
   return [];
+}
+
+function extractProjectStatusFromApiTask(task: any): ProjectTypes | null {
+  const raw = task?.projectStatus ?? task?.ProjectStatus;
+  if (raw == null || raw === "") return null;
+  return Number(raw) as ProjectTypes;
+}
+
+function normalizeProjectStatusFromRow(row: any): ProjectTypes | null {
+  const raw =
+    row?.projectStatus ??
+    row?.ProjectStatus ??
+    row?.taskData?.projectStatus ??
+    row?.taskData?.ProjectStatus;
+  if (raw == null || raw === "") return null;
+  return Number(raw) as ProjectTypes;
+}
+
+function getRowParentId(row: any): unknown {
+  return row?.ParentID ?? row?.parentId ?? row?.taskData?.ParentID ?? row?.taskData?.parentId;
+}
+
+function isRootTaskRow(row: any): boolean {
+  return isRootParentId(getRowParentId(row));
 }
 
 const MODULE_GUID_RE =
@@ -381,6 +411,9 @@ function buildLocalRowPatchFromTaskData(
     resources: nextResources,
     modules: modulesArray.slice(),
     moduleIds: modulesArray.slice(),
+    projectStatus: isRootTaskRow(taskData)
+      ? normalizeProjectStatusFromRow(taskData)
+      : (existing?.projectStatus ?? null),
   };
 }
 
@@ -827,6 +860,7 @@ function ProjectChart() {
           resources: users,
           modules: modulesArray,
           moduleIds: modulesArray.slice(),
+          projectStatus: extractProjectStatusFromApiTask(task),
         };
       });
       const ascendingData = transformedData.sort((a: any, b: any) => a.TaskID - b.TaskID);
@@ -936,6 +970,41 @@ function ProjectChart() {
     [] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const projectStatusColumnEdit = useMemo(
+    () => ({
+      create: () => document.createElement("input"),
+      write: (args: { rowData: any; element: HTMLElement }) => {
+        const isRoot = isRootTaskRow(args.rowData);
+        const value = normalizeProjectStatusFromRow(args.rowData);
+        const ddl = new DropDownList({
+          dataSource: projectTypeOptions,
+          fields: { text: "label", value: "value" },
+          placeholder: isRoot ? "Durum seçin" : "Yalnızca kök görevler için",
+          width: "100%",
+          value: value ?? undefined,
+          enabled: isRoot,
+          change: (e: { value: number | null }) => {
+            if (!isRoot) return;
+            const next = e.value == null ? null : (Number(e.value) as ProjectTypes);
+            args.rowData.projectStatus = next;
+            if (args.rowData.taskData) {
+              args.rowData.taskData.projectStatus = next;
+            }
+          },
+        });
+        ddl.appendTo(args.element);
+        return ddl;
+      },
+      read: (element: HTMLElement, value?: unknown) => {
+        const inst = (element as any).ej2_instances?.[0];
+        const v = inst?.value ?? value;
+        if (v == null || v === "") return null;
+        return Number(v) as ProjectTypes;
+      },
+    }),
+    [] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
   const editSettings: EditSettingsModel = {
     allowAdding: true,
     allowEditing: true,
@@ -953,6 +1022,7 @@ function ProjectChart() {
     { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
     { type: "Notes" as DialogFieldType, headerText: "Notes" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
+    { type: "Custom" as DialogFieldType, headerText: "Durum", fields: ["projectStatus"] },
   ];
   const addDialogFields: AddDialogFieldSettingsModel[] = [
     { type: "General" as DialogFieldType, headerText: "General" },
@@ -960,6 +1030,7 @@ function ProjectChart() {
     { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
     { type: "Notes" as DialogFieldType, headerText: "Notes" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
+    { type: "Custom" as DialogFieldType, headerText: "Durum", fields: ["projectStatus"] },
   ];
   const toolbarOptions = [
     "Add",
@@ -1089,6 +1160,11 @@ function ProjectChart() {
         taskId: args.taskData.TaskID,
         users: usersForInsert(args.taskData.resources),
         moduleIds: moduleIdsPayload,
+        ...(isRootParentId(args.taskData.ParentID)
+          ? {
+              projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? undefined,
+            }
+          : {}),
       };
 
       const api = new ProjectTasksApi(config);
@@ -1271,6 +1347,11 @@ function ProjectChart() {
         taskId: taskData.TaskID,
         users: taskData.resources,
         moduleIds: moduleIdsPayload,
+        ...(isRootParentId(taskData.ParentID)
+          ? {
+              projectStatus: normalizeProjectStatusFromRow(taskData) ?? undefined,
+            }
+          : {}),
       };
 
       const api = new ProjectTasksApi(config);
@@ -1301,6 +1382,9 @@ function ProjectChart() {
         if (body.users !== undefined) patch.resources = body.users;
         patch.moduleIds = moduleIdsPayload.slice();
         patch.modules = moduleIdsPayload.slice();
+        if (isRootParentId(taskData.ParentID)) {
+          patch.projectStatus = normalizeProjectStatusFromRow(taskData);
+        }
         setProjectData((prev) =>
           prev.map((t: any) => (t.Id === taskData.Id ? { ...t, ...patch } : t))
         );
@@ -1738,6 +1822,7 @@ function ProjectChart() {
             <AddDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
             <AddDialogFieldDirective type="Notes" headerText="Notes" />
             <AddDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
+            <AddDialogFieldDirective type="Custom" headerText="Durum" fields={["projectStatus"]} />
           </AddDialogFieldsDirective>
           <EditDialogFieldsDirective>
             <EditDialogFieldDirective type="General" headerText="General" />
@@ -1745,6 +1830,7 @@ function ProjectChart() {
             <EditDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
             <EditDialogFieldDirective type="Notes" headerText="Notes" />
             <EditDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
+            <EditDialogFieldDirective type="Custom" headerText="Durum" fields={["projectStatus"]} />
           </EditDialogFieldsDirective>
           <Inject
             services={[
@@ -1825,11 +1911,19 @@ function ProjectChart() {
               edit={moduleIdsColumnEdit}
               template={(props: any) => {
                 const ids = normalizeModuleIdsFromRow(props);
-                // ref: Syncfusion kolon template'i state closure'ını güncellemeyebilir; GetTaskModules sonrası GUID → name için güncel liste gerekir.
                 const list = moduleDataRef.current as GanttModuleOption[];
                 const text = ids.map((id) => resolveModuleDisplayName(list, id)).join(", ");
                 return <div>{text}</div>;
               }}
+            />
+            <ColumnDirective
+              field="projectStatus"
+              headerText="Durum"
+              width="120"
+              edit={projectStatusColumnEdit}
+              template={(props: any) => (
+                <div>{getProjectStatusLabel(normalizeProjectStatusFromRow(props))}</div>
+              )}
             />
 
             <ColumnDirective

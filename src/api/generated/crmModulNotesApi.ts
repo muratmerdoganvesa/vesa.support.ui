@@ -21,7 +21,6 @@ import { BaseAPI } from "./base";
 export interface CrmModulNoteDto {
   id?: string;
   crmModulId?: string;
-  nextAction?: string | null;
   notes?: string | null;
   createdDate?: string;
   updatedDate?: string | null;
@@ -30,12 +29,10 @@ export interface CrmModulNoteDto {
 
 export interface CreateCrmModulNoteDto {
   crmModulId: string;
-  nextAction?: string | null;
   notes?: string | null;
 }
 
 export interface UpdateCrmModulNoteDto {
-  nextAction?: string | null;
   notes?: string | null;
 }
 

@@ -131,10 +131,8 @@ function CalendarList() {
   useEffect(() => {
     if (filterParams.week > 0) {
       if (hasPerm == false && filterParams.departmentId != "" && filterParams.userIds.length > 0) {
-        console.log("weekly istek atıldı");
         handleFetchTableData();
       } else if (hasPerm == true) {
-        console.log("weekly istek atıldı");
         handleFetchTableData();
       }
     }
@@ -162,7 +160,6 @@ function CalendarList() {
       let customMonth = new Date(updatedTask.startDate).getMonth() + 1;
       handleFetchTableData();
     } catch (error) {
-      console.log("error", error);
     }
   };
 
@@ -269,7 +266,6 @@ function CalendarList() {
       dispatchBusy({ isBusy: true });
       let conf = getConfiguration();
       let api = new UserCalendarApi(conf);
-      console.log("filterParams213213", filterParams);
       let response = await api.apiUserCalendarGetTasksByWeeklyGet(
         filterParams.year,
         filterParams.week,
@@ -280,7 +276,6 @@ function CalendarList() {
         filterParams.percentageId.length ? filterParams.percentageId : undefined,
         filterParams.isGetAll || undefined,
       );
-      console.log("responseweekly", response.data);
       let leavesResponse = await api.apiUserCalendarGetEmployeeLeavesByWeeklyGet(
         filterParams.year,
         filterParams.week,
@@ -312,7 +307,6 @@ function CalendarList() {
         "2e5c2ba5-3eb8-414d-8bc7-08dd44716854",
       );
       setPositionsData(response.data);
-      console.log("positionsdata", response.data);
     } catch (error) {
       dispatchAlert({
         message: "Pozisyon bilgisi çekilirken bir hata oluştu",
@@ -332,7 +326,6 @@ function CalendarList() {
         "2e5c2ba5-3eb8-414d-8bc7-08dd44716854",
       );
       setDepatmentsData(response.data);
-      console.log("departmentssdata", response.data);
     } catch (error) {
       dispatchAlert({
         message: "Departman bilgisi çekilirken bir hata oluştu",

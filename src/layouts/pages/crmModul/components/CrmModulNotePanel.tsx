@@ -15,15 +15,10 @@ type CrmModulNotePanelProps = {
   crmModulId?: string;
 };
 
-const emptyForm = () => ({
-  nextAction: "",
-  notes: "",
-});
-
 export const CrmModulNotePanel = ({ crmModulId }: CrmModulNotePanelProps) => {
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
-  const [formValues, setFormValues] = useState(emptyForm);
+  const [notes, setNotes] = useState("");
   const [noteItems, setNoteItems] = useState<CrmModulNoteDto[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -55,11 +50,8 @@ export const CrmModulNotePanel = ({ crmModulId }: CrmModulNotePanelProps) => {
       return;
     }
 
-    if (!formValues.nextAction.trim() && !formValues.notes.trim()) {
-      dispatchAlert({
-        message: "Sonraki aksiyon veya not alanından en az biri doldurulmalıdır.",
-        type: "error",
-      });
+    if (!notes.trim()) {
+      dispatchAlert({ message: "Not alanı doldurulmalıdır.", type: "error" });
       return;
     }
 
@@ -68,10 +60,9 @@ export const CrmModulNotePanel = ({ crmModulId }: CrmModulNotePanelProps) => {
       const api = new CrmModulNotesApi(getConfiguration());
       await api.apiCrmModulNotesPost({
         crmModulId,
-        nextAction: formValues.nextAction.trim() || null,
-        notes: formValues.notes.trim() || null,
+        notes: notes.trim() || null,
       });
-      setFormValues(emptyForm());
+      setNotes("");
       dispatchAlert({ message: "Not başarıyla kaydedildi.", type: "success" });
       await fetchNotes();
     } catch {
@@ -108,121 +99,91 @@ export const CrmModulNotePanel = ({ crmModulId }: CrmModulNotePanelProps) => {
     }
   };
 
-  const canSave = Boolean(crmModulId);
+  const canSaveNote = Boolean(crmModulId);
 
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-4">
-      <div className="flex items-center gap-2">
+    <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
         <StickyNote className="size-4 text-slate-500" />
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-          Notlar
-        </h3>
-        <span className="text-xs text-slate-400">({noteItems.length})</span>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+          Notlar & Aktivite
+        </h2>
+        <span className="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+          {noteItems.length}
+        </span>
       </div>
 
-      {!canSave ? (
-        <div className="rounded-lg border border-dashed border-slate-200 bg-white py-8 text-center">
-          <p className="text-sm text-slate-500">Not eklemek için önce müşteri kaydını oluşturun.</p>
+      <div className="p-5 space-y-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="crm-note-notes" className="text-xs font-medium text-slate-600">
+            Not
+          </Label>
+          <Textarea
+            id="crm-note-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Görüşme notu..."
+            rows={3}
+            className="bg-white resize-none border-slate-200"
+            disabled={!canSaveNote}
+          />
         </div>
-      ) : (
-        <>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="crm-note-next-action">Sonraki Aksiyon</Label>
-                <Textarea
-                  id="crm-note-next-action"
-                  value={formValues.nextAction}
-                  onChange={(e) =>
-                    setFormValues((prev) => ({ ...prev, nextAction: e.target.value }))
-                  }
-                  placeholder="Sonraki aksiyonu yazın..."
-                  rows={3}
-                  className="bg-white resize-none"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="crm-note-notes">Notlar</Label>
-                <Textarea
-                  id="crm-note-notes"
-                  value={formValues.notes}
-                  onChange={(e) => setFormValues((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Notları yazın..."
-                  rows={3}
-                  className="bg-white resize-none"
-                />
-              </div>
-            </div>
 
-            <div className="flex justify-end">
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSaveNote}
-                className="gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                <Save className="size-4" />
-                Notu Kaydet
-              </Button>
-            </div>
+        {canSaveNote && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSaveNote}
+              className="gap-1.5 bg-teal-700 hover:bg-teal-800 text-white"
+            >
+              <Save className="size-4" />
+              Notu Kaydet
+            </Button>
           </div>
+        )}
 
-          {loading ? (
-            <p className="text-sm text-slate-500 text-center py-6">Notlar yükleniyor...</p>
-          ) : noteItems.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-200 bg-white py-10 text-center">
-              <p className="text-sm text-slate-500">Henüz not eklenmedi.</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Sonraki aksiyon ve not bilgilerini yukarıdan ekleyin.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {noteItems.map((note) => (
-                <article
-                  key={note.id}
-                  className="rounded-lg border border-slate-200 bg-white p-4 space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-xs text-slate-400 tabular-nums">
-                      {formatNoteDate(note.createdDate)}
-                    </p>
-                    {note.id && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteNote(note.id!)}
-                        className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
-                        title="Notu sil"
-                        aria-label="Notu sil"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Sonraki Aksiyon
-                      </p>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
-                        {note.nextAction?.trim() || "—"}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                        Notlar
-                      </p>
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
-                        {note.notes?.trim() || "—"}
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+        {!canSaveNote ? (
+          <div className="rounded-lg border border-dashed border-slate-200 py-8 text-center">
+            <p className="text-sm text-slate-500">Not eklemek için önce müşteri kaydını oluşturun.</p>
+          </div>
+        ) : loading ? (
+          <p className="text-sm text-slate-500 text-center py-6">Notlar yükleniyor...</p>
+        ) : noteItems.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-200 py-8 text-center">
+            <p className="text-sm text-slate-500">Henüz not eklenmedi.</p>
+          </div>
+        ) : (
+          <div className="space-y-3 pt-2">
+            {noteItems.map((note) => (
+              <article
+                key={note.id}
+                className="rounded-lg border border-slate-200 bg-slate-50/50 p-4"
+              >
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <p className="text-xs text-slate-400 tabular-nums">
+                    {formatNoteDate(note.createdDate)}
+                  </p>
+                  {note.id && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteNote(note.id!)}
+                      className="inline-flex items-center justify-center size-8 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
+                      title="Notu sil"
+                      aria-label="Notu sil"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">
+                  {note.notes?.trim() || "—"}
+                </p>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 };

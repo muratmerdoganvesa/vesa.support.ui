@@ -4198,6 +4198,205 @@ export interface ConsultantInfoDto {
 /**
  * 
  * @export
+ * @interface CreateCrmModulDto
+ */
+export interface CreateCrmModulDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'partnerCompanyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'contactPerson'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'contactTitle'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'phoneNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'email'?: string | null;
+    /**
+     * 
+     * @type {LeadSource}
+     * @memberof CreateCrmModulDto
+     */
+    'leadSource'?: LeadSource;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'accountManager'?: string | null;
+    /**
+     * 
+     * @type {Array<CrmSubItemInputDto>}
+     * @memberof CreateCrmModulDto
+     */
+    'crmSubItems'?: Array<CrmSubItemInputDto> | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CreateCrmModulDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
+    'notes'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof CreateCrmModulDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof CreateCrmModulDto
+     */
+    'typeCode'?: TypeCodes;
+}
+
+
+/**
+ * 
+ * @export
+ * @interface CreateCrmModulNoteDto
+ */
+export interface CreateCrmModulNoteDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulNoteDto
+     */
+    'crmModulId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulNoteDto
+     */
+    'notes'?: string | null;
+}
+/**
+ * 
+ * @export
+ * @interface CreateCrmSubItemDto
+ */
+export interface CreateCrmSubItemDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmSubItemDto
+     */
+    'crmModulId'?: string;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CreateCrmSubItemDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmSubItemDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmSubItemDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof CreateCrmSubItemDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof CreateCrmSubItemDto
+     */
+    'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CreateCrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
+}
+
+
+/**
+ * 
+ * @export
  * @interface CreateDocumentationDepartmentDto
  */
 export interface CreateDocumentationDepartmentDto {
@@ -4688,6 +4887,374 @@ export interface CreateUserDto {
      */
     'isKanbanAdmin'?: boolean;
 }
+
+
+/**
+ * 
+ * @export
+ * @interface CrmModulDto
+ */
+export interface CrmModulDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'id'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'partnerCompanyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'contactPerson'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'contactTitle'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'phoneNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'email'?: string | null;
+    /**
+     * 
+     * @type {LeadSource}
+     * @memberof CrmModulDto
+     */
+    'leadSource'?: LeadSource;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'accountManager'?: string | null;
+    /**
+     * 
+     * @type {Array<CrmSubItemDto>}
+     * @memberof CrmModulDto
+     */
+    'crmSubItems'?: Array<CrmSubItemDto> | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CrmModulDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CrmModulDto
+     */
+    'solutionModuleNames'?: Array<string> | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'notes'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof CrmModulDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof CrmModulDto
+     */
+    'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'createdDate'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
+    'updatedDate'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
+    'uniqNumber'?: number;
+}
+
+
+/**
+ * 
+ * @export
+ * @interface CrmModulNoteDto
+ */
+export interface CrmModulNoteDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulNoteDto
+     */
+    'id'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulNoteDto
+     */
+    'crmModulId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulNoteDto
+     */
+    'notes'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulNoteDto
+     */
+    'createdDate'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulNoteDto
+     */
+    'updatedDate'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulNoteDto
+     */
+    'uniqNumber'?: number;
+}
+/**
+ * 
+ * @export
+ * @interface CrmSubItemDto
+ */
+export interface CrmSubItemDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemDto
+     */
+    'id'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemDto
+     */
+    'crmModulId'?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof CrmSubItemDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof CrmSubItemDto
+     */
+    'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CrmSubItemDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CrmSubItemDto
+     */
+    'solutionModuleNames'?: Array<string> | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemDto
+     */
+    'createdDate'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemDto
+     */
+    'updatedDate'?: string | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
+    'uniqNumber'?: number;
+}
+
+
+/**
+ * 
+ * @export
+ * @interface CrmSubItemInputDto
+ */
+export interface CrmSubItemInputDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemInputDto
+     */
+    'id'?: string | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof CrmSubItemInputDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemInputDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmSubItemInputDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof CrmSubItemInputDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof CrmSubItemInputDto
+     */
+    'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CrmSubItemInputDto
+     */
+    'opportunityStage'?: OpportunityStage;
+}
+
+
+/**
+ * 
+ * @export
+ * @enum {number}
+ */
+
+export const CurrencyType = {
+    NUMBER_0: 0,
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3
+} as const;
+
+export type CurrencyType = typeof CurrencyType[keyof typeof CurrencyType];
 
 
 /**
@@ -8515,6 +9082,26 @@ export interface KanbanTasksUpdateDto {
 /**
  * 
  * @export
+ * @enum {number}
+ */
+
+export const LeadSource = {
+    NUMBER_0: 0,
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3,
+    NUMBER_4: 4,
+    NUMBER_5: 5,
+    NUMBER_6: 6,
+    NUMBER_7: 7
+} as const;
+
+export type LeadSource = typeof LeadSource[keyof typeof LeadSource];
+
+
+/**
+ * 
+ * @export
  * @interface LeaveResponseDto
  */
 export interface LeaveResponseDto {
@@ -9339,6 +9926,27 @@ export const OfficeLocation = {
 } as const;
 
 export type OfficeLocation = typeof OfficeLocation[keyof typeof OfficeLocation];
+
+
+/**
+ * 
+ * @export
+ * @enum {number}
+ */
+
+export const OpportunityStage = {
+    NUMBER_0: 0,
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3,
+    NUMBER_4: 4,
+    NUMBER_5: 5,
+    NUMBER_6: 6,
+    NUMBER_7: 7,
+    NUMBER_8: 8
+} as const;
+
+export type OpportunityStage = typeof OpportunityStage[keyof typeof OpportunityStage];
 
 
 /**
@@ -11834,6 +12442,87 @@ export interface ProjectInfoDto {
 /**
  * 
  * @export
+ * @interface ProjectKalemStatisticsDto
+ */
+export interface ProjectKalemStatisticsDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'id'?: string;
+    /**
+     * 
+     * @type {number}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'taskId'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'kalemName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'projectId'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'customerName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'projectDescription'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'projectSubDescription'?: string | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'modules'?: Array<string> | null;
+    /**
+     * 
+     * @type {Array<TicketProjectStatsPersonDto>}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'employees'?: Array<TicketProjectStatsPersonDto> | null;
+    /**
+     * 
+     * @type {TicketProjectStatsPersonDto}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'projectManager'?: TicketProjectStatsPersonDto;
+    /**
+     * 
+     * @type {string}
+     * @memberof ProjectKalemStatisticsDto
+     */
+    'createdDate'?: string | null;
+}
+
+
+/**
+ * 
+ * @export
  * @interface ProjectLastYearInvoiceList
  */
 export interface ProjectLastYearInvoiceList {
@@ -11965,7 +12654,15 @@ export interface ProjectTasksInsertDto {
      * @memberof ProjectTasksInsertDto
      */
     'moduleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof ProjectTasksInsertDto
+     */
+    'projectStatus'?: ProjectTypes;
 }
+
+
 /**
  * 
  * @export
@@ -12062,7 +12759,15 @@ export interface ProjectTasksListDto {
      * @memberof ProjectTasksListDto
      */
     'modules'?: Array<string> | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof ProjectTasksListDto
+     */
+    'projectStatus'?: ProjectTypes;
 }
+
+
 /**
  * 
  * @export
@@ -12153,7 +12858,15 @@ export interface ProjectTasksUpdateDto {
      * @memberof ProjectTasksUpdateDto
      */
     'moduleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {ProjectTypes}
+     * @memberof ProjectTasksUpdateDto
+     */
+    'projectStatus'?: ProjectTypes;
 }
+
+
 /**
  * 
  * @export
@@ -15267,69 +15980,6 @@ export type TicketPriority = typeof TicketPriority[keyof typeof TicketPriority];
 /**
  * 
  * @export
- * @interface TicketProjectStatsDto
- */
-export interface TicketProjectStatsDto {
-    /**
-     * 
-     * @type {string}
-     * @memberof TicketProjectStatsDto
-     */
-    'id'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof TicketProjectStatsDto
-     */
-    'customerName'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof TicketProjectStatsDto
-     */
-    'projectDescription'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof TicketProjectStatsDto
-     */
-    'projectSubDescription'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof TicketProjectStatsDto
-     */
-    'createdDate'?: string | null;
-    /**
-     * 
-     * @type {ProjectTypes}
-     * @memberof TicketProjectStatsDto
-     */
-    'projectStatus'?: ProjectTypes;
-    /**
-     * 
-     * @type {Array<string>}
-     * @memberof TicketProjectStatsDto
-     */
-    'modules'?: Array<string> | null;
-    /**
-     * 
-     * @type {Array<TicketProjectStatsPersonDto>}
-     * @memberof TicketProjectStatsDto
-     */
-    'employees'?: Array<TicketProjectStatsPersonDto> | null;
-    /**
-     * 
-     * @type {TicketProjectStatsPersonDto}
-     * @memberof TicketProjectStatsDto
-     */
-    'projectManager'?: TicketProjectStatsPersonDto;
-}
-
-
-/**
- * 
- * @export
  * @interface TicketProjectStatsPersonDto
  */
 export interface TicketProjectStatsPersonDto {
@@ -17427,6 +18077,209 @@ export interface TokenDto {
      */
     'refreshTokenExpiration'?: string;
 }
+/**
+ * 
+ * @export
+ * @enum {number}
+ */
+
+export const TypeCodes = {
+    NUMBER_0: 0,
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3
+} as const;
+
+export type TypeCodes = typeof TypeCodes[keyof typeof TypeCodes];
+
+
+/**
+ * 
+ * @export
+ * @interface UpdateCrmModulDto
+ */
+export interface UpdateCrmModulDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'partnerCompanyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'contactPerson'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'contactTitle'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'phoneNumber'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'email'?: string | null;
+    /**
+     * 
+     * @type {LeadSource}
+     * @memberof UpdateCrmModulDto
+     */
+    'leadSource'?: LeadSource;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'accountManager'?: string | null;
+    /**
+     * 
+     * @type {Array<CrmSubItemInputDto>}
+     * @memberof UpdateCrmModulDto
+     */
+    'crmSubItems'?: Array<CrmSubItemInputDto> | null;
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof UpdateCrmModulDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
+    'notes'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof UpdateCrmModulDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof UpdateCrmModulDto
+     */
+    'typeCode'?: TypeCodes;
+}
+
+
+/**
+ * 
+ * @export
+ * @interface UpdateCrmModulNoteDto
+ */
+export interface UpdateCrmModulNoteDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulNoteDto
+     */
+    'notes'?: string | null;
+}
+/**
+ * 
+ * @export
+ * @interface UpdateCrmSubItemDto
+ */
+export interface UpdateCrmSubItemDto {
+    /**
+     * 
+     * @type {Array<string>}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'solutionModuleIds'?: Array<string> | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'unitPrice'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'personCount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'expectedCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'lastContactDate'?: string | null;
+    /**
+     * 
+     * @type {CurrencyType}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'currencyType'?: CurrencyType;
+    /**
+     * 
+     * @type {TypeCodes}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
+}
+
+
 /**
  * 
  * @export
@@ -19764,6 +20617,12 @@ export interface WebEventsDto {
      * @type {boolean}
      * @memberof WebEventsDto
      */
+    'status'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WebEventsDto
+     */
     'isEvent'?: boolean;
     /**
      * 
@@ -19777,6 +20636,12 @@ export interface WebEventsDto {
      * @memberof WebEventsDto
      */
     'link'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WebEventsDto
+     */
+    'linkedinUrl'?: string | null;
     /**
      * 
      * @type {Array<WebEventImageDto>}
@@ -27177,6 +28042,1420 @@ export class CacheApi extends BaseAPI {
      */
     public apiCacheDeleteAllCacheGet(userName?: string, options?: RawAxiosRequestConfig) {
         return CacheApiFp(this.configuration).apiCacheDeleteAllCacheGet(userName, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CrmModulNotesApi - axios parameter creator
+ * @export
+ */
+export const CrmModulNotesApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} crmModulId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesByCrmModulCrmModulIdGet: async (crmModulId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'crmModulId' is not null or undefined
+            assertParamExists('apiCrmModulNotesByCrmModulCrmModulIdGet', 'crmModulId', crmModulId)
+            const localVarPath = `/api/CrmModulNotes/ByCrmModul/{crmModulId}`
+                .replace(`{${"crmModulId"}}`, encodeURIComponent(String(crmModulId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesIdDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmModulNotesIdDelete', 'id', id)
+            const localVarPath = `/api/CrmModulNotes/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesIdGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmModulNotesIdGet', 'id', id)
+            const localVarPath = `/api/CrmModulNotes/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmModulNoteDto} [updateCrmModulNoteDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesIdPut: async (id: string, updateCrmModulNoteDto?: UpdateCrmModulNoteDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmModulNotesIdPut', 'id', id)
+            const localVarPath = `/api/CrmModulNotes/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateCrmModulNoteDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {CreateCrmModulNoteDto} [createCrmModulNoteDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesPost: async (createCrmModulNoteDto?: CreateCrmModulNoteDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModulNotes`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createCrmModulNoteDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CrmModulNotesApi - functional programming interface
+ * @export
+ */
+export const CrmModulNotesApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CrmModulNotesApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} crmModulId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<CrmModulNoteDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulNotesApi.apiCrmModulNotesByCrmModulCrmModulIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulNotesIdDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesIdDelete(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulNotesApi.apiCrmModulNotesIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulNotesIdGet(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmModulNoteDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesIdGet(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulNotesApi.apiCrmModulNotesIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmModulNoteDto} [updateCrmModulNoteDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulNotesIdPut(id: string, updateCrmModulNoteDto?: UpdateCrmModulNoteDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesIdPut(id, updateCrmModulNoteDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulNotesApi.apiCrmModulNotesIdPut']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {CreateCrmModulNoteDto} [createCrmModulNoteDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulNotesPost(createCrmModulNoteDto?: CreateCrmModulNoteDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulNotesPost(createCrmModulNoteDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulNotesApi.apiCrmModulNotesPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CrmModulNotesApi - factory interface
+ * @export
+ */
+export const CrmModulNotesApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CrmModulNotesApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} crmModulId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<CrmModulNoteDto>> {
+            return localVarFp.apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesIdDelete(id: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmModulNotesIdDelete(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesIdGet(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrmModulNoteDto> {
+            return localVarFp.apiCrmModulNotesIdGet(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmModulNoteDto} [updateCrmModulNoteDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesIdPut(id: string, updateCrmModulNoteDto?: UpdateCrmModulNoteDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmModulNotesIdPut(id, updateCrmModulNoteDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {CreateCrmModulNoteDto} [createCrmModulNoteDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulNotesPost(createCrmModulNoteDto?: CreateCrmModulNoteDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmModulNotesPost(createCrmModulNoteDto, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CrmModulNotesApi - object-oriented interface
+ * @export
+ * @class CrmModulNotesApi
+ * @extends {BaseAPI}
+ */
+export class CrmModulNotesApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} crmModulId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulNotesApi
+     */
+    public apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig) {
+        return CrmModulNotesApiFp(this.configuration).apiCrmModulNotesByCrmModulCrmModulIdGet(crmModulId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulNotesApi
+     */
+    public apiCrmModulNotesIdDelete(id: string, options?: RawAxiosRequestConfig) {
+        return CrmModulNotesApiFp(this.configuration).apiCrmModulNotesIdDelete(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulNotesApi
+     */
+    public apiCrmModulNotesIdGet(id: string, options?: RawAxiosRequestConfig) {
+        return CrmModulNotesApiFp(this.configuration).apiCrmModulNotesIdGet(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {UpdateCrmModulNoteDto} [updateCrmModulNoteDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulNotesApi
+     */
+    public apiCrmModulNotesIdPut(id: string, updateCrmModulNoteDto?: UpdateCrmModulNoteDto, options?: RawAxiosRequestConfig) {
+        return CrmModulNotesApiFp(this.configuration).apiCrmModulNotesIdPut(id, updateCrmModulNoteDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {CreateCrmModulNoteDto} [createCrmModulNoteDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulNotesApi
+     */
+    public apiCrmModulNotesPost(createCrmModulNoteDto?: CreateCrmModulNoteDto, options?: RawAxiosRequestConfig) {
+        return CrmModulNotesApiFp(this.configuration).apiCrmModulNotesPost(createCrmModulNoteDto, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CrmModulsApi - axios parameter creator
+ * @export
+ */
+export const CrmModulsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsCurrencyTypesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModuls/CurrencyTypes`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModuls`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsIdDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmModulsIdDelete', 'id', id)
+            const localVarPath = `/api/CrmModuls/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsIdGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmModulsIdGet', 'id', id)
+            const localVarPath = `/api/CrmModuls/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmModulDto} [updateCrmModulDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsIdPut: async (id: string, updateCrmModulDto?: UpdateCrmModulDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmModulsIdPut', 'id', id)
+            const localVarPath = `/api/CrmModuls/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateCrmModulDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsLeadSourcesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModuls/LeadSources`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsOpportunityStagesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModuls/OpportunityStages`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {CreateCrmModulDto} [createCrmModulDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsPost: async (createCrmModulDto?: CreateCrmModulDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModuls`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createCrmModulDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsTypeCodesGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmModuls/TypeCodes`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CrmModulsApi - functional programming interface
+ * @export
+ */
+export const CrmModulsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CrmModulsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsCurrencyTypesGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsCurrencyTypesGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsCurrencyTypesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<CrmModulDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsIdDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsIdDelete(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsIdGet(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmModulDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsIdGet(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmModulDto} [updateCrmModulDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsIdPut(id: string, updateCrmModulDto?: UpdateCrmModulDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsIdPut(id, updateCrmModulDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsIdPut']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsLeadSourcesGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsLeadSourcesGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsLeadSourcesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsOpportunityStagesGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsOpportunityStagesGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsOpportunityStagesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {CreateCrmModulDto} [createCrmModulDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsPost(createCrmModulDto?: CreateCrmModulDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsPost(createCrmModulDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmModulsTypeCodesGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<EnumOptionDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsTypeCodesGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmModulsApi.apiCrmModulsTypeCodesGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CrmModulsApi - factory interface
+ * @export
+ */
+export const CrmModulsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CrmModulsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsCurrencyTypesGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<EnumOptionDto>> {
+            return localVarFp.apiCrmModulsCurrencyTypesGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<CrmModulDto>> {
+            return localVarFp.apiCrmModulsGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsIdDelete(id: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmModulsIdDelete(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsIdGet(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrmModulDto> {
+            return localVarFp.apiCrmModulsIdGet(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmModulDto} [updateCrmModulDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsIdPut(id: string, updateCrmModulDto?: UpdateCrmModulDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmModulsIdPut(id, updateCrmModulDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsLeadSourcesGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<EnumOptionDto>> {
+            return localVarFp.apiCrmModulsLeadSourcesGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsOpportunityStagesGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<EnumOptionDto>> {
+            return localVarFp.apiCrmModulsOpportunityStagesGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {CreateCrmModulDto} [createCrmModulDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsPost(createCrmModulDto?: CreateCrmModulDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmModulsPost(createCrmModulDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmModulsTypeCodesGet(options?: RawAxiosRequestConfig): AxiosPromise<Array<EnumOptionDto>> {
+            return localVarFp.apiCrmModulsTypeCodesGet(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CrmModulsApi - object-oriented interface
+ * @export
+ * @class CrmModulsApi
+ * @extends {BaseAPI}
+ */
+export class CrmModulsApi extends BaseAPI {
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsCurrencyTypesGet(options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsCurrencyTypesGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsGet(options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsIdDelete(id: string, options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsIdDelete(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsIdGet(id: string, options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsIdGet(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {UpdateCrmModulDto} [updateCrmModulDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsIdPut(id: string, updateCrmModulDto?: UpdateCrmModulDto, options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsIdPut(id, updateCrmModulDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsLeadSourcesGet(options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsLeadSourcesGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsOpportunityStagesGet(options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsOpportunityStagesGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {CreateCrmModulDto} [createCrmModulDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsPost(createCrmModulDto?: CreateCrmModulDto, options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsPost(createCrmModulDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmModulsApi
+     */
+    public apiCrmModulsTypeCodesGet(options?: RawAxiosRequestConfig) {
+        return CrmModulsApiFp(this.configuration).apiCrmModulsTypeCodesGet(options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CrmSubItemsApi - axios parameter creator
+ * @export
+ */
+export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {string} crmModulId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsByCrmModulCrmModulIdGet: async (crmModulId: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'crmModulId' is not null or undefined
+            assertParamExists('apiCrmSubItemsByCrmModulCrmModulIdGet', 'crmModulId', crmModulId)
+            const localVarPath = `/api/CrmSubItems/ByCrmModul/{crmModulId}`
+                .replace(`{${"crmModulId"}}`, encodeURIComponent(String(crmModulId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsIdDelete: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmSubItemsIdDelete', 'id', id)
+            const localVarPath = `/api/CrmSubItems/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsIdGet: async (id: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmSubItemsIdGet', 'id', id)
+            const localVarPath = `/api/CrmSubItems/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmSubItemDto} [updateCrmSubItemDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsIdPut: async (id: string, updateCrmSubItemDto?: UpdateCrmSubItemDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiCrmSubItemsIdPut', 'id', id)
+            const localVarPath = `/api/CrmSubItems/{id}`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'PUT', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(updateCrmSubItemDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {CreateCrmSubItemDto} [createCrmSubItemDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsPost: async (createCrmSubItemDto?: CreateCrmSubItemDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/CrmSubItems`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(createCrmSubItemDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CrmSubItemsApi - functional programming interface
+ * @export
+ */
+export const CrmSubItemsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CrmSubItemsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {string} crmModulId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<CrmSubItemDto>>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmSubItemsApi.apiCrmSubItemsByCrmModulCrmModulIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmSubItemsIdDelete(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsIdDelete(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmSubItemsApi.apiCrmSubItemsIdDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmSubItemsIdGet(id: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmSubItemDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsIdGet(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmSubItemsApi.apiCrmSubItemsIdGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmSubItemDto} [updateCrmSubItemDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmSubItemsIdPut(id: string, updateCrmSubItemDto?: UpdateCrmSubItemDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsIdPut(id, updateCrmSubItemDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmSubItemsApi.apiCrmSubItemsIdPut']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {CreateCrmSubItemDto} [createCrmSubItemDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiCrmSubItemsPost(createCrmSubItemDto?: CreateCrmSubItemDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmSubItemsPost(createCrmSubItemDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmSubItemsApi.apiCrmSubItemsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CrmSubItemsApi - factory interface
+ * @export
+ */
+export const CrmSubItemsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CrmSubItemsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {string} crmModulId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<CrmSubItemDto>> {
+            return localVarFp.apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsIdDelete(id: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmSubItemsIdDelete(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsIdGet(id: string, options?: RawAxiosRequestConfig): AxiosPromise<CrmSubItemDto> {
+            return localVarFp.apiCrmSubItemsIdGet(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
+         * @param {UpdateCrmSubItemDto} [updateCrmSubItemDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsIdPut(id: string, updateCrmSubItemDto?: UpdateCrmSubItemDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmSubItemsIdPut(id, updateCrmSubItemDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {CreateCrmSubItemDto} [createCrmSubItemDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiCrmSubItemsPost(createCrmSubItemDto?: CreateCrmSubItemDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiCrmSubItemsPost(createCrmSubItemDto, options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CrmSubItemsApi - object-oriented interface
+ * @export
+ * @class CrmSubItemsApi
+ * @extends {BaseAPI}
+ */
+export class CrmSubItemsApi extends BaseAPI {
+    /**
+     * 
+     * @param {string} crmModulId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmSubItemsApi
+     */
+    public apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId: string, options?: RawAxiosRequestConfig) {
+        return CrmSubItemsApiFp(this.configuration).apiCrmSubItemsByCrmModulCrmModulIdGet(crmModulId, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmSubItemsApi
+     */
+    public apiCrmSubItemsIdDelete(id: string, options?: RawAxiosRequestConfig) {
+        return CrmSubItemsApiFp(this.configuration).apiCrmSubItemsIdDelete(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmSubItemsApi
+     */
+    public apiCrmSubItemsIdGet(id: string, options?: RawAxiosRequestConfig) {
+        return CrmSubItemsApiFp(this.configuration).apiCrmSubItemsIdGet(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
+     * @param {UpdateCrmSubItemDto} [updateCrmSubItemDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmSubItemsApi
+     */
+    public apiCrmSubItemsIdPut(id: string, updateCrmSubItemDto?: UpdateCrmSubItemDto, options?: RawAxiosRequestConfig) {
+        return CrmSubItemsApiFp(this.configuration).apiCrmSubItemsIdPut(id, updateCrmSubItemDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {CreateCrmSubItemDto} [createCrmSubItemDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmSubItemsApi
+     */
+    public apiCrmSubItemsPost(createCrmSubItemDto?: CreateCrmSubItemDto, options?: RawAxiosRequestConfig) {
+        return CrmSubItemsApiFp(this.configuration).apiCrmSubItemsPost(createCrmSubItemDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -51757,7 +54036,7 @@ export const TicketProjectsApiFp = function(configuration?: Configuration) {
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<TicketProjectStatsDto>>> {
+        async apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<Array<ProjectKalemStatisticsDto>>> {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketProjectsGetProjectStatisticsGet(workCompanyId, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['TicketProjectsApi.apiTicketProjectsGetProjectStatisticsGet']?.[localVarOperationServerIndex]?.url;
@@ -51906,7 +54185,7 @@ export const TicketProjectsApiFactory = function (configuration?: Configuration,
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<TicketProjectStatsDto>> {
+        apiTicketProjectsGetProjectStatisticsGet(workCompanyId?: string, options?: RawAxiosRequestConfig): AxiosPromise<Array<ProjectKalemStatisticsDto>> {
             return localVarFp.apiTicketProjectsGetProjectStatisticsGet(workCompanyId, options).then((request) => request(axios, basePath));
         },
         /**

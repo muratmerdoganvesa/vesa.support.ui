@@ -1,4 +1,5 @@
 import { ProjectTypes } from "api/generated";
+import type { StatsBoardItem } from "./types";
 
 export const UNASSIGNED_PROJECT_TYPE_KEY = "__unassigned__" as const;
 
@@ -52,6 +53,11 @@ export const getProjectColumnKey = (
   projectStatus?: ProjectTypes | null,
 ): ProjectTypeColumnKey =>
   projectStatus == null ? UNASSIGNED_PROJECT_TYPE_KEY : projectStatus;
+
+export const getStatsBoardColumnKey = (item: StatsBoardItem): ProjectTypeColumnKey => {
+  if (item.kind === "project") return UNASSIGNED_PROJECT_TYPE_KEY;
+  return getProjectColumnKey(item.projectStatus);
+};
 
 /** Kanban kolon renkleri ile uyumlu */
 export const PROJECT_TYPE_COLUMN_COLORS: Record<

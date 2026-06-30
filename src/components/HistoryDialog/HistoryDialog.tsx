@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "components/ui/table";
 import { Button } from "components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface Props {
   ticketId: string;
@@ -35,8 +36,10 @@ const columns: { key: keyof TicketAssigneListDto; label: string }[] = [
 
 function HistoryDialog({ ticketId, isOpen, onClose }: Props) {
   const [historyData, setHistoryData] = useState<TicketAssigneListDto[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const getHistory = async () => {
+    setLoading(true);
     const conf = getConfiguration();
     const ticketApi = new TicketApi(conf);
     const res = await ticketApi.apiTicketGetAssingListGet(ticketId);
@@ -45,6 +48,7 @@ function HistoryDialog({ ticketId, isOpen, onClose }: Props) {
       item.createDate = format(new Date(item.createDate), "dd.MM.yyyy HH:mm:ss", { locale: tr });
     });
     setHistoryData(res.data);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -64,7 +68,11 @@ function HistoryDialog({ ticketId, isOpen, onClose }: Props) {
         </DialogHeader>
 
         <div className="overflow-auto max-h-[420px]">
-          {historyData.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+            </div>
+          ) : historyData.length === 0 ? (
             <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
               Talep geçmişi bulunmamaktadır.
             </div>
@@ -109,6 +117,7 @@ function HistoryDialog({ ticketId, isOpen, onClose }: Props) {
             size="sm"
             onClick={onClose}
             aria-label="Diyaloğu kapat"
+            className="mb-3"
           >
             Kapat
           </Button>

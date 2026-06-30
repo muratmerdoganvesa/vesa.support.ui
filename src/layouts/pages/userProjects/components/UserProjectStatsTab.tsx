@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Users } from "lucide-react";
 
 import { UserAppDtoOnlyNameId, TicketDepartmensListDto } from "api/generated";
@@ -36,6 +36,7 @@ export const UserProjectStatsTab = ({
   const dispatchBusy = useBusy();
   const { getPhoto } = useUserPhotos();
   const [statsData, setStatsData] = useState<UserProjectStatsDto[]>([]);
+  const hasInitialFetchedRef = useRef(false);
 
   const fetchStats = async (userId?: string | null) => {
     try {
@@ -50,8 +51,10 @@ export const UserProjectStatsTab = ({
   };
 
   useEffect(() => {
-    if (!isInitialized || hasPerm === undefined) return;
+    if (!isInitialized || hasPerm === undefined || hasInitialFetchedRef.current) return;
     if (hasPerm !== true && !selectedUser?.id) return;
+
+    hasInitialFetchedRef.current = true;
 
     const loadInitialData = async () => {
       dispatchBusy({ isBusy: true });

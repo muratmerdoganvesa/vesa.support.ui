@@ -47,12 +47,14 @@ interface FilterCalendarProps {
 export interface filterData {
   selectedUsers: UserApp[];
   selectedDepartmentForm: string;
-  selectedLevelForm: number;
+  selectedLevelForm: number | null;
   week: string;
   year: string;
   selectedDays: number[];
   selectedPercentage: number[];
   showAll: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
 // ─── Shared helper ────────────────────────────────────────────────────────────
@@ -387,6 +389,7 @@ function FilterCalendar({ initialWeek, initialYear, onFilterApply }: FilterCalen
   const navigate = useNavigate();
   const dispatchBusy = useBusy();
   const dispatchAlert = useAlert();
+  const hasInitialAppliedRef = useRef(false);
 
   const [departmentData, setDepartmentData] = useState<TicketDepartmensListDto[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<TicketDepartmensListDto | null>(null);
@@ -469,12 +472,6 @@ function FilterCalendar({ initialWeek, initialYear, onFilterApply }: FilterCalen
   }, []);
 
   useEffect(() => {
-    if (formData.week && formData.week !== "") {
-      handleFilterApply();
-    }
-  }, [formData.week]);
-
-  useEffect(() => {
     if (initialWeek) setFormData((prev) => ({ ...prev, week: initialWeek.toString() }));
     if (initialYear) setFormData((prev) => ({ ...prev, year: initialYear.toString() }));
     if (selectedDepartment)
@@ -512,30 +509,41 @@ function FilterCalendar({ initialWeek, initialYear, onFilterApply }: FilterCalen
     }
   }, []);
 
-  useEffect(() => {
-    console.log("showAll", formData.showAll);
-  }, [formData.showAll]);
 
   useEffect(() => {
-    console.log("formData.selectedUsers", formData.selectedUsers);
-    console.log("veriler:", hasPerm, isManager, formData.selectedUsers.length);
-    if (hasPerm == false && isManager == false && formData.selectedUsers.length >= 1) {
-      console.log("1");
-      if (onFilterApply) onFilterApply(formData);
-    } else if (
-      hasPerm == false &&
-      isManager == true &&
+    if (
+      hasPerm === false &&
+      isManager === true &&
       formData.selectedLevelForm == null &&
-      formData.selectedUsers.length == 0
+      formData.selectedUsers.length === 0 &&
+      teamUsers.length > 0
     ) {
-      console.log("2");
-      console.log("null");
       setFormData((prev) => ({ ...prev, selectedUsers: teamUsers }));
-    } else if (hasPerm == false && isManager == true && formData.selectedUsers.length >= 0) {
-      console.log("3");
-      if (onFilterApply) onFilterApply(formData);
     }
-  }, [formData.selectedUsers]);
+  }, [hasPerm, isManager, formData.selectedLevelForm, formData.selectedUsers.length, teamUsers]);
+
+  useEffect(() => {
+    if (
+      hasInitialAppliedRef.current ||
+      hasPerm !== false ||
+      !formData.week ||
+      !formData.year ||
+      formData.selectedUsers.length === 0 ||
+      !onFilterApply
+    ) {
+      return;
+    }
+
+    const weekNum = parseInt(formData.week as string);
+    const yearNum = parseInt(formData.year as string);
+    if (isNaN(weekNum) || isNaN(yearNum) || weekNum < 1 || weekNum > 53) {
+      return;
+    }
+
+    hasInitialAppliedRef.current = true;
+    const { startDate, endDate } = getDateRangeFromWeek(weekNum, yearNum);
+    onFilterApply({ ...formData, startDate, endDate });
+  }, [hasPerm, formData.week, formData.year, formData.selectedUsers.length, onFilterApply]);
 
   useEffect(() => {
     const fetchTeamUsers = async () => {
@@ -591,7 +599,6 @@ function FilterCalendar({ initialWeek, initialYear, onFilterApply }: FilterCalen
   const handleFilterReset = async () => {
     setSelectedLevel(null);
     if (hasPerm == false) {
-      console.log("filter reset basıldı");
       const data: filterData = {
         selectedLevelForm: null,
         selectedUsers: teamUsers,

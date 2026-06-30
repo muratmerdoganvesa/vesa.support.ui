@@ -12,6 +12,7 @@ import { ListOrdered, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   getCurrencySymbol,
   getCurrencyTypeLabel,
+  getOpportunityStageLabel,
   getTypeCodeLabel,
 } from "../constants";
 import { calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
@@ -68,6 +69,7 @@ export const CrmSubItemList = ({
                 SF Modülü
               </TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Tip</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-600">Fırsat Aşaması</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Para Birimi</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Birim Fiyat</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Kişi</TableHead>
@@ -102,6 +104,9 @@ export const CrmSubItemList = ({
                   </TableCell>
                   <TableCell className="text-sm text-slate-600 whitespace-nowrap">
                     {getTypeCodeLabel(item.typeCode)}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                    {getOpportunityStageLabel(item.opportunityStage)}
                   </TableCell>
                   <TableCell className="text-sm text-slate-600 whitespace-nowrap">
                     {getCurrencyTypeLabel(item.currencyType)}

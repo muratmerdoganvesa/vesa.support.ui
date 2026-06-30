@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { TicketProjectsApi, TicketProjectsListDto, UserAppDtoOnlyNameId, TicketDepartmensListDto } from "api/generated";
 import getConfiguration from "confiuration";
@@ -78,6 +78,7 @@ export const ConsultantProjectsTab = ({
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
   const [projectsData, setProjectsData] = useState<TicketProjectsListDto[]>([]);
+  const hasInitialFetchedRef = useRef(false);
 
   const fetchProjectData = async (userId?: string | null) => {
     try {
@@ -91,8 +92,10 @@ export const ConsultantProjectsTab = ({
   };
 
   useEffect(() => {
-    if (!isInitialized || hasPerm === undefined) return;
+    if (!isInitialized || hasPerm === undefined || hasInitialFetchedRef.current) return;
     if (hasPerm !== true && !selectedUser?.id) return;
+
+    hasInitialFetchedRef.current = true;
 
     const loadInitialData = async () => {
       dispatchBusy({ isBusy: true });
