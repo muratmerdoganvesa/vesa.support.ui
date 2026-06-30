@@ -315,7 +315,7 @@ export default function App() {
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
-            
+       
 
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  

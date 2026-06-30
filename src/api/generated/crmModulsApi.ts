@@ -107,7 +107,6 @@ export interface CreateCrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  nextAction?: string | null;
   crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
@@ -119,7 +118,6 @@ export interface UpdateCrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  nextAction?: string | null;
   crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
@@ -132,7 +130,6 @@ export interface CrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  nextAction?: string | null;
   crmSubItems?: CrmSubItemDto[] | null;
   solutionModuleIds?: string[] | null;
   solutionModuleNames?: string[] | null;

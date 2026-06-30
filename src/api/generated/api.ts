@@ -4245,12 +4245,6 @@ export interface CreateCrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {string}
-     * @memberof CreateCrmModulDto
-     */
-    'nextAction'?: string | null;
-    /**
-     * 
      * @type {Array<CrmSubItemInputDto>}
      * @memberof CreateCrmModulDto
      */
@@ -4949,12 +4943,6 @@ export interface CrmModulDto {
      * @memberof CrmModulDto
      */
     'accountManager'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CrmModulDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemDto>}
@@ -18153,12 +18141,6 @@ export interface UpdateCrmModulDto {
      * @memberof UpdateCrmModulDto
      */
     'accountManager'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof UpdateCrmModulDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemInputDto>}

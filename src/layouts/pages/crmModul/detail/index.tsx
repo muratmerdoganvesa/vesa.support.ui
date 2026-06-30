@@ -163,13 +163,7 @@ const CrmModulDetailPage = () => {
               onAdd={handleAddItem}
             />
 
-            <CrmModulNotePanel
-              crmModulId={id}
-              nextAction={modulValues.nextAction}
-              onNextActionChange={(value) =>
-                setModulValues((prev) => ({ ...prev, nextAction: value }))
-              }
-            />
+            <CrmModulNotePanel crmModulId={id} />
           </div>
         )}
       </div>

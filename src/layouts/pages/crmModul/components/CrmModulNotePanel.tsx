@@ -1,6 +1,5 @@
 import { CrmModulNoteDto, CrmModulNotesApi } from "api/generated";
 import { Button } from "components/ui/button";
-import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
 import { Textarea } from "components/ui/textarea";
 import getConfiguration from "confiuration";
@@ -14,15 +13,9 @@ import { formatDateTr } from "../utils";
 
 type CrmModulNotePanelProps = {
   crmModulId?: string;
-  nextAction: string;
-  onNextActionChange: (value: string) => void;
 };
 
-export const CrmModulNotePanel = ({
-  crmModulId,
-  nextAction,
-  onNextActionChange,
-}: CrmModulNotePanelProps) => {
+export const CrmModulNotePanel = ({ crmModulId }: CrmModulNotePanelProps) => {
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
   const [notes, setNotes] = useState("");
@@ -121,33 +114,19 @@ export const CrmModulNotePanel = ({
       </div>
 
       <div className="p-5 space-y-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="crm-note-next-action" className="text-xs font-medium text-slate-600">
-              Sonraki Aksiyon
-            </Label>
-            <Input
-              id="crm-note-next-action"
-              value={nextAction}
-              onChange={(e) => onNextActionChange(e.target.value)}
-              placeholder="örn. Sözleşmeyi gönder..."
-              className="h-10 bg-white border-slate-200"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="crm-note-notes" className="text-xs font-medium text-slate-600">
-              Not
-            </Label>
-            <Textarea
-              id="crm-note-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Görüşme notu..."
-              rows={2}
-              className="bg-white resize-none border-slate-200 min-h-[40px]"
-              disabled={!canSaveNote}
-            />
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="crm-note-notes" className="text-xs font-medium text-slate-600">
+            Not
+          </Label>
+          <Textarea
+            id="crm-note-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Görüşme notu..."
+            rows={3}
+            className="bg-white resize-none border-slate-200"
+            disabled={!canSaveNote}
+          />
         </div>
 
         {canSaveNote && (
@@ -166,10 +145,7 @@ export const CrmModulNotePanel = ({
 
         {!canSaveNote ? (
           <div className="rounded-lg border border-dashed border-slate-200 py-8 text-center">
-            <p className="text-sm text-slate-500">
-              Not eklemek için önce müşteri kaydını oluşturun. Sonraki aksiyon kayıtla birlikte
-              saklanır.
-            </p>
+            <p className="text-sm text-slate-500">Not eklemek için önce müşteri kaydını oluşturun.</p>
           </div>
         ) : loading ? (
           <p className="text-sm text-slate-500 text-center py-6">Notlar yükleniyor...</p>
