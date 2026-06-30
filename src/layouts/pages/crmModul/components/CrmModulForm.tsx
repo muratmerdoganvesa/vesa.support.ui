@@ -90,12 +90,21 @@ export const CrmModulFormFields = ({
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <SectionCard title="Şirket Bilgileri" variant={variant}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Şirket Adı" htmlFor="crm-partner-company" required className="sm:col-span-2">
+          <Field label="Müşteri Adı" htmlFor="crm-company-name" required className="sm:col-span-2">
+            <Input
+              id="crm-company-name"
+              value={values.companyName}
+              onChange={(e) => handleFieldChange("companyName", e.target.value)}
+              placeholder="Müşteri adı"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Partner Şirket Adı" htmlFor="crm-partner-company" className="sm:col-span-2">
             <Input
               id="crm-partner-company"
               value={values.partnerCompanyName}
               onChange={(e) => handleFieldChange("partnerCompanyName", e.target.value)}
-              placeholder="Şirket adı"
+              placeholder="Partner şirket adı (opsiyonel)"
               className={inputClass}
             />
           </Field>
@@ -116,12 +125,12 @@ export const CrmModulFormFields = ({
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager">
+          <Field label="Sap Hesap Yöneticisi" htmlFor="crm-account-manager">
             <Input
               id="crm-account-manager"
               value={values.accountManager}
               onChange={(e) => handleFieldChange("accountManager", e.target.value)}
-              placeholder="Hesap yöneticisi"
+              placeholder="Sap hesap yöneticisi"
               className={inputClass}
             />
           </Field>

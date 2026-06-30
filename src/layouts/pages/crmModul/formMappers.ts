@@ -12,6 +12,7 @@ import {
 import { parseIsoDate, toIsoDateString, formatPhoneNumberTr } from "./utils";
 
 export type CrmModulFormValues = {
+  companyName: string;
   partnerCompanyName: string;
   contactPerson: string;
   contactTitle: string;
@@ -29,13 +30,16 @@ export type CrmSubItemFormValues = {
   currencyType: CurrencyType;
   unitPrice: string;
   personCount: string;
+  discount: string;
   estimatedValue: string;
+  estimatedDiscountedValue: string;
   expectedCloseDate?: Date;
   lastContactDate?: Date;
   opportunityStage: OpportunityStage;
 };
 
 export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
+  companyName: "",
   partnerCompanyName: "",
   contactPerson: "",
   contactTitle: "",
@@ -52,7 +56,9 @@ export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
   currencyType: CurrencyType.NUMBER_0,
   unitPrice: "",
   personCount: "",
+  discount: "",
   estimatedValue: "",
+  estimatedDiscountedValue: "",
   expectedCloseDate: undefined,
   lastContactDate: undefined,
   opportunityStage: OpportunityStage.NUMBER_0,
@@ -83,6 +89,23 @@ export const calculateEstimatedValueString = (
   return total.toFixed(2);
 };
 
+export const calculateEstimatedDiscountedValueString = (
+  unitPrice: string,
+  personCount: string,
+  discount: string
+): string => {
+  const estimated = calculateEstimatedValueString(unitPrice, personCount);
+  if (!estimated) return "";
+
+  const discountPercent = parseOptionalInt(discount);
+  if (discountPercent == null || discountPercent <= 0) return estimated;
+
+  const estimatedNum = Number(estimated);
+  const discounted = estimatedNum * (1 - Math.min(discountPercent, 100) / 100);
+  if (!Number.isFinite(discounted)) return estimated;
+  return discounted.toFixed(2);
+};
+
 export const formatEstimatedValueDisplay = (
   estimated: string,
   symbol: string
@@ -103,8 +126,12 @@ const toSubItemInputDto = (item: CrmSubItemFormValues): CrmSubItemInputDto => ({
   currencyType: item.currencyType,
   unitPrice: parseOptionalNumber(item.unitPrice),
   personCount: parseOptionalInt(item.personCount),
+  discount: parseOptionalInt(item.discount),
   estimatedValue: parseOptionalNumber(
     calculateEstimatedValueString(item.unitPrice, item.personCount)
+  ),
+  estimatedDiscountedValue: parseOptionalNumber(
+    calculateEstimatedDiscountedValueString(item.unitPrice, item.personCount, item.discount)
   ),
   expectedCloseDate: toIsoDateString(item.expectedCloseDate),
   lastContactDate: toIsoDateString(item.lastContactDate),
@@ -115,6 +142,7 @@ export const toCreateDto = (
   modul: CrmModulFormValues,
   subItems: CrmSubItemFormValues[]
 ): CreateCrmModulDto => ({
+  companyName: modul.companyName.trim() || null,
   partnerCompanyName: modul.partnerCompanyName.trim() || null,
   contactPerson: modul.contactPerson.trim() || null,
   contactTitle: modul.contactTitle.trim() || null,
@@ -131,6 +159,7 @@ export const toUpdateDto = (
 ): UpdateCrmModulDto => toCreateDto(modul, subItems);
 
 export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues => ({
+  companyName: data.companyName?.trim() || data.partnerCompanyName?.trim() || "",
   partnerCompanyName: data.partnerCompanyName ?? "",
   contactPerson: data.contactPerson ?? "",
   contactTitle: data.contactTitle ?? "",
@@ -141,19 +170,28 @@ export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues =
 });
 
 export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFormValues[] =>
-  items.map((item) => ({
-    clientKey: item.id ?? crypto.randomUUID(),
-    id: item.id,
-    solutionModuleIds: (item.solutionModuleIds ?? []).slice(0, 1),
-    typeCode: item.typeCode ?? TypeCodes.NUMBER_0,
-    currencyType: item.currencyType ?? CurrencyType.NUMBER_0,
-    unitPrice: item.unitPrice != null ? String(item.unitPrice) : "",
-    personCount: item.personCount != null ? String(item.personCount) : "",
-    estimatedValue: calculateEstimatedValueString(
-      item.unitPrice != null ? String(item.unitPrice) : "",
-      item.personCount != null ? String(item.personCount) : ""
-    ),
-    expectedCloseDate: parseIsoDate(item.expectedCloseDate),
-    lastContactDate: parseIsoDate(item.lastContactDate),
-    opportunityStage: item.opportunityStage ?? OpportunityStage.NUMBER_0,
-  }));
+  items.map((item) => {
+    const unitPrice = item.unitPrice != null ? String(item.unitPrice) : "";
+    const personCount = item.personCount != null ? String(item.personCount) : "";
+    const discount = item.discount != null ? String(item.discount) : "";
+
+    return {
+      clientKey: item.id ?? crypto.randomUUID(),
+      id: item.id,
+      solutionModuleIds: (item.solutionModuleIds ?? []).slice(0, 1),
+      typeCode: item.typeCode ?? TypeCodes.NUMBER_0,
+      currencyType: item.currencyType ?? CurrencyType.NUMBER_0,
+      unitPrice,
+      personCount,
+      discount,
+      estimatedValue: calculateEstimatedValueString(unitPrice, personCount),
+      estimatedDiscountedValue: calculateEstimatedDiscountedValueString(
+        unitPrice,
+        personCount,
+        discount
+      ),
+      expectedCloseDate: parseIsoDate(item.expectedCloseDate),
+      lastContactDate: parseIsoDate(item.lastContactDate),
+      opportunityStage: item.opportunityStage ?? OpportunityStage.NUMBER_0,
+    };
+  });

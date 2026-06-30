@@ -68,7 +68,7 @@ export const CrmDetailSummary = ({
   onAiRapor,
 }: CrmDetailSummaryProps) => {
   const stats = calculateCrmDetailStats(subItems);
-  const companyName = modulValues.partnerCompanyName.trim() || "Yeni Müşteri";
+  const companyName = modulValues.companyName.trim() || "Yeni Müşteri";
   const initials = getCompanyInitials(companyName);
   const leadLabel = getLeadSourceLabel(modulValues.leadSource);
   const recordId = uniqNumber ? `#${uniqNumber}` : isEditMode ? "" : "Yeni kayıt";
