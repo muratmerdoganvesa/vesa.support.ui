@@ -1,5 +1,5 @@
 import { LeadSource } from "api/generated";
-import { ArrowLeft, Save, Target, TrendingUp, Wallet } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, Target, TrendingUp, Wallet } from "lucide-react";
 import { Button } from "components/ui/button";
 import { getLeadSourceLabel } from "../constants";
 import { type CrmModulFormValues } from "../formMappers";
@@ -17,8 +17,11 @@ type CrmDetailSummaryProps = {
   uniqNumber?: number;
   isEditMode: boolean;
   canSave: boolean;
+  canAiRapor?: boolean;
+  isAiRaporLoading?: boolean;
   onBack: () => void;
   onSave: () => void;
+  onAiRapor?: () => void;
 };
 
 const StatCard = ({
@@ -58,8 +61,11 @@ export const CrmDetailSummary = ({
   uniqNumber,
   isEditMode,
   canSave,
+  canAiRapor = false,
+  isAiRaporLoading = false,
   onBack,
   onSave,
+  onAiRapor,
 }: CrmDetailSummaryProps) => {
   const stats = calculateCrmDetailStats(subItems);
   const companyName = modulValues.partnerCompanyName.trim() || "Yeni Müşteri";
@@ -104,6 +110,19 @@ export const CrmDetailSummary = ({
               <Save className="size-4" />
               Kaydet
             </Button>
+            {onAiRapor && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onAiRapor}
+                disabled={!canAiRapor || isAiRaporLoading}
+                className="gap-1.5 border-violet-300 text-violet-800 hover:bg-violet-50"
+                aria-label="AI raporu al"
+              >
+                <Sparkles className="size-4" />
+                {isAiRaporLoading ? "Rapor hazırlanıyor..." : "AI Raporu Al"}
+              </Button>
+            )}
           </div>
         </div>
 
