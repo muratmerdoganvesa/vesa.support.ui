@@ -4245,10 +4245,10 @@ export interface CreateCrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {OpportunityStage}
+     * @type {string}
      * @memberof CreateCrmModulDto
      */
-    'opportunityStage'?: OpportunityStage;
+    'nextAction'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemInputDto>}
@@ -4296,12 +4296,6 @@ export interface CreateCrmModulDto {
      * @type {string}
      * @memberof CreateCrmModulDto
      */
-    'nextAction'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CreateCrmModulDto
-     */
     'notes'?: string | null;
     /**
      * 
@@ -4330,12 +4324,6 @@ export interface CreateCrmModulNoteDto {
      * @memberof CreateCrmModulNoteDto
      */
     'crmModulId'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof CreateCrmModulNoteDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -4403,6 +4391,12 @@ export interface CreateCrmSubItemDto {
      * @memberof CreateCrmSubItemDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CreateCrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
 }
 
 
@@ -4957,10 +4951,10 @@ export interface CrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {OpportunityStage}
+     * @type {string}
      * @memberof CrmModulDto
      */
-    'opportunityStage'?: OpportunityStage;
+    'nextAction'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemDto>}
@@ -5009,12 +5003,6 @@ export interface CrmModulDto {
      * @memberof CrmModulDto
      */
     'lastContactDate'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CrmModulDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -5072,12 +5060,6 @@ export interface CrmModulNoteDto {
      * @memberof CrmModulNoteDto
      */
     'crmModulId'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof CrmModulNoteDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -5163,6 +5145,12 @@ export interface CrmSubItemDto {
      * @memberof CrmSubItemDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
     /**
      * 
      * @type {Array<string>}
@@ -5256,6 +5244,12 @@ export interface CrmSubItemInputDto {
      * @memberof CrmSubItemInputDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CrmSubItemInputDto
+     */
+    'opportunityStage'?: OpportunityStage;
 }
 
 
@@ -18161,10 +18155,10 @@ export interface UpdateCrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {OpportunityStage}
+     * @type {string}
      * @memberof UpdateCrmModulDto
      */
-    'opportunityStage'?: OpportunityStage;
+    'nextAction'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemInputDto>}
@@ -18212,12 +18206,6 @@ export interface UpdateCrmModulDto {
      * @type {string}
      * @memberof UpdateCrmModulDto
      */
-    'nextAction'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof UpdateCrmModulDto
-     */
     'notes'?: string | null;
     /**
      * 
@@ -18240,12 +18228,6 @@ export interface UpdateCrmModulDto {
  * @interface UpdateCrmModulNoteDto
  */
 export interface UpdateCrmModulNoteDto {
-    /**
-     * 
-     * @type {string}
-     * @memberof UpdateCrmModulNoteDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -18307,6 +18289,12 @@ export interface UpdateCrmSubItemDto {
      * @memberof UpdateCrmSubItemDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
 }
 
 

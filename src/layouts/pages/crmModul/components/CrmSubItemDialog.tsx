@@ -1,6 +1,7 @@
 import {
   CurrencyType,
   ListModuleDto,
+  OpportunityStage,
   TypeCodes,
 } from "api/generated";
 import { Button } from "components/ui/button";
@@ -36,6 +37,7 @@ import { useEffect, useState } from "react";
 import {
   CURRENCY_TYPE_OPTIONS,
   getCurrencySymbol,
+  OPPORTUNITY_STAGE_OPTIONS,
   TYPE_CODE_OPTIONS,
 } from "../constants";
 import {
@@ -140,6 +142,26 @@ export const CrmSubItemDialog = ({
               </SelectTrigger>
               <SelectContent position="popper" className="z-[1200] w-(--radix-select-trigger-width)">
                 {TYPE_CODE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field label="Fırsat Aşaması">
+            <Select
+              value={String(values.opportunityStage)}
+              onValueChange={(v) =>
+                handleFieldChange("opportunityStage", Number(v) as OpportunityStage)
+              }
+            >
+              <SelectTrigger className="h-10 w-full bg-white">
+                <SelectValue placeholder="Aşama seçin" />
+              </SelectTrigger>
+              <SelectContent position="popper" className="z-[1200] w-(--radix-select-trigger-width)">
+                {OPPORTUNITY_STAGE_OPTIONS.map((opt) => (
                   <SelectItem key={opt.value} value={String(opt.value)}>
                     {opt.label}
                   </SelectItem>

@@ -1,12 +1,13 @@
 import { format, isValid, parseISO, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CrmModulDto, ListModuleDto, TypeCodes } from "api/generated";
-import { getTypeCodeLabel } from "./constants";
+import { CrmModulDto, ListModuleDto, OpportunityStage, TypeCodes } from "api/generated";
+import { getTypeCodeLabel, getOpportunityStageLabel } from "./constants";
 
 export type CrmModulListAggregates = {
   totalPersonCount: number;
   uniqueModuleNames: string[];
   uniqueTypeLabels: string[];
+  uniqueOpportunityStageLabels: string[];
 };
 
 export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggregates => {
@@ -35,14 +36,25 @@ export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggrega
     }
   });
 
+  const stageMap = new Map<OpportunityStage, string>();
+  subItems.forEach((item) => {
+    if (item.opportunityStage == null || item.opportunityStage === OpportunityStage.NUMBER_0) return;
+    if (!stageMap.has(item.opportunityStage)) {
+      stageMap.set(item.opportunityStage, getOpportunityStageLabel(item.opportunityStage));
+    }
+  });
+
   const uniqueModuleNames = Array.from(moduleMap.values()).sort((a, b) =>
     a.localeCompare(b, "tr")
   );
   const uniqueTypeLabels = Array.from(typeMap.values()).sort((a, b) =>
     a.localeCompare(b, "tr")
   );
+  const uniqueOpportunityStageLabels = Array.from(stageMap.values()).sort((a, b) =>
+    a.localeCompare(b, "tr")
+  );
 
-  return { totalPersonCount, uniqueModuleNames, uniqueTypeLabels };
+  return { totalPersonCount, uniqueModuleNames, uniqueTypeLabels, uniqueOpportunityStageLabels };
 };
 
 export const formatInlineList = (items: string[]): string => {

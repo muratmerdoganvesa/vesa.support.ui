@@ -19,7 +19,7 @@ export type CrmModulFormValues = {
   email: string;
   leadSource: LeadSource;
   accountManager: string;
-  opportunityStage: OpportunityStage;
+  nextAction: string;
 };
 
 export type CrmSubItemFormValues = {
@@ -33,6 +33,7 @@ export type CrmSubItemFormValues = {
   estimatedValue: string;
   expectedCloseDate?: Date;
   lastContactDate?: Date;
+  opportunityStage: OpportunityStage;
 };
 
 export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
@@ -43,7 +44,7 @@ export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
   email: "",
   leadSource: LeadSource.NUMBER_0,
   accountManager: "",
-  opportunityStage: OpportunityStage.NUMBER_0,
+  nextAction: "",
 });
 
 export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
@@ -56,6 +57,7 @@ export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
   estimatedValue: "",
   expectedCloseDate: undefined,
   lastContactDate: undefined,
+  opportunityStage: OpportunityStage.NUMBER_0,
 });
 
 const parseOptionalNumber = (value: string): number | null => {
@@ -95,6 +97,7 @@ const toSubItemInputDto = (item: CrmSubItemFormValues): CrmSubItemInputDto => ({
   ),
   expectedCloseDate: toIsoDateString(item.expectedCloseDate),
   lastContactDate: toIsoDateString(item.lastContactDate),
+  opportunityStage: item.opportunityStage,
 });
 
 export const toCreateDto = (
@@ -108,7 +111,7 @@ export const toCreateDto = (
   email: modul.email.trim() || null,
   leadSource: modul.leadSource,
   accountManager: modul.accountManager.trim() || null,
-  opportunityStage: modul.opportunityStage,
+  nextAction: modul.nextAction.trim() || null,
   crmSubItems: subItems.length > 0 ? subItems.map(toSubItemInputDto) : null,
 });
 
@@ -125,7 +128,7 @@ export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues =
   email: data.email ?? "",
   leadSource: data.leadSource ?? LeadSource.NUMBER_0,
   accountManager: data.accountManager ?? "",
-  opportunityStage: data.opportunityStage ?? OpportunityStage.NUMBER_0,
+  nextAction: data.nextAction ?? "",
 });
 
 export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFormValues[] =>
@@ -143,4 +146,5 @@ export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFo
     ),
     expectedCloseDate: parseIsoDate(item.expectedCloseDate),
     lastContactDate: parseIsoDate(item.lastContactDate),
+    opportunityStage: item.opportunityStage ?? OpportunityStage.NUMBER_0,
   }));

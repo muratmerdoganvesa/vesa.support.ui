@@ -77,11 +77,27 @@ const CrmModulPage = () => {
       if (contactQ && !contactPerson.includes(contactQ)) return false;
       if (
         appliedFilters.opportunityStage !== "all" &&
-        row.opportunityStage !== appliedFilters.opportunityStage
+        !(row.crmSubItems ?? []).some(
+          (item) => item.opportunityStage === appliedFilters.opportunityStage
+        )
       ) {
         return false;
       }
-      if (!isDateInRange(row.lastContactDate, appliedFilters.dateFrom, appliedFilters.dateTo)) {
+      const lastContactDates = (row.crmSubItems ?? [])
+        .map((item) => item.lastContactDate)
+        .filter(Boolean);
+      if (
+        lastContactDates.length > 0 &&
+        !lastContactDates.some((date) =>
+          isDateInRange(date, appliedFilters.dateFrom, appliedFilters.dateTo)
+        )
+      ) {
+        return false;
+      }
+      if (
+        lastContactDates.length === 0 &&
+        !isDateInRange(row.lastContactDate, appliedFilters.dateFrom, appliedFilters.dateTo)
+      ) {
         return false;
       }
       return true;

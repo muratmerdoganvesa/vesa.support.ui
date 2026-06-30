@@ -1,7 +1,8 @@
-import { LeadSource, OpportunityStage } from "api/generated";
+import { LeadSource } from "api/generated";
 import { type ReactNode } from "react";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
+import { Textarea } from "components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -10,7 +11,7 @@ import {
   SelectValue,
 } from "components/ui/select";
 import { cn } from "lib/utils";
-import { LEAD_SOURCE_OPTIONS, OPPORTUNITY_STAGE_OPTIONS } from "../constants";
+import { LEAD_SOURCE_OPTIONS } from "../constants";
 import { type CrmModulFormValues } from "../formMappers";
 import { formatPhoneNumberTr } from "../utils";
 
@@ -105,25 +106,6 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Fırsat Aşaması">
-            <Select
-              value={String(values.opportunityStage)}
-              onValueChange={(v) =>
-                handleFieldChange("opportunityStage", Number(v) as OpportunityStage)
-              }
-            >
-              <SelectTrigger className="h-10 bg-white">
-                <SelectValue placeholder="Aşama seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {OPPORTUNITY_STAGE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={String(opt.value)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
           <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager" className="sm:col-span-2">
             <Input
               id="crm-account-manager"
@@ -180,6 +162,19 @@ export const CrmModulFormFields = ({ values, onChange }: CrmModulFormFieldsProps
             />
           </Field>
         </div>
+      </SectionCard>
+
+      <SectionCard title="Sonraki Aksiyon" className="xl:col-span-2">
+        <Field label="Sonraki Aksiyon" htmlFor="crm-next-action">
+          <Textarea
+            id="crm-next-action"
+            value={values.nextAction}
+            onChange={(e) => handleFieldChange("nextAction", e.target.value)}
+            placeholder="Sonraki aksiyonu yazın..."
+            rows={3}
+            className="bg-white resize-none"
+          />
+        </Field>
       </SectionCard>
     </div>
   );
