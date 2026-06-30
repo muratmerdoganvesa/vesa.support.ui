@@ -9,6 +9,7 @@ import {
 } from "components/ui/dialog";
 import { useEffect, useState } from "react";
 import {
+  calculateEstimatedDiscountedValueString,
   calculateEstimatedValueString,
   emptyCrmSubItemFormValues,
   type CrmSubItemFormValues,
@@ -44,6 +45,11 @@ export const CrmSubItemDialog = ({
     onSave({
       ...values,
       estimatedValue: calculateEstimatedValueString(values.unitPrice, values.personCount),
+      estimatedDiscountedValue: calculateEstimatedDiscountedValueString(
+        values.unitPrice,
+        values.personCount,
+        values.discount
+      ),
     });
     onOpenChange(false);
   };

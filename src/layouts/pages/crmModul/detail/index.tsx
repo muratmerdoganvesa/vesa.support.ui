@@ -110,8 +110,8 @@ const CrmModulDetailPage = () => {
   };
 
   const handleSave = async () => {
-    if (!modulValues.partnerCompanyName.trim()) {
-      dispatchAlert({ message: "Şirket adı zorunludur.", type: "error" });
+    if (!modulValues.companyName.trim()) {
+      dispatchAlert({ message: "Müşteri adı zorunludur.", type: "error" });
       return;
     }
 
@@ -144,8 +144,8 @@ const CrmModulDetailPage = () => {
       return;
     }
 
-    if (!modulValues.partnerCompanyName.trim()) {
-      dispatchAlert({ message: "Şirket adı zorunludur.", type: "error" });
+    if (!modulValues.companyName.trim()) {
+      dispatchAlert({ message: "Müşteri adı zorunludur.", type: "error" });
       return;
     }
 
@@ -199,8 +199,8 @@ const CrmModulDetailPage = () => {
     }
   };
 
-  const canSave = !loading && Boolean(modulValues.partnerCompanyName.trim());
-  const canAiRapor = isEditMode && !loading && Boolean(modulValues.partnerCompanyName.trim());
+  const canSave = !loading && Boolean(modulValues.companyName.trim());
+  const canAiRapor = isEditMode && !loading && Boolean(modulValues.companyName.trim());
 
   return (
     <DashboardLayout>

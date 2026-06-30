@@ -32,7 +32,7 @@ import {
   OPPORTUNITY_STAGE_OPTIONS,
   TYPE_CODE_OPTIONS,
 } from "../constants";
-import { calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
+import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
 import { ModuleMultiSelect } from "./ModuleMultiSelect";
 
 type CrmSubItemFormFieldsProps = {
@@ -74,16 +74,40 @@ export const CrmSubItemFormFields = ({
     onChange({ ...values, [key]: value });
   };
 
-  const handlePricingChange = (unitPrice: string, personCount: string) => {
+  const handlePricingChange = (unitPrice: string, personCount: string, discount?: string) => {
+    const nextDiscount = discount ?? values.discount;
     onChange({
       ...values,
       unitPrice,
       personCount,
+      discount: nextDiscount,
       estimatedValue: calculateEstimatedValueString(unitPrice, personCount),
+      estimatedDiscountedValue: calculateEstimatedDiscountedValueString(
+        unitPrice,
+        personCount,
+        nextDiscount
+      ),
+    });
+  };
+
+  const handleDiscountChange = (discount: string) => {
+    onChange({
+      ...values,
+      discount,
+      estimatedDiscountedValue: calculateEstimatedDiscountedValueString(
+        values.unitPrice,
+        values.personCount,
+        discount
+      ),
     });
   };
 
   const estimatedValueDisplay = calculateEstimatedValueString(values.unitPrice, values.personCount);
+  const estimatedDiscountedValueDisplay = calculateEstimatedDiscountedValueString(
+    values.unitPrice,
+    values.personCount,
+    values.discount
+  );
 
   return (
     <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
@@ -184,6 +208,20 @@ export const CrmSubItemFormFields = ({
         />
       </Field>
 
+      <Field label="İndirim (%)" htmlFor={`sub-discount-${values.clientKey}`}>
+        <Input
+          id={`sub-discount-${values.clientKey}`}
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          value={values.discount}
+          onChange={(e) => handleDiscountChange(e.target.value)}
+          placeholder="0"
+          className="h-10 bg-white"
+        />
+      </Field>
+
       <Field label="Tahmini Değer" htmlFor={`sub-estimated-value-${values.clientKey}`}>
         <InputGroup className="h-10 bg-white">
           <InputGroupAddon>
@@ -192,6 +230,23 @@ export const CrmSubItemFormFields = ({
           <InputGroupInput
             id={`sub-estimated-value-${values.clientKey}`}
             value={estimatedValueDisplay}
+            readOnly
+            disabled
+            placeholder="—"
+            className="h-10"
+            aria-readonly
+          />
+        </InputGroup>
+      </Field>
+
+      <Field label="İndirimli Tahmini Değer" htmlFor={`sub-discounted-value-${values.clientKey}`}>
+        <InputGroup className="h-10 bg-white">
+          <InputGroupAddon>
+            <InputGroupText>{getCurrencySymbol(values.currencyType)}</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
+            id={`sub-discounted-value-${values.clientKey}`}
+            value={estimatedDiscountedValueDisplay}
             readOnly
             disabled
             placeholder="—"

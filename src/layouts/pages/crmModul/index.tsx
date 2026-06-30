@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { CrmModulFilters, CrmModulFilterValues } from "./components/CrmModulFilters";
 import { CrmModulTable } from "./components/CrmModulTable";
 import { ROWS_PER_PAGE } from "./constants";
-import { buildCrmModulFilterOptions, isDateInRange, resolvePartnerCompanyName } from "./utils";
+import { buildCrmModulFilterOptions, isDateInRange, resolveCompanyName } from "./utils";
 
 const defaultFilters: CrmModulFilterValues = {
   company: "all",
@@ -71,7 +71,7 @@ const CrmModulPage = () => {
 
   const filteredRows = useMemo(() => {
     return crmData.filter((row) => {
-      const companyName = resolvePartnerCompanyName(row);
+      const companyName = resolveCompanyName(row);
 
       if (appliedFilters.company !== "all" && companyName !== appliedFilters.company) {
         return false;

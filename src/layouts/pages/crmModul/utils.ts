@@ -14,7 +14,7 @@ import {
   getOpportunityStageProbability,
   getTypeCodeLabel,
 } from "./constants";
-import { calculateEstimatedValueString, type CrmSubItemFormValues } from "./formMappers";
+import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, type CrmSubItemFormValues } from "./formMappers";
 
 export type CrmModulListAggregates = {
   totalPersonCount: number;
@@ -86,7 +86,11 @@ export type CrmDetailStats = {
 const emptyCurrencyTotals = (): CurrencyTotals => ({ try: 0, usd: 0, eur: 0 });
 
 const parseItemEstimatedValue = (item: CrmSubItemFormValues): number => {
-  const calculated = calculateEstimatedValueString(item.unitPrice, item.personCount);
+  const calculated = calculateEstimatedDiscountedValueString(
+    item.unitPrice,
+    item.personCount,
+    item.discount
+  );
   if (!calculated) return 0;
   const parsed = Number(calculated);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -200,6 +204,9 @@ export const resolveModuleNamesFromIds = (
   return names.length > 0 ? names.join(", ") : "—";
 };
 
+export const resolveCompanyName = (row: CrmModulDto): string =>
+  row.companyName?.trim() || row.partnerCompanyName?.trim() || "—";
+
 export const resolvePartnerCompanyName = (row: CrmModulDto): string =>
   row.partnerCompanyName?.trim() || "—";
 
@@ -224,7 +231,7 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
   const managerSet = new Set<string>();
 
   rows.forEach((row) => {
-    const companyName = resolvePartnerCompanyName(row);
+    const companyName = resolveCompanyName(row);
     if (companyName !== "—") {
       companySet.add(companyName);
     }
