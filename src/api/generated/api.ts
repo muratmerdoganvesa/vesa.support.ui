@@ -4206,6 +4206,12 @@ export interface CreateCrmModulDto {
      * @type {string}
      * @memberof CreateCrmModulDto
      */
+    'companyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
     'partnerCompanyName'?: string | null;
     /**
      * 
@@ -4272,7 +4278,19 @@ export interface CreateCrmModulDto {
      * @type {number}
      * @memberof CreateCrmModulDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -4360,7 +4378,19 @@ export interface CreateCrmSubItemDto {
      * @type {number}
      * @memberof CreateCrmSubItemDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -4906,6 +4936,12 @@ export interface CrmModulDto {
      * @type {string}
      * @memberof CrmModulDto
      */
+    'companyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
     'partnerCompanyName'?: string | null;
     /**
      * 
@@ -4978,7 +5014,19 @@ export interface CrmModulDto {
      * @type {number}
      * @memberof CrmModulDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -5108,7 +5156,19 @@ export interface CrmSubItemDto {
      * @type {number}
      * @memberof CrmSubItemDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -5207,7 +5267,19 @@ export interface CrmSubItemInputDto {
      * @type {number}
      * @memberof CrmSubItemInputDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -18104,6 +18176,12 @@ export interface UpdateCrmModulDto {
      * @type {string}
      * @memberof UpdateCrmModulDto
      */
+    'companyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
     'partnerCompanyName'?: string | null;
     /**
      * 
@@ -18170,7 +18248,19 @@ export interface UpdateCrmModulDto {
      * @type {number}
      * @memberof UpdateCrmModulDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -18246,7 +18336,19 @@ export interface UpdateCrmSubItemDto {
      * @type {number}
      * @memberof UpdateCrmSubItemDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}

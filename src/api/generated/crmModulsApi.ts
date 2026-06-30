@@ -73,7 +73,9 @@ export interface CrmSubItemInputDto {
   solutionModuleIds?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
+  discount?: number | null;
   estimatedValue?: number | null;
+  estimatedDiscountedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
@@ -88,7 +90,9 @@ export interface CrmSubItemDto {
   solutionModuleNames?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
+  discount?: number | null;
   estimatedValue?: number | null;
+  estimatedDiscountedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
@@ -100,6 +104,7 @@ export interface CrmSubItemDto {
 }
 
 export interface CreateCrmModulDto {
+  companyName?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -111,6 +116,7 @@ export interface CreateCrmModulDto {
 }
 
 export interface UpdateCrmModulDto {
+  companyName?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -123,6 +129,7 @@ export interface UpdateCrmModulDto {
 
 export interface CrmModulDto {
   id?: string;
+  companyName?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -135,7 +142,9 @@ export interface CrmModulDto {
   solutionModuleNames?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
+  discount?: number | null;
   estimatedValue?: number | null;
+  estimatedDiscountedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;

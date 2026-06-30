@@ -18,6 +18,7 @@ import {
   aggregateCrmModulSubItems,
   formatInlineList,
   formatPhoneNumberTr,
+  resolveCompanyName,
   resolvePartnerCompanyName,
 } from "../utils";
 
@@ -54,7 +55,10 @@ export const CrmModulTable = ({
         <TableHeader>
           <TableRow className="bg-slate-50/70 hover:bg-slate-50/70 border-b border-slate-200">
             <TableHead className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide min-w-[160px]">
-              Şirket
+              Müşteri
+            </TableHead>
+            <TableHead className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide min-w-[140px]">
+              Partner
             </TableHead>
             <TableHead className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
               Lead Kaynağı
@@ -94,7 +98,7 @@ export const CrmModulTable = ({
         <TableBody>
           {rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={12} className="py-16 text-center">
+              <TableCell colSpan={13} className="py-16 text-center">
                 <div className="flex flex-col items-center gap-3 text-slate-400">
                   <div className="size-12 rounded-full bg-slate-100 flex items-center justify-center">
                     <Handshake className="size-6 text-slate-300" />
@@ -122,9 +126,12 @@ export const CrmModulTable = ({
                     <div className="flex items-center gap-1.5">
                       <Building2 className="size-3.5 text-slate-400 shrink-0" />
                       <span className="text-sm text-slate-700 font-medium">
-                        {resolvePartnerCompanyName(row)}
+                        {resolveCompanyName(row)}
                       </span>
                     </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
+                    {resolvePartnerCompanyName(row)}
                   </TableCell>
                   <TableCell className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
                     {getLeadSourceLabel(row.leadSource)}

@@ -108,15 +108,15 @@ export const getOpportunityStageProbability = (stage?: OpportunityStage | null):
 export const getOpportunityStageBadgeClass = (stage?: OpportunityStage | null): string => {
   switch (stage) {
     case OpportunityStage.NUMBER_1:
-      return "bg-slate-100 text-slate-700";
+      return "bg-[#FFF4E5] text-[#B45309]";
     case OpportunityStage.NUMBER_2:
-      return "bg-amber-50 text-amber-800";
+      return "bg-[#FFF4E5] text-[#B45309]";
     case OpportunityStage.NUMBER_3:
-      return "bg-orange-50 text-orange-800";
+      return "bg-[#FFF4E5] text-[#B45309]";
     case OpportunityStage.NUMBER_4:
-      return "bg-orange-100 text-orange-900";
+      return "bg-[#FFF4E5] text-[#B45309]";
     case OpportunityStage.NUMBER_5:
-      return "bg-violet-50 text-violet-800";
+      return "bg-[#FFF4E5] text-[#92400E]";
     case OpportunityStage.NUMBER_6:
       return "bg-emerald-50 text-emerald-800";
     case OpportunityStage.NUMBER_7:

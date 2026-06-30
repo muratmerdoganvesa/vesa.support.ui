@@ -12,7 +12,12 @@ import {
   getOpportunityStageLabel,
   getOpportunityStageProbability,
 } from "../constants";
-import { calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
+import {
+  calculateEstimatedDiscountedValueString,
+  calculateEstimatedValueString,
+  formatEstimatedValueDisplay,
+  type CrmSubItemFormValues,
+} from "../formMappers";
 import { getOpportunityTitle } from "../utils";
 import { CrmPipelineStageBar } from "./CrmPipelineStageBar";
 import { CrmSubItemFormFields } from "./CrmSubItemFormFields";
@@ -37,7 +42,14 @@ export const CrmOpportunityCard = ({
   const title = getOpportunityTitle(item, modules);
   const kalemCount = item.solutionModuleIds.length;
   const estimated = calculateEstimatedValueString(item.unitPrice, item.personCount);
+  const discounted = calculateEstimatedDiscountedValueString(
+    item.unitPrice,
+    item.personCount,
+    item.discount
+  );
+  const displayValue = item.discount.trim() ? discounted : estimated;
   const symbol = getCurrencySymbol(item.currencyType);
+  const hasDiscount = item.discount.trim() !== "" && Number(item.discount) > 0;
   const probability = getOpportunityStageProbability(item.opportunityStage);
   const closeLabel = item.expectedCloseDate
     ? format(item.expectedCloseDate, "dd.MM.yyyy", { locale: tr })
@@ -66,19 +78,29 @@ export const CrmOpportunityCard = ({
               )}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-slate-900 truncate leading-snug">{title}</p>
+              <p className="text-lg font-bold text-slate-900 truncate leading-snug">{title}</p>
               <p className="text-sm text-slate-500 mt-1 truncate">{metaParts.join(" · ")}</p>
             </div>
+            {hasDiscount && (
+              <span className="shrink-0 text-sm font-semibold text-red-600 tabular-nums">
+                %{item.discount}
+              </span>
+            )}
             <Badge
               className={cn(
-                "shrink-0 h-7 px-3 text-xs font-semibold rounded-full border-transparent",
+                "shrink-0 h-8 px-3.5 text-sm font-semibold rounded-full border-0 shadow-none",
                 getOpportunityStageBadgeClass(item.opportunityStage)
               )}
             >
               {getOpportunityStageLabel(item.opportunityStage)}
             </Badge>
-            <span className="text-lg font-bold text-slate-950 tabular-nums shrink-0 min-w-[120px] text-right tracking-tight">
-              {estimated ? `${symbol}${Number(estimated).toLocaleString("tr-TR")}` : "—"}
+            <span className="text-xl font-bold text-slate-950 tabular-nums shrink-0 min-w-[140px] text-right tracking-tight">
+              {!isOpen && hasDiscount && estimated && (
+                <span className="block text-sm font-normal text-slate-400 line-through mb-0.5">
+                  {formatEstimatedValueDisplay(estimated, symbol)}
+                </span>
+              )}
+              {formatEstimatedValueDisplay(displayValue, symbol)}
             </span>
           </button>
         </CollapsibleTrigger>
@@ -96,8 +118,13 @@ export const CrmOpportunityCard = ({
               <p className="text-sm text-slate-600">
                 Fırsat Değeri:{" "}
                 <span className="font-semibold text-emerald-700 tabular-nums">
-                  {estimated ? `${symbol}${Number(estimated).toLocaleString("tr-TR")}` : "—"}
+                  {formatEstimatedValueDisplay(displayValue, symbol)}
                 </span>
+                {hasDiscount && estimated && (
+                  <span className="text-slate-400 ml-2 line-through tabular-nums">
+                    {formatEstimatedValueDisplay(estimated, symbol)}
+                  </span>
+                )}
               </p>
               <Button
                 type="button"

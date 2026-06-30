@@ -1,5 +1,6 @@
 import { CrmModulNoteDto, ListModuleDto } from "api/generated";
 import {
+  calculateEstimatedDiscountedValueString,
   calculateEstimatedValueString,
   type CrmModulFormValues,
   type CrmSubItemFormValues,
@@ -25,7 +26,11 @@ export type CrmAiRaporPayload = {
 };
 
 const formatBudget = (item: CrmSubItemFormValues): string | undefined => {
-  const estimated = calculateEstimatedValueString(item.unitPrice, item.personCount);
+  const estimated = calculateEstimatedDiscountedValueString(
+    item.unitPrice,
+    item.personCount,
+    item.discount
+  );
   if (!estimated) return undefined;
 
   const amount = Number(estimated);
@@ -83,7 +88,7 @@ export const buildCrmAiRaporPayload = (
     .sort((a, b) => (b.tarih ?? "").localeCompare(a.tarih ?? ""));
 
   return {
-    musteri_adi: modulValues.partnerCompanyName.trim() || "Müşteri",
+    musteri_adi: modulValues.companyName.trim() || "Müşteri",
     firsatlar,
     notlar,
   };
