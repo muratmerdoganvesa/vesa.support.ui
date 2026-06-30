@@ -35,7 +35,7 @@ export const CrmOpportunityCard = ({
   onDelete,
 }: CrmOpportunityCardProps) => {
   const title = getOpportunityTitle(item, modules);
-  const kalemCount = item.solutionModuleIds.length > 0 ? 1 : 0;
+  const kalemCount = item.solutionModuleIds.length;
   const estimated = calculateEstimatedValueString(item.unitPrice, item.personCount);
   const symbol = getCurrencySymbol(item.currencyType);
   const probability = getOpportunityStageProbability(item.opportunityStage);
@@ -51,33 +51,33 @@ export const CrmOpportunityCard = ({
 
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange}>
-      <article className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <article className="bg-white overflow-hidden">
         <CollapsibleTrigger asChild>
           <button
             type="button"
             className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-slate-50/80 transition-colors"
             aria-expanded={isOpen}
+            aria-label={`${title} fırsat detayını ${isOpen ? "kapat" : "aç"}`}
           >
             <ChevronRight
               className={cn(
-                "size-5 text-slate-400 shrink-0 transition-transform duration-200",
+                "size-4 text-slate-400 shrink-0 transition-transform duration-200",
                 isOpen && "rotate-90"
               )}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{title}</p>
-              <p className="text-xs text-slate-500 mt-0.5 truncate">{metaParts.join(" · ")}</p>
+              <p className="text-base font-bold text-slate-900 truncate leading-snug">{title}</p>
+              <p className="text-sm text-slate-500 mt-1 truncate">{metaParts.join(" · ")}</p>
             </div>
             <Badge
-              variant="outline"
               className={cn(
-                "shrink-0 font-medium",
+                "shrink-0 h-7 px-3 text-xs font-semibold rounded-full border-transparent",
                 getOpportunityStageBadgeClass(item.opportunityStage)
               )}
             >
               {getOpportunityStageLabel(item.opportunityStage)}
             </Badge>
-            <span className="text-sm font-bold text-slate-800 tabular-nums shrink-0 min-w-[100px] text-right">
+            <span className="text-lg font-bold text-slate-950 tabular-nums shrink-0 min-w-[120px] text-right tracking-tight">
               {estimated ? `${symbol}${Number(estimated).toLocaleString("tr-TR")}` : "—"}
             </span>
           </button>

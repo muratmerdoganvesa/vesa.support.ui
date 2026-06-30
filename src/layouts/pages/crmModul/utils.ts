@@ -1,7 +1,15 @@
 import { format, isValid, parseISO, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CrmModulDto, CurrencyType, ListModuleDto, OpportunityStage, TypeCodes } from "api/generated";
 import {
+  CrmModulDto,
+  CurrencyType,
+  LeadSource,
+  ListModuleDto,
+  OpportunityStage,
+  TypeCodes,
+} from "api/generated";
+import {
+  getLeadSourceLabel,
   getOpportunityStageLabel,
   getOpportunityStageProbability,
   getTypeCodeLabel,
@@ -194,6 +202,76 @@ export const resolveModuleNamesFromIds = (
 
 export const resolvePartnerCompanyName = (row: CrmModulDto): string =>
   row.partnerCompanyName?.trim() || "—";
+
+export type CrmModulFilterOption<T extends string | number = string> = {
+  value: T;
+  label: string;
+};
+
+export type CrmModulFilterOptions = {
+  companies: CrmModulFilterOption[];
+  leadSources: CrmModulFilterOption<LeadSource>[];
+  opportunityStages: CrmModulFilterOption<OpportunityStage>[];
+  contactPersons: CrmModulFilterOption[];
+  accountManagers: CrmModulFilterOption[];
+};
+
+export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterOptions => {
+  const companySet = new Set<string>();
+  const leadSourceMap = new Map<LeadSource, string>();
+  const stageMap = new Map<OpportunityStage, string>();
+  const contactSet = new Set<string>();
+  const managerSet = new Set<string>();
+
+  rows.forEach((row) => {
+    const companyName = resolvePartnerCompanyName(row);
+    if (companyName !== "—") {
+      companySet.add(companyName);
+    }
+
+    if (row.leadSource != null && row.leadSource !== LeadSource.NUMBER_0) {
+      leadSourceMap.set(row.leadSource, getLeadSourceLabel(row.leadSource));
+    }
+
+    (row.crmSubItems ?? []).forEach((item) => {
+      if (item.opportunityStage == null || item.opportunityStage === OpportunityStage.NUMBER_0) {
+        return;
+      }
+      stageMap.set(item.opportunityStage, getOpportunityStageLabel(item.opportunityStage));
+    });
+
+    const contactPerson = row.contactPerson?.trim();
+    if (contactPerson) {
+      contactSet.add(contactPerson);
+    }
+
+    const accountManager = row.accountManager?.trim();
+    if (accountManager) {
+      managerSet.add(accountManager);
+    }
+  });
+
+  const sortByLabel = <T extends string | number>(
+    items: CrmModulFilterOption<T>[]
+  ): CrmModulFilterOption<T>[] =>
+    [...items].sort((a, b) => a.label.localeCompare(b.label, "tr"));
+
+  return {
+    companies: sortByLabel(Array.from(companySet).map((value) => ({ value, label: value }))),
+    leadSources: sortByLabel(
+      Array.from(leadSourceMap.entries()).map(([value, label]) => ({ value, label }))
+    ),
+    opportunityStages: sortByLabel(
+      Array.from(stageMap.entries()).map(([value, label]) => ({ value, label }))
+    ),
+    contactPersons: sortByLabel(
+      Array.from(contactSet).map((value) => ({ value, label: value }))
+    ),
+    accountManagers: sortByLabel(
+      Array.from(managerSet).map((value) => ({ value, label: value }))
+    ),
+  };
+};
 
 export const formatSolutionModuleNames = (names?: string[] | null): string => {
   if (!names?.length) return "—";
