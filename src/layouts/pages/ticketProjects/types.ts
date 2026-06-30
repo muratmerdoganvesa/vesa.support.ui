@@ -5,14 +5,21 @@ export type TicketProjectStatsPersonDto = {
   fullName: string;
 };
 
-export type TicketProjectStatsDto = {
+export type StatsBoardItemKind = "kalem" | "project";
+
+/** İstatistik board kartı — statuslü kalem veya seçilmemiş proje */
+export type StatsBoardItem = {
+  kind: StatsBoardItemKind;
   id: string;
+  projectId: string;
   customerName: string;
   projectDescription: string;
   projectSubDescription?: string | null;
   createdDate?: string | null;
-  projectStatus?: ProjectTypes | null;
   modules: string[];
   employees: TicketProjectStatsPersonDto[];
   projectManager?: TicketProjectStatsPersonDto | null;
+  taskId?: number | null;
+  kalemName?: string | null;
+  projectStatus?: ProjectTypes | null;
 };

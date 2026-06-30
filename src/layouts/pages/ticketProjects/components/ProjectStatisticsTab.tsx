@@ -4,13 +4,13 @@ import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchUserDepartmentMap } from "layouts/pages/ticketProjects/api/fetchUsersForStats";
 import {
-  getProjectColumnKey,
-  getProjectTypeColumnColors,
   getProjectTypeColumns,
+  getProjectTypeColumnColors,
+  getStatsBoardColumnKey,
   type ProjectTypeColumnDef,
   type ProjectTypeColumnKey,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
-import type { TicketProjectStatsDto } from "layouts/pages/ticketProjects/types";
+import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
 import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
@@ -86,28 +86,24 @@ const BoardSkeleton = ({ columnCount }: { columnCount: number }) => (
   </div>
 );
 
-type MobileProjectBoardProps = {
+type MobileBoardProps = {
   columns: ProjectTypeColumnDef[];
-  groupedProjects: Record<ProjectTypeColumnKey, TicketProjectStatsDto[]>;
+  groupedItems: Record<ProjectTypeColumnKey, StatsBoardItem[]>;
   highlightPersonIds?: Set<string> | null;
 };
 
-const MobileProjectBoard = ({
-  columns,
-  groupedProjects,
-  highlightPersonIds,
-}: MobileProjectBoardProps) => {
+const MobileBoard = ({ columns, groupedItems, highlightPersonIds }: MobileBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
   const activeColumn = columns.find((col) => col.key === activeCol) ?? columns[0];
-  const activeProjects = activeColumn ? groupedProjects[activeColumn.key] ?? [] : [];
+  const activeItems = activeColumn ? groupedItems[activeColumn.key] ?? [] : [];
   const activeColors = activeColumn ? getProjectTypeColumnColors(activeColumn.label) : null;
 
   return (
     <div className="flex flex-col gap-2">
       <div className="scrollbar-none flex items-center gap-1 overflow-x-auto pb-1">
         {columns.map((column) => {
-          const count = groupedProjects[column.key]?.length ?? 0;
+          const count = groupedItems[column.key]?.length ?? 0;
           const colors = getProjectTypeColumnColors(column.label);
           const isActive = activeCol === column.key;
           return (
@@ -132,15 +128,15 @@ const MobileProjectBoard = ({
       </div>
 
       <div className="flex flex-col gap-2">
-        {activeProjects.length === 0 ? (
+        {activeItems.length === 0 ? (
           <div className="flex h-24 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 dark:border-border">
-            <span className="text-xs text-slate-400 dark:text-muted-foreground">Bu kolonda proje yok</span>
+            <span className="text-xs text-slate-400 dark:text-muted-foreground">Bu kolonda kart yok</span>
           </div>
         ) : (
-          activeProjects.map((project) => (
+          activeItems.map((item) => (
             <ProjectStatsKanbanCard
-              key={project.id}
-              project={project}
+              key={item.id}
+              item={item}
               cardBorderClass={activeColors?.cardBorder ?? "border-l-slate-300"}
               highlightPersonIds={highlightPersonIds}
             />
@@ -151,17 +147,26 @@ const MobileProjectBoard = ({
   );
 };
 
+const sortBoardItems = (a: StatsBoardItem, b: StatsBoardItem): number => {
+  const projectCmp = (a.projectDescription ?? "").localeCompare(b.projectDescription ?? "", "tr");
+  if (projectCmp !== 0) return projectCmp;
+  if (a.kind === "project" && b.kind === "project") return 0;
+  if (a.kind === "project") return -1;
+  if (b.kind === "project") return 1;
+  return (a.kalemName ?? "").localeCompare(b.kalemName ?? "", "tr");
+};
+
 const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
   const dispatchAlert = useAlert();
   const isMobile = useIsMobile();
-  const [projects, setProjects] = useState<TicketProjectStatsDto[]>([]);
+  const [boardItems, setBoardItems] = useState<StatsBoardItem[]>([]);
   const [userDepartmentById, setUserDepartmentById] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
 
-  const filters = useProjectStatisticsFilters(projects, userDepartmentById);
+  const filters = useProjectStatisticsFilters(boardItems, userDepartmentById);
 
   const highlightPersonIds = useMemo(() => {
     const ids = new Set<string>();
@@ -188,12 +193,12 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
         fetchProjectStatistics(),
         fetchUserDepartmentMap().catch(() => new Map<string, string>()),
       ]);
-      setProjects(data);
+      setBoardItems(data);
       setUserDepartmentById(departmentMap);
       setHasLoaded(true);
     } catch {
       dispatchAlert({ message: "Proje istatistikleri getirilirken hata oluştu.", type: "Error" });
-      setProjects([]);
+      setBoardItems([]);
     } finally {
       setIsLoading(false);
     }
@@ -204,36 +209,33 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
     loadStatistics();
   }, [isActive, hasLoaded, loadStatistics]);
 
-  const groupedProjects = useMemo(() => {
+  const groupedItems = useMemo(() => {
     const groups = Object.fromEntries(
-      columns.map((column) => [column.key, [] as TicketProjectStatsDto[]]),
-    ) as Record<ProjectTypeColumnKey, TicketProjectStatsDto[]>;
+      columns.map((column) => [column.key, [] as StatsBoardItem[]]),
+    ) as Record<ProjectTypeColumnKey, StatsBoardItem[]>;
 
-    for (const project of filters.filteredProjects) {
-      const key = getProjectColumnKey(project.projectStatus);
-      groups[key].push(project);
+    for (const item of filters.filteredItems) {
+      const key = getStatsBoardColumnKey(item);
+      groups[key].push(item);
     }
 
-    for (const key of Object.keys(groups) as ProjectTypeColumnKey[]) {
-      groups[key].sort((a, b) =>
-        (a.projectDescription ?? "").localeCompare(b.projectDescription ?? "", "tr"),
-      );
+    for (const column of columns) {
+      groups[column.key].sort(sortBoardItems);
     }
 
     return groups;
-  }, [filters.filteredProjects, columns]);
+  }, [filters.filteredItems, columns]);
 
   const columnCounts = useMemo(
     () =>
       Object.fromEntries(
-        columns.map((column) => [column.key, groupedProjects[column.key]?.length ?? 0]),
+        columns.map((column) => [column.key, groupedItems[column.key]?.length ?? 0]),
       ) as Record<ProjectTypeColumnKey, number>,
-    [columns, groupedProjects],
+    [columns, groupedItems],
   );
 
   return (
     <div className="flex gap-0 overflow-hidden rounded-xl">
-      {/* ── Mobile backdrop ── */}
       {filters.sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/30 lg:hidden"
@@ -242,7 +244,6 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
         />
       )}
 
-      {/* ── Left sidebar ── */}
       <aside
         className={cn(
           "relative flex flex-col border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out dark:border-border dark:bg-card",
@@ -252,7 +253,6 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
         )}
         aria-label="Filtre paneli"
       >
-        {/* Sidebar header */}
         <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5 dark:border-border">
           <p className="text-xs font-semibold text-slate-600 dark:text-foreground">Filtreler</p>
           <div className="flex items-center gap-1.5">
@@ -261,7 +261,6 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
                 {filters.activeFilterCount}
               </span>
             )}
-            {/* Close button — mobile only */}
             <button
               type="button"
               onClick={() => filters.setSidebarOpen(false)}
@@ -300,9 +299,7 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
         />
       </aside>
 
-      {/* ── Main content ── */}
       <div className="min-w-0 flex-1 overflow-hidden">
-        {/* Top bar: mobile filter toggle + summary */}
         <div className="mb-3 flex items-center gap-3">
           <button
             type="button"
@@ -322,13 +319,12 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
           )}
         </div>
 
-        {/* Board */}
         {isLoading ? (
           <BoardSkeleton columnCount={columns.length} />
         ) : isMobile ? (
-          <MobileProjectBoard
+          <MobileBoard
             columns={columns}
-            groupedProjects={groupedProjects}
+            groupedItems={groupedItems}
             highlightPersonIds={highlightPersonIds}
           />
         ) : (
@@ -344,7 +340,7 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
                 <ProjectStatsKanbanColumn
                   key={String(column.key)}
                   column={column}
-                  projects={groupedProjects[column.key] ?? []}
+                  items={groupedItems[column.key] ?? []}
                   highlightPersonIds={highlightPersonIds}
                 />
               ))}

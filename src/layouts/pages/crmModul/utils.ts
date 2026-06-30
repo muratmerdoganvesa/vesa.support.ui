@@ -29,7 +29,7 @@ export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggrega
 
   const typeMap = new Map<TypeCodes, string>();
   subItems.forEach((item) => {
-    if (item.typeCode == null || item.typeCode === TypeCodes.None) return;
+    if (item.typeCode == null || item.typeCode === TypeCodes.NUMBER_0) return;
     if (!typeMap.has(item.typeCode)) {
       typeMap.set(item.typeCode, getTypeCodeLabel(item.typeCode));
     }

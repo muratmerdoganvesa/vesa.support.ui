@@ -191,7 +191,7 @@ const ProjectStatisticsFilterSidebar = ({
           <span className="tabular-nums font-bold text-slate-600">{filteredCount}</span>
           {" / "}
           <span className="tabular-nums">{totalCount}</span>
-          {" proje"}
+          {" kart"}
         </p>
       </div>
 

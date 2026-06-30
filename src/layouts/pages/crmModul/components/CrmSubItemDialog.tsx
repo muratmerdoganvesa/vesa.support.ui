@@ -1,5 +1,5 @@
 import {
-  CrmCurrencyType,
+  CurrencyType,
   ListModuleDto,
   TypeCodes,
 } from "api/generated";
@@ -152,7 +152,7 @@ export const CrmSubItemDialog = ({
             <Select
               value={String(values.currencyType)}
               onValueChange={(v) =>
-                handleFieldChange("currencyType", Number(v) as CrmCurrencyType)
+                handleFieldChange("currencyType", Number(v) as CurrencyType)
               }
             >
               <SelectTrigger className="h-10 w-full bg-white">

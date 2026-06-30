@@ -1,6 +1,6 @@
 import {
   CreateCrmModulDto,
-  CrmCurrencyType,
+  CurrencyType,
   CrmModulDto,
   CrmSubItemDto,
   CrmSubItemInputDto,
@@ -27,7 +27,7 @@ export type CrmSubItemFormValues = {
   id?: string;
   solutionModuleIds: string[];
   typeCode: TypeCodes;
-  currencyType: CrmCurrencyType;
+  currencyType: CurrencyType;
   unitPrice: string;
   personCount: string;
   estimatedValue: string;
@@ -41,16 +41,16 @@ export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
   contactTitle: "",
   phoneNumber: "",
   email: "",
-  leadSource: LeadSource.None,
+  leadSource: LeadSource.NUMBER_0,
   accountManager: "",
-  opportunityStage: OpportunityStage.None,
+  opportunityStage: OpportunityStage.NUMBER_0,
 });
 
 export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
   clientKey: crypto.randomUUID(),
   solutionModuleIds: [],
-  typeCode: TypeCodes.None,
-  currencyType: CrmCurrencyType.None,
+  typeCode: TypeCodes.NUMBER_0,
+  currencyType: CurrencyType.NUMBER_0,
   unitPrice: "",
   personCount: "",
   estimatedValue: "",
@@ -123,9 +123,9 @@ export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues =
   contactTitle: data.contactTitle ?? "",
   phoneNumber: formatPhoneNumberTr(data.phoneNumber ?? ""),
   email: data.email ?? "",
-  leadSource: data.leadSource ?? LeadSource.None,
+  leadSource: data.leadSource ?? LeadSource.NUMBER_0,
   accountManager: data.accountManager ?? "",
-  opportunityStage: data.opportunityStage ?? OpportunityStage.None,
+  opportunityStage: data.opportunityStage ?? OpportunityStage.NUMBER_0,
 });
 
 export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFormValues[] =>
@@ -133,8 +133,8 @@ export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFo
     clientKey: item.id ?? crypto.randomUUID(),
     id: item.id,
     solutionModuleIds: item.solutionModuleIds ?? [],
-    typeCode: item.typeCode ?? TypeCodes.None,
-    currencyType: item.currencyType ?? CrmCurrencyType.None,
+    typeCode: item.typeCode ?? TypeCodes.NUMBER_0,
+    currencyType: item.currencyType ?? CurrencyType.NUMBER_0,
     unitPrice: item.unitPrice != null ? String(item.unitPrice) : "",
     personCount: item.personCount != null ? String(item.personCount) : "",
     estimatedValue: calculateEstimatedValueString(

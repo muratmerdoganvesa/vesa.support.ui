@@ -2,7 +2,7 @@ import { memo } from "react";
 import { Building2, CalendarClock } from "lucide-react";
 import { cn } from "lib/utils";
 import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
-import type { TicketProjectStatsDto } from "layouts/pages/ticketProjects/types";
+import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Badge } from "components/ui/badge";
 
 const formatDate = (dateStr: string | null | undefined): string => {
@@ -24,20 +24,34 @@ const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> |
         : "font-medium text-slate-700 dark:text-foreground",
   );
 
+const buildDisplayName = (item: StatsBoardItem): string => {
+  const projectPart = item.projectSubDescription
+    ? `${item.projectDescription} — ${item.projectSubDescription}`
+    : item.projectDescription;
+
+  if (item.kind === "project") {
+    return projectPart || "—";
+  }
+
+  const kalemPart = item.kalemName?.trim();
+  if (projectPart && kalemPart) return `${projectPart} — ${kalemPart}`;
+  return projectPart || kalemPart || "—";
+};
+
 type ProjectStatsKanbanCardProps = {
-  project: TicketProjectStatsDto;
+  item: StatsBoardItem;
   cardBorderClass: string;
   highlightPersonIds?: Set<string> | null;
 };
 
 const ProjectStatsKanbanCard = ({
-  project,
+  item,
   cardBorderClass,
   highlightPersonIds,
 }: ProjectStatsKanbanCardProps) => {
-  const displayName = project.projectSubDescription
-    ? `${project.projectDescription} — ${project.projectSubDescription}`
-    : project.projectDescription;
+  const displayName = buildDisplayName(item);
+  const statusLabel =
+    item.kind === "project" ? "Seçilmedi" : getProjectStatusLabel(item.projectStatus);
 
   return (
     <article
@@ -45,32 +59,32 @@ const ProjectStatsKanbanCard = ({
         "group bg-white border-l-[3px] p-3 shadow-sm transition-shadow hover:shadow-md dark:bg-card",
         cardBorderClass,
       )}
-      aria-label={`${displayName} proje kartı`}
+      aria-label={`${displayName} kartı`}
     >
-      <p className="mb-2 line-clamp-2 text-[13px] font-semibold leading-snug text-slate-800 dark:text-foreground">
-        {displayName || "—"}
+      <p className="mb-2 line-clamp-3 text-[13px] font-semibold leading-snug text-slate-800 dark:text-foreground">
+        {displayName}
       </p>
 
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-border dark:bg-muted dark:text-muted-foreground">
-          {getProjectStatusLabel(project.projectStatus)}
+          {statusLabel}
         </span>
       </div>
 
       <div className="mb-2">
         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-muted-foreground">
           <CalendarClock className="size-2.5 shrink-0" aria-hidden />
-          {formatDate(project.createdDate)}
+          {formatDate(item.createdDate)}
         </span>
       </div>
 
-      {project.modules.length > 0 && (
+      {item.modules.length > 0 && (
         <div className="mb-2 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Modüller
           </p>
           <div className="flex flex-wrap gap-1">
-            {project.modules.map((moduleName) => (
+            {item.modules.map((moduleName) => (
               <Badge
                 key={moduleName}
                 variant="secondary"
@@ -83,13 +97,13 @@ const ProjectStatsKanbanCard = ({
         </div>
       )}
 
-      {project.employees.length > 0 && (
+      {item.employees.length > 0 && (
         <div className="mb-2 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Danışmanlar
           </p>
           <ul className="flex flex-col gap-0.5" aria-label="Danışman listesi">
-            {project.employees.map((employee) => (
+            {item.employees.map((employee) => (
               <li key={employee.id} className={getPersonNameClass(employee.id, highlightPersonIds)}>
                 {employee.fullName}
               </li>
@@ -98,22 +112,22 @@ const ProjectStatsKanbanCard = ({
         </div>
       )}
 
-      {project.projectManager && (
+      {item.projectManager && (
         <div className="mb-2 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Proje Yöneticisi
           </p>
-          <p className={getPersonNameClass(project.projectManager.id, highlightPersonIds)}>
-            {project.projectManager.fullName}
+          <p className={getPersonNameClass(item.projectManager.id, highlightPersonIds)}>
+            {item.projectManager.fullName}
           </p>
         </div>
       )}
 
-      {project.customerName && (
+      {item.customerName && (
         <div className="flex items-center gap-1 border-t border-slate-100 pt-2 dark:border-border/60">
           <Building2 className="size-3 shrink-0 text-slate-400" aria-hidden />
           <span className="truncate text-[11px] font-medium text-slate-500 dark:text-muted-foreground">
-            {project.customerName}
+            {item.customerName}
           </span>
         </div>
       )}

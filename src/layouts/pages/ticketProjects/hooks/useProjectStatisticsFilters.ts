@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import {
-  getProjectColumnKey,
   getProjectTypeColumns,
+  UNASSIGNED_PROJECT_TYPE_KEY,
   type ProjectTypeColumnKey,
 } from "../projectTypeHelpers";
-import type { TicketProjectStatsDto } from "../types";
+import type { StatsBoardItem } from "../types";
 
 export type PersonItem = { id: string; name: string; count: number };
 export type LabelCountItem = { name: string; count: number };
@@ -19,30 +19,40 @@ type FilterParams = {
   selectedDepartment: string;
 };
 
-const getProjectPersonIds = (project: TicketProjectStatsDto): string[] => {
+const getItemPersonIds = (item: StatsBoardItem): string[] => {
   const ids: string[] = [];
-  if (project.projectManager?.id) ids.push(project.projectManager.id);
-  for (const e of project.employees) {
+  if (item.projectManager?.id) ids.push(item.projectManager.id);
+  for (const e of item.employees) {
     if (e.id) ids.push(e.id);
   }
   return ids;
 };
 
-const projectMatchesDepartment = (
-  project: TicketProjectStatsDto,
+const itemMatchesDepartment = (
+  item: StatsBoardItem,
   department: string,
   userDepartmentById: Map<string, string>,
 ): boolean => {
-  const personIds = getProjectPersonIds(project);
+  const personIds = getItemPersonIds(item);
   return personIds.some((id) => userDepartmentById.get(id) === department);
 };
 
+const itemMatchesStatus = (
+  item: StatsBoardItem,
+  selectedStatus: ProjectTypeColumnKey,
+): boolean => {
+  if (selectedStatus === UNASSIGNED_PROJECT_TYPE_KEY) {
+    return item.kind === "project";
+  }
+  return item.kind === "kalem" && item.projectStatus === selectedStatus;
+};
+
 const applyClientFilters = (
-  projects: TicketProjectStatsDto[],
+  items: StatsBoardItem[],
   params: FilterParams,
   userDepartmentById: Map<string, string>,
-): TicketProjectStatsDto[] => {
-  let filtered = projects;
+): StatsBoardItem[] => {
+  let filtered = items;
   const {
     searchTerm,
     selectedPersonId,
@@ -54,14 +64,18 @@ const applyClientFilters = (
 
   if (searchTerm.trim()) {
     const q = searchTerm.toLowerCase();
-    filtered = filtered.filter((p) => {
-      const persons = [p.projectManager?.fullName ?? "", ...p.employees.map((e) => e.fullName)]
+    filtered = filtered.filter((item) => {
+      const persons = [
+        item.projectManager?.fullName ?? "",
+        ...item.employees.map((e) => e.fullName),
+      ]
         .join(" ")
         .toLowerCase();
       return (
-        (p.projectDescription ?? "").toLowerCase().includes(q) ||
-        (p.projectSubDescription ?? "").toLowerCase().includes(q) ||
-        (p.customerName ?? "").toLowerCase().includes(q) ||
+        (item.kalemName ?? "").toLowerCase().includes(q) ||
+        (item.projectDescription ?? "").toLowerCase().includes(q) ||
+        (item.projectSubDescription ?? "").toLowerCase().includes(q) ||
+        (item.customerName ?? "").toLowerCase().includes(q) ||
         persons.includes(q)
       );
     });
@@ -69,29 +83,27 @@ const applyClientFilters = (
 
   if (selectedPersonId !== "All") {
     filtered = filtered.filter(
-      (p) =>
-        p.projectManager?.id === selectedPersonId ||
-        p.employees.some((e) => e.id === selectedPersonId),
+      (item) =>
+        item.projectManager?.id === selectedPersonId ||
+        item.employees.some((e) => e.id === selectedPersonId),
     );
   }
 
   if (selectedCustomer !== "All") {
-    filtered = filtered.filter((p) => p.customerName === selectedCustomer);
+    filtered = filtered.filter((item) => item.customerName === selectedCustomer);
   }
 
   if (selectedModule !== "All") {
-    filtered = filtered.filter((p) => p.modules.includes(selectedModule));
+    filtered = filtered.filter((item) => item.modules.includes(selectedModule));
   }
 
   if (selectedStatus !== "All") {
-    filtered = filtered.filter(
-      (p) => getProjectColumnKey(p.projectStatus) === selectedStatus,
-    );
+    filtered = filtered.filter((item) => itemMatchesStatus(item, selectedStatus));
   }
 
   if (selectedDepartment !== "All") {
-    filtered = filtered.filter((p) =>
-      projectMatchesDepartment(p, selectedDepartment, userDepartmentById),
+    filtered = filtered.filter((item) =>
+      itemMatchesDepartment(item, selectedDepartment, userDepartmentById),
     );
   }
 
@@ -99,7 +111,7 @@ const applyClientFilters = (
 };
 
 export const useProjectStatisticsFilters = (
-  projects: TicketProjectStatsDto[],
+  items: StatsBoardItem[],
   userDepartmentById: Map<string, string>,
 ) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -130,71 +142,71 @@ export const useProjectStatisticsFilters = (
     ],
   );
 
-  const filteredProjects = useMemo(
-    () => applyClientFilters(projects, filterParams, userDepartmentById),
-    [projects, filterParams, userDepartmentById],
+  const filteredItems = useMemo(
+    () => applyClientFilters(items, filterParams, userDepartmentById),
+    [items, filterParams, userDepartmentById],
   );
 
   const baseForPerson = useMemo(
     () =>
       applyClientFilters(
-        projects,
+        items,
         { ...filterParams, selectedPersonId: "All" },
         userDepartmentById,
       ),
-    [projects, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById],
   );
 
   const baseForCustomer = useMemo(
     () =>
       applyClientFilters(
-        projects,
+        items,
         { ...filterParams, selectedCustomer: "All" },
         userDepartmentById,
       ),
-    [projects, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById],
   );
 
   const baseForModule = useMemo(
     () =>
       applyClientFilters(
-        projects,
+        items,
         { ...filterParams, selectedModule: "All" },
         userDepartmentById,
       ),
-    [projects, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById],
   );
 
   const baseForStatus = useMemo(
     () =>
       applyClientFilters(
-        projects,
+        items,
         { ...filterParams, selectedStatus: "All" },
         userDepartmentById,
       ),
-    [projects, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById],
   );
 
   const baseForDepartment = useMemo(
     () =>
       applyClientFilters(
-        projects,
+        items,
         { ...filterParams, selectedDepartment: "All" },
         userDepartmentById,
       ),
-    [projects, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById],
   );
 
   const allPersons = useMemo((): { id: string; name: string }[] => {
     const map = new Map<string, string>();
-    for (const p of projects) {
-      if (p.projectManager) map.set(p.projectManager.id, p.projectManager.fullName);
-      for (const e of p.employees) map.set(e.id, e.fullName);
+    for (const item of items) {
+      if (item.projectManager) map.set(item.projectManager.id, item.projectManager.fullName);
+      for (const e of item.employees) map.set(e.id, e.fullName);
     }
     return Array.from(map.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, "tr"));
-  }, [projects]);
+  }, [items]);
 
   const uniquePersons = useMemo(
     (): PersonItem[] =>
@@ -202,7 +214,8 @@ export const useProjectStatisticsFilters = (
         id,
         name,
         count: baseForPerson.filter(
-          (p) => p.projectManager?.id === id || p.employees.some((e) => e.id === id),
+          (item) =>
+            item.projectManager?.id === id || item.employees.some((e) => e.id === id),
         ).length,
       })),
     [allPersons, baseForPerson],
@@ -210,19 +223,19 @@ export const useProjectStatisticsFilters = (
 
   const uniqueCustomers = useMemo(
     (): LabelCountItem[] =>
-      Array.from(new Set(baseForCustomer.map((p) => p.customerName).filter(Boolean)))
+      Array.from(new Set(baseForCustomer.map((item) => item.customerName).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b, "tr"))
         .map((name) => ({
           name,
-          count: baseForCustomer.filter((p) => p.customerName === name).length,
+          count: baseForCustomer.filter((item) => item.customerName === name).length,
         })),
     [baseForCustomer],
   );
 
   const uniqueModules = useMemo((): LabelCountItem[] => {
     const countMap = new Map<string, number>();
-    for (const p of baseForModule) {
-      for (const m of p.modules) {
+    for (const item of baseForModule) {
+      for (const m of item.modules) {
         countMap.set(m, (countMap.get(m) ?? 0) + 1);
       }
     }
@@ -236,14 +249,14 @@ export const useProjectStatisticsFilters = (
     return columns.map(({ key, label }) => ({
       key,
       label,
-      count: baseForStatus.filter((p) => getProjectColumnKey(p.projectStatus) === key).length,
+      count: baseForStatus.filter((item) => itemMatchesStatus(item, key)).length,
     }));
   }, [baseForStatus]);
 
   const uniqueDepartments = useMemo((): LabelCountItem[] => {
     const deptSet = new Set<string>();
-    for (const p of baseForDepartment) {
-      for (const id of getProjectPersonIds(p)) {
+    for (const item of baseForDepartment) {
+      for (const id of getItemPersonIds(item)) {
         const dept = userDepartmentById.get(id)?.trim();
         if (dept) deptSet.add(dept);
       }
@@ -252,8 +265,8 @@ export const useProjectStatisticsFilters = (
       .sort((a, b) => a.localeCompare(b, "tr"))
       .map((name) => ({
         name,
-        count: baseForDepartment.filter((p) =>
-          projectMatchesDepartment(p, name, userDepartmentById),
+        count: baseForDepartment.filter((item) =>
+          itemMatchesDepartment(item, name, userDepartmentById),
         ).length,
       }));
   }, [baseForDepartment, userDepartmentById]);
@@ -320,7 +333,7 @@ export const useProjectStatisticsFilters = (
     handleModuleSelect,
     handleStatusSelect,
     handleDepartmentSelect,
-    filteredProjects,
+    filteredItems,
     uniquePersons,
     uniqueCustomers,
     uniqueModules,
@@ -328,7 +341,7 @@ export const useProjectStatisticsFilters = (
     uniqueDepartments,
     departmentAllCount: baseForDepartment.length,
     activeFilterCount,
-    totalCount: projects.length,
-    filteredCount: filteredProjects.length,
+    totalCount: items.length,
+    filteredCount: filteredItems.length,
   };
 };
