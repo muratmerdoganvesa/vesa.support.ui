@@ -1,113 +1,139 @@
-
-
-import React, { useEffect, useState } from 'react';
-import { SelectDialog, TimelineItem, Timeline } from '@ui5/webcomponents-react';
-import { WorkFlowItemApi, WorkFlowItemDtoWithApproveItems } from 'api/generated';
+import React, { useEffect, useState } from "react";
+import { SelectDialog, TimelineItem, Timeline } from "@ui5/webcomponents-react";
+import { WorkFlowItemApi, WorkFlowItemDtoWithApproveItems } from "api/generated";
 import "@ui5/webcomponents-icons/dist/hr-approval";
-import { useBusy } from '../hooks/useBusy';
-import { formatDateTime } from '../utils/utils';
+import { useBusy } from "../hooks/useBusy";
+import { formatDateTime } from "../utils/utils";
 import getConfiguration from "confiuration";
-interface User {
-    userId: string;
-    firstName: string;
-    lastName: string;
-    // Diğer kullanıcı alanları...
-}
-interface UserSelectDialogProps {
+
+interface ShowHistoryProps {
     open: boolean;
     onClose: () => void;
     approveId: string;
 }
-const ShowHistory: React.FC<UserSelectDialogProps> = ({
-    open,
-    onClose,
-    approveId
-}) => {
-    const dispatchBusy = useBusy()
-    const [searchText, setSearchText] = useState("");
+
+const getStatusConfig = (status?: number) => {
+    if (status === 1) {
+        return { label: "Onaylandı", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    }
+    if (status === 2) {
+        return { label: "Reddedildi", className: "bg-red-50 text-red-700 border-red-200" };
+    }
+    return { label: "Beklemede", className: "bg-amber-50 text-amber-700 border-amber-200" };
+};
+
+const DetailRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div className="grid grid-cols-[minmax(0,10.5rem)_1fr] items-start gap-x-4 gap-y-1 py-2 border-b border-slate-100 last:border-0">
+        <span className="text-xs font-medium text-slate-500 leading-5">{label}</span>
+        <div className="text-sm text-slate-800 leading-5 min-w-0 wrap-break-word">{children}</div>
+    </div>
+);
+
+const ShowHistory: React.FC<ShowHistoryProps> = ({ open, onClose, approveId }) => {
+    const dispatchBusy = useBusy();
     const [approveItems, setApproveItems] = useState<WorkFlowItemDtoWithApproveItems[]>([]);
-    const [itemOffset, setItemOffset] = useState(0);
-    const [pageCount, setpageCount] = useState(0);
-    const [sfUserSearchDataCount, setsfUserSearchDataCount] = useState(0);
-    const [searchBusy, setsearchBusy] = useState(false);
-    const itemsPerPage = 10;
-   const configuration = getConfiguration();
-    const onSearhboxSelect = (instance: any) => {
+    const configuration = getConfiguration();
 
-    };
     useEffect(() => {
-
+        if (!open) return;
         getApproveItem();
+    }, [open, approveId]);
 
-    }, []); //
-    async function getApproveItem() {
+    const getApproveItem = async () => {
         dispatchBusy({ isBusy: true });
-        if (approveId != "") {
 
-            let api = new WorkFlowItemApi(configuration);
-            var data = await api.apiWorkFlowItemGetApproveItemsWorkFlowHeadIdGet(approveId);
+        if (approveId !== "") {
+            const api = new WorkFlowItemApi(configuration);
+            const data = await api.apiWorkFlowItemGetApproveItemsWorkFlowHeadIdGet(approveId);
 
-            data.data.sort((a, b) => {
-                let dateA = a.approveItems![0]?.createdDate ? new Date(a.approveItems![0]!.createdDate).getTime() : 0;
-                let dateB = b.approveItems![0]?.createdDate ? new Date(b.approveItems![0]!.createdDate).getTime() : 0;
-                return dateB - dateA;;
+            const sortedItems = [...data.data].sort((a, b) => {
+                const dateA = a.approveItems?.[0]?.createdDate
+                    ? new Date(a.approveItems[0].createdDate).getTime()
+                    : 0;
+                const dateB = b.approveItems?.[0]?.createdDate
+                    ? new Date(b.approveItems[0].createdDate).getTime()
+                    : 0;
+                return dateB - dateA;
             });
-            setApproveItems(data.data);
-            console.log("history data:", data.data)
-        }
-        else {
+
+            setApproveItems(sortedItems);
+        } else {
             setApproveItems([]);
         }
+
         dispatchBusy({ isBusy: false });
-    }
+    };
+
     return (
         <SelectDialog
             open={open}
             style={{ width: "800px" }}
             headerText="Onay Akışı"
             onClose={onClose}
-            onBeforeClose={() => { }}
-            onBeforeOpen={() => { }}
+            onBeforeClose={() => {}}
+            onBeforeOpen={() => {}}
             onCancel={onClose}
-            onClear={() => { }}
-            onConfirm={() => { }}
-            onLoadMore={() => { }}
-
-            onSearchInput={() => { }}
+            onClear={() => {}}
+            onConfirm={() => {}}
+            onLoadMore={() => {}}
+            onSearchInput={() => {}}
         >
-            <div style={{ marginBottom: "5px", width: '100%' }}>
-                {approveId && (
-                    <Timeline>
-                        {approveItems.map((item, index) => (
-                            <TimelineItem
-                                key={index}
-                                icon="hr-approval"
-                                name={item.nodeName!}
-                                subtitleText={"Onayına Gönderilen Kullanıcı: " + item.approveItems![0]!.approveUserNameSurname!}
+            <div className="w-full px-4 py-5 max-h-[65vh] overflow-y-auto">
+                {!approveId ? (
+                    <p className="py-10 text-center text-sm text-slate-500">
+                        Onay akışı bilgisi bulunamadı.
+                    </p>
+                ) : approveItems.length === 0 ? (
+                    <p className="py-10 text-center text-sm text-slate-500">
+                        Henüz onay kaydı bulunmamaktadır.
+                    </p>
+                ) : (
+                    <Timeline className="w-full">
+                        {approveItems.map((item, index) => {
+                            const approveItem = item.approveItems?.[0];
+                            if (!approveItem) return null;
 
-                                style={{ color: 'lightblue' }}
-                            >
-                                <div
-                                    dangerouslySetInnerHTML={{
-                                        __html:
-                                            "İşlem Yapan Kullanıcı: " + item.approveItems![0]!.approvedUser_RuntimeNameSurname! + "<br>" +
-                                            "İşlem Tipi: " +
-                                            (item.approveItems![0]!.approverStatus === 2 ? "<span style='color:red;'>Reddedildi</span>" :
-                                                item.approveItems![0]!.approverStatus === 1 ? "<span style='color:green;'>Onaylandı</span>" : "") +
-                                            "<br>" +
-                                            "Onaya Gönderilen Tarih: " + formatDateTime(item.approveItems![0]!.createdDate?.toString()!) + "<br>"
-                                            + (item.approveItems![0].approvedUser_RuntimeNote != "" && item.approveItems![0].approvedUser_RuntimeNote != null
-                                                ? "Açıklama: " + item.approveItems![0]!.approvedUser_RuntimeNote!
-                                                : "")
-                                            + "<br>"
-                                            + (item.approveItems![0].approvedUser_RuntimeNumberManDay != "" && item.approveItems![0].approvedUser_RuntimeNumberManDay != null
-                                                ? "Adam/Gün: " + item.approveItems![0]!.approvedUser_RuntimeNumberManDay!
-                                                : "")
-                                    }}
-                                />
+                            const status = getStatusConfig(approveItem.approverStatus);
+                            const note = approveItem.approvedUser_RuntimeNote?.trim();
+                            const manDay = approveItem.approvedUser_RuntimeNumberManDay?.trim();
 
-                            </TimelineItem>
-                        ))}
+                            return (
+                                <TimelineItem
+                                    key={`${item.nodeName}-${index}`}
+                                    icon="hr-approval"
+                                    name={item.nodeName ?? "Onay Adımı"}
+                                    subtitleText={`Onayına gönderilen: ${approveItem.approveUserNameSurname ?? "—"}`}
+                                >
+                                    <div className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-sm">
+                                        <DetailRow label="İşlem yapan">
+                                            {approveItem.approvedUser_RuntimeNameSurname ?? "—"}
+                                        </DetailRow>
+
+                                        <DetailRow label="İşlem tipi">
+                                            <span
+                                                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${status.className}`}
+                                            >
+                                                {status.label}
+                                            </span>
+                                        </DetailRow>
+
+                                        <DetailRow label="Gönderim tarihi">
+                                            {approveItem.createdDate
+                                                ? formatDateTime(approveItem.createdDate.toString())
+                                                : "—"}
+                                        </DetailRow>
+
+                                        {note && (
+                                            <DetailRow label="Açıklama">{note}</DetailRow>
+                                        )}
+
+                                        {manDay && (
+                                            <DetailRow label="Adam/Gün">{manDay}</DetailRow>
+                                        )}
+                                    </div>
+                                </TimelineItem>
+                            );
+                        })}
                     </Timeline>
                 )}
             </div>

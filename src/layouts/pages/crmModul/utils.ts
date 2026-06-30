@@ -1,12 +1,26 @@
 import { format, isValid, parseISO, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CrmModulDto, ListModuleDto, TypeCodes } from "api/generated";
-import { getTypeCodeLabel } from "./constants";
+import {
+  CrmModulDto,
+  CurrencyType,
+  LeadSource,
+  ListModuleDto,
+  OpportunityStage,
+  TypeCodes,
+} from "api/generated";
+import {
+  getLeadSourceLabel,
+  getOpportunityStageLabel,
+  getOpportunityStageProbability,
+  getTypeCodeLabel,
+} from "./constants";
+import { calculateEstimatedValueString, type CrmSubItemFormValues } from "./formMappers";
 
 export type CrmModulListAggregates = {
   totalPersonCount: number;
   uniqueModuleNames: string[];
   uniqueTypeLabels: string[];
+  uniqueOpportunityStageLabels: string[];
 };
 
 export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggregates => {
@@ -29,9 +43,17 @@ export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggrega
 
   const typeMap = new Map<TypeCodes, string>();
   subItems.forEach((item) => {
-    if (item.typeCode == null || item.typeCode === TypeCodes.None) return;
+    if (item.typeCode == null || item.typeCode === TypeCodes.NUMBER_0) return;
     if (!typeMap.has(item.typeCode)) {
       typeMap.set(item.typeCode, getTypeCodeLabel(item.typeCode));
+    }
+  });
+
+  const stageMap = new Map<OpportunityStage, string>();
+  subItems.forEach((item) => {
+    if (item.opportunityStage == null || item.opportunityStage === OpportunityStage.NUMBER_0) return;
+    if (!stageMap.has(item.opportunityStage)) {
+      stageMap.set(item.opportunityStage, getOpportunityStageLabel(item.opportunityStage));
     }
   });
 
@@ -41,8 +63,107 @@ export const aggregateCrmModulSubItems = (row: CrmModulDto): CrmModulListAggrega
   const uniqueTypeLabels = Array.from(typeMap.values()).sort((a, b) =>
     a.localeCompare(b, "tr")
   );
+  const uniqueOpportunityStageLabels = Array.from(stageMap.values()).sort((a, b) =>
+    a.localeCompare(b, "tr")
+  );
 
-  return { totalPersonCount, uniqueModuleNames, uniqueTypeLabels };
+  return { totalPersonCount, uniqueModuleNames, uniqueTypeLabels, uniqueOpportunityStageLabels };
+};
+
+export type CurrencyTotals = {
+  try: number;
+  usd: number;
+  eur: number;
+};
+
+export type CrmDetailStats = {
+  openOpportunityCount: number;
+  pipeline: CurrencyTotals;
+  weightedForecast: CurrencyTotals;
+  won: CurrencyTotals;
+};
+
+const emptyCurrencyTotals = (): CurrencyTotals => ({ try: 0, usd: 0, eur: 0 });
+
+const parseItemEstimatedValue = (item: CrmSubItemFormValues): number => {
+  const calculated = calculateEstimatedValueString(item.unitPrice, item.personCount);
+  if (!calculated) return 0;
+  const parsed = Number(calculated);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const addToCurrencyTotal = (totals: CurrencyTotals, currency: CurrencyType, amount: number) => {
+  switch (currency) {
+    case CurrencyType.NUMBER_1:
+      totals.try += amount;
+      break;
+    case CurrencyType.NUMBER_2:
+      totals.usd += amount;
+      break;
+    case CurrencyType.NUMBER_3:
+      totals.eur += amount;
+      break;
+    default:
+      break;
+  }
+};
+
+export const calculateCrmDetailStats = (items: CrmSubItemFormValues[]): CrmDetailStats => {
+  const pipeline = emptyCurrencyTotals();
+  const weightedForecast = emptyCurrencyTotals();
+  const won = emptyCurrencyTotals();
+  let openOpportunityCount = 0;
+
+  items.forEach((item) => {
+    const amount = parseItemEstimatedValue(item);
+    const stage = item.opportunityStage ?? OpportunityStage.NUMBER_0;
+    const isWon = stage === OpportunityStage.NUMBER_6;
+    const isLostOrCancelled =
+      stage === OpportunityStage.NUMBER_7 || stage === OpportunityStage.NUMBER_8;
+
+    if (!isWon && !isLostOrCancelled) {
+      openOpportunityCount += 1;
+      addToCurrencyTotal(pipeline, item.currencyType, amount);
+      const probability = getOpportunityStageProbability(stage) / 100;
+      addToCurrencyTotal(weightedForecast, item.currencyType, amount * probability);
+    }
+
+    if (isWon) {
+      addToCurrencyTotal(won, item.currencyType, amount);
+    }
+  });
+
+  return { openOpportunityCount, pipeline, weightedForecast, won };
+};
+
+export const formatMoney = (amount: number, symbol: string): string => {
+  const formatted = new Intl.NumberFormat("tr-TR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(amount));
+  return `${symbol}${formatted}`;
+};
+
+export const formatCurrencyTotalsBlock = (totals: CurrencyTotals): string[] => [
+  formatMoney(totals.try, "₺"),
+  formatMoney(totals.usd, "$"),
+  formatMoney(totals.eur, "€"),
+];
+
+export const getCompanyInitials = (name: string): string => {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "—";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
+};
+
+export const getOpportunityTitle = (
+  item: CrmSubItemFormValues,
+  modules: { id?: string; name?: string | null }[]
+): string => {
+  const names = resolveModuleNamesFromIds(item.solutionModuleIds, modules);
+  if (names !== "—") return names;
+  return "Yeni Fırsat";
 };
 
 export const formatInlineList = (items: string[]): string => {
@@ -81,6 +202,76 @@ export const resolveModuleNamesFromIds = (
 
 export const resolvePartnerCompanyName = (row: CrmModulDto): string =>
   row.partnerCompanyName?.trim() || "—";
+
+export type CrmModulFilterOption<T extends string | number = string> = {
+  value: T;
+  label: string;
+};
+
+export type CrmModulFilterOptions = {
+  companies: CrmModulFilterOption[];
+  leadSources: CrmModulFilterOption<LeadSource>[];
+  opportunityStages: CrmModulFilterOption<OpportunityStage>[];
+  contactPersons: CrmModulFilterOption[];
+  accountManagers: CrmModulFilterOption[];
+};
+
+export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterOptions => {
+  const companySet = new Set<string>();
+  const leadSourceMap = new Map<LeadSource, string>();
+  const stageMap = new Map<OpportunityStage, string>();
+  const contactSet = new Set<string>();
+  const managerSet = new Set<string>();
+
+  rows.forEach((row) => {
+    const companyName = resolvePartnerCompanyName(row);
+    if (companyName !== "—") {
+      companySet.add(companyName);
+    }
+
+    if (row.leadSource != null && row.leadSource !== LeadSource.NUMBER_0) {
+      leadSourceMap.set(row.leadSource, getLeadSourceLabel(row.leadSource));
+    }
+
+    (row.crmSubItems ?? []).forEach((item) => {
+      if (item.opportunityStage == null || item.opportunityStage === OpportunityStage.NUMBER_0) {
+        return;
+      }
+      stageMap.set(item.opportunityStage, getOpportunityStageLabel(item.opportunityStage));
+    });
+
+    const contactPerson = row.contactPerson?.trim();
+    if (contactPerson) {
+      contactSet.add(contactPerson);
+    }
+
+    const accountManager = row.accountManager?.trim();
+    if (accountManager) {
+      managerSet.add(accountManager);
+    }
+  });
+
+  const sortByLabel = <T extends string | number>(
+    items: CrmModulFilterOption<T>[]
+  ): CrmModulFilterOption<T>[] =>
+    [...items].sort((a, b) => a.label.localeCompare(b.label, "tr"));
+
+  return {
+    companies: sortByLabel(Array.from(companySet).map((value) => ({ value, label: value }))),
+    leadSources: sortByLabel(
+      Array.from(leadSourceMap.entries()).map(([value, label]) => ({ value, label }))
+    ),
+    opportunityStages: sortByLabel(
+      Array.from(stageMap.entries()).map(([value, label]) => ({ value, label }))
+    ),
+    contactPersons: sortByLabel(
+      Array.from(contactSet).map((value) => ({ value, label: value }))
+    ),
+    accountManagers: sortByLabel(
+      Array.from(managerSet).map((value) => ({ value, label: value }))
+    ),
+  };
+};
 
 export const formatSolutionModuleNames = (names?: string[] | null): string => {
   if (!names?.length) return "—";

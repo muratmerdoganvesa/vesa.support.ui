@@ -17,8 +17,7 @@ import {
 } from "./common";
 import type { RequestArgs } from "./base";
 import { BaseAPI } from "./base";
-import type { CrmSubItemDto } from "./crmModulsApi";
-import type { CrmCurrencyType, TypeCodes } from "./crmModulsApi";
+import type { CrmSubItemDto, CrmCurrencyType, TypeCodes, OpportunityStage } from "./crmModulsApi";
 
 export interface CreateCrmSubItemDto {
   crmModulId: string;
@@ -30,6 +29,7 @@ export interface CreateCrmSubItemDto {
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
+  opportunityStage?: OpportunityStage;
 }
 
 export interface UpdateCrmSubItemDto {
@@ -41,6 +41,7 @@ export interface UpdateCrmSubItemDto {
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
+  opportunityStage?: OpportunityStage;
 }
 
 export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configuration) {

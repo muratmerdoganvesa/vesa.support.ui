@@ -1,15 +1,15 @@
-import { CrmCurrencyType, LeadSource, OpportunityStage, TypeCodes } from "api/generated";
+import { CurrencyType, LeadSource, OpportunityStage, TypeCodes } from "api/generated";
 
 export const OPPORTUNITY_STAGE_OPTIONS: { value: OpportunityStage; label: string }[] = [
-  { value: OpportunityStage.None, label: "Seçilmedi" },
-  { value: OpportunityStage.New, label: "Yeni" },
-  { value: OpportunityStage.Contacted, label: "İlk Görüşme" },
-  { value: OpportunityStage.Qualified, label: "İhtiyaç Analizi" },
-  { value: OpportunityStage.ProposalSent, label: "Teklif Gönderildi" },
-  { value: OpportunityStage.Negotiation, label: "Pazarlık" },
-  { value: OpportunityStage.Won, label: "Kazanıldı" },
-  { value: OpportunityStage.Lost, label: "Kaybedildi" },
-  { value: OpportunityStage.Cancelled, label: "İptal" },
+  { value: OpportunityStage.NUMBER_0, label: "Seçilmedi" },
+  { value: OpportunityStage.NUMBER_1, label: "Yeni" },
+  { value: OpportunityStage.NUMBER_2, label: "İlk Görüşme" },
+  { value: OpportunityStage.NUMBER_3, label: "İhtiyaç Analizi" },
+  { value: OpportunityStage.NUMBER_4, label: "Teklif Gönderildi" },
+  { value: OpportunityStage.NUMBER_5, label: "Pazarlık" },
+  { value: OpportunityStage.NUMBER_6, label: "Kazanıldı" },
+  { value: OpportunityStage.NUMBER_7, label: "Kaybedildi" },
+  { value: OpportunityStage.NUMBER_8, label: "İptal" },
 ];
 
 export const getOpportunityStageLabel = (stage?: OpportunityStage | null): string => {
@@ -18,14 +18,14 @@ export const getOpportunityStageLabel = (stage?: OpportunityStage | null): strin
 };
 
 export const LEAD_SOURCE_OPTIONS: { value: LeadSource; label: string }[] = [
-  { value: LeadSource.None, label: "Seçilmedi" },
-  { value: LeadSource.ColdCall, label: "Soğuk Çağrı" },
-  { value: LeadSource.Website, label: "Web Sitesi" },
-  { value: LeadSource.Referral, label: "Referans" },
-  { value: LeadSource.Partner, label: "Partner" },
-  { value: LeadSource.Event, label: "Etkinlik" },
-  { value: LeadSource.SAP, label: "SAP" },
-  { value: LeadSource.Other, label: "Diğer" },
+  { value: LeadSource.NUMBER_0, label: "Seçilmedi" },
+  { value: LeadSource.NUMBER_1, label: "Soğuk Çağrı" },
+  { value: LeadSource.NUMBER_2, label: "Web Sitesi" },
+  { value: LeadSource.NUMBER_3, label: "Referans" },
+  { value: LeadSource.NUMBER_4, label: "Partner" },
+  { value: LeadSource.NUMBER_5, label: "Etkinlik" },
+  { value: LeadSource.NUMBER_6, label: "SAP" },
+  { value: LeadSource.NUMBER_7, label: "Diğer" },
 ];
 
 export const getLeadSourceLabel = (source?: LeadSource | null): string => {
@@ -33,25 +33,25 @@ export const getLeadSourceLabel = (source?: LeadSource | null): string => {
   return LEAD_SOURCE_OPTIONS.find((o) => o.value === source)?.label ?? "—";
 };
 
-export const CURRENCY_TYPE_OPTIONS: { value: CrmCurrencyType; label: string }[] = [
-  { value: CrmCurrencyType.None, label: "Seçilmedi" },
-  { value: CrmCurrencyType.TRY, label: "Türk Lirası" },
-  { value: CrmCurrencyType.USD, label: "ABD Doları" },
-  { value: CrmCurrencyType.EUR, label: "Euro" },
+export const CURRENCY_TYPE_OPTIONS: { value: CurrencyType; label: string }[] = [
+  { value: CurrencyType.NUMBER_0, label: "Seçilmedi" },
+  { value: CurrencyType.NUMBER_1, label: "Türk Lirası" },
+  { value: CurrencyType.NUMBER_2, label: "ABD Doları" },
+  { value: CurrencyType.NUMBER_3, label: "Euro" },
 ];
 
-export const getCurrencyTypeLabel = (currency?: CrmCurrencyType | null): string => {
+export const getCurrencyTypeLabel = (currency?: CurrencyType | null): string => {
   if (currency == null) return "—";
   return CURRENCY_TYPE_OPTIONS.find((o) => o.value === currency)?.label ?? "—";
 };
 
-export const getCurrencySymbol = (currency?: CrmCurrencyType | null): string => {
+export const getCurrencySymbol = (currency?: CurrencyType | null): string => {
   switch (currency) {
-    case CrmCurrencyType.TRY:
+    case CurrencyType.NUMBER_1:
       return "₺";
-    case CrmCurrencyType.USD:
+    case CurrencyType.NUMBER_2:
       return "$";
-    case CrmCurrencyType.EUR:
+    case CurrencyType.NUMBER_3:
       return "€";
     default:
       return "—";
@@ -59,10 +59,10 @@ export const getCurrencySymbol = (currency?: CrmCurrencyType | null): string => 
 };
 
 export const TYPE_CODE_OPTIONS: { value: TypeCodes; label: string }[] = [
-  { value: TypeCodes.None, label: "Seçilmedi" },
-  { value: TypeCodes.Lisance, label: "Lisans" },
-  { value: TypeCodes.Consulting, label: "Danışmanlık" },
-  { value: TypeCodes.MSP, label: "MSP" },
+  { value: TypeCodes.NUMBER_0, label: "Seçilmedi" },
+  { value: TypeCodes.NUMBER_1, label: "Lisans" },
+  { value: TypeCodes.NUMBER_2, label: "Danışmanlık" },
+  { value: TypeCodes.NUMBER_3, label: "MSP" },
 ];
 
 export const getTypeCodeLabel = (typeCode?: TypeCodes | null): string => {
@@ -71,3 +71,59 @@ export const getTypeCodeLabel = (typeCode?: TypeCodes | null): string => {
 };
 
 export const ROWS_PER_PAGE = 15;
+
+/** Pipeline görselleştirmesinde gösterilen aktif aşamalar */
+export const PIPELINE_STAGE_FLOW: OpportunityStage[] = [
+  OpportunityStage.NUMBER_1,
+  OpportunityStage.NUMBER_2,
+  OpportunityStage.NUMBER_3,
+  OpportunityStage.NUMBER_4,
+  OpportunityStage.NUMBER_5,
+  OpportunityStage.NUMBER_6,
+];
+
+export const OPPORTUNITY_STAGE_PROBABILITY: Record<OpportunityStage, number> = {
+  [OpportunityStage.NUMBER_0]: 0,
+  [OpportunityStage.NUMBER_1]: 10,
+  [OpportunityStage.NUMBER_2]: 20,
+  [OpportunityStage.NUMBER_3]: 25,
+  [OpportunityStage.NUMBER_4]: 50,
+  [OpportunityStage.NUMBER_5]: 75,
+  [OpportunityStage.NUMBER_6]: 100,
+  [OpportunityStage.NUMBER_7]: 0,
+  [OpportunityStage.NUMBER_8]: 0,
+};
+
+export const CLOSED_OPPORTUNITY_STAGES: OpportunityStage[] = [
+  OpportunityStage.NUMBER_6,
+  OpportunityStage.NUMBER_7,
+  OpportunityStage.NUMBER_8,
+];
+
+export const getOpportunityStageProbability = (stage?: OpportunityStage | null): number => {
+  if (stage == null) return 0;
+  return OPPORTUNITY_STAGE_PROBABILITY[stage] ?? 0;
+};
+
+export const getOpportunityStageBadgeClass = (stage?: OpportunityStage | null): string => {
+  switch (stage) {
+    case OpportunityStage.NUMBER_1:
+      return "bg-slate-100 text-slate-700";
+    case OpportunityStage.NUMBER_2:
+      return "bg-amber-50 text-amber-800";
+    case OpportunityStage.NUMBER_3:
+      return "bg-orange-50 text-orange-800";
+    case OpportunityStage.NUMBER_4:
+      return "bg-orange-100 text-orange-900";
+    case OpportunityStage.NUMBER_5:
+      return "bg-violet-50 text-violet-800";
+    case OpportunityStage.NUMBER_6:
+      return "bg-emerald-50 text-emerald-800";
+    case OpportunityStage.NUMBER_7:
+      return "bg-red-50 text-red-700";
+    case OpportunityStage.NUMBER_8:
+      return "bg-slate-100 text-slate-500";
+    default:
+      return "bg-slate-50 text-slate-500";
+  }
+};

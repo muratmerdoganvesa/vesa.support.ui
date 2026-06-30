@@ -4,18 +4,18 @@ import {
   getProjectTypeColumnColors,
   type ProjectTypeColumnDef,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
-import type { TicketProjectStatsDto } from "layouts/pages/ticketProjects/types";
+import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 
 type ProjectStatsKanbanColumnProps = {
   column: ProjectTypeColumnDef;
-  projects: TicketProjectStatsDto[];
+  items: StatsBoardItem[];
   highlightPersonIds?: Set<string> | null;
 };
 
 const ProjectStatsKanbanColumn = ({
   column,
-  projects,
+  items,
   highlightPersonIds,
 }: ProjectStatsKanbanColumnProps) => {
   const colors = getProjectTypeColumnColors(column.label);
@@ -32,7 +32,7 @@ const ProjectStatsKanbanColumn = ({
         <span className={cn("size-2 shrink-0 rounded-full", colors.dot)} />
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-foreground">
           {column.label}
-          <span className="ml-1 font-normal text-slate-400">({projects.length})</span>
+          <span className="ml-1 font-normal text-slate-400">({items.length})</span>
         </h3>
         <span
           className={cn(
@@ -40,7 +40,7 @@ const ProjectStatsKanbanColumn = ({
             colors.badge,
           )}
         >
-          {projects.length}
+          {items.length}
         </span>
       </div>
 
@@ -48,11 +48,11 @@ const ProjectStatsKanbanColumn = ({
         className="flex flex-col gap-2 overflow-y-auto bg-gray-50 p-2 dark:bg-muted/20"
         style={{ maxHeight: "calc(100vh - 380px)", minHeight: "625px" }}
       >
-        {projects.length > 0 ? (
-          projects.map((project) => (
+        {items.length > 0 ? (
+          items.map((item) => (
             <ProjectStatsKanbanCard
-              key={project.id}
-              project={project}
+              key={item.id}
+              item={item}
               cardBorderClass={colors.cardBorder}
               highlightPersonIds={highlightPersonIds}
             />

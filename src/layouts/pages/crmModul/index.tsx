@@ -21,12 +21,14 @@ import { useNavigate } from "react-router-dom";
 import { CrmModulFilters, CrmModulFilterValues } from "./components/CrmModulFilters";
 import { CrmModulTable } from "./components/CrmModulTable";
 import { ROWS_PER_PAGE } from "./constants";
-import { isDateInRange, resolvePartnerCompanyName } from "./utils";
+import { buildCrmModulFilterOptions, isDateInRange, resolvePartnerCompanyName } from "./utils";
 
 const defaultFilters: CrmModulFilterValues = {
-  companySearch: "",
-  contactSearch: "",
+  company: "all",
+  leadSource: "all",
   opportunityStage: "all",
+  contactPerson: "all",
+  accountManager: "all",
   dateFrom: undefined,
   dateTo: undefined,
 };
@@ -65,23 +67,56 @@ const CrmModulPage = () => {
     setCurrentPage(1);
   }, [appliedFilters]);
 
+  const filterOptions = useMemo(() => buildCrmModulFilterOptions(crmData), [crmData]);
+
   const filteredRows = useMemo(() => {
-    const companyQ = appliedFilters.companySearch.trim().toLowerCase();
-    const contactQ = appliedFilters.contactSearch.trim().toLowerCase();
-
     return crmData.filter((row) => {
-      const companyName = resolvePartnerCompanyName(row).toLowerCase();
-      const contactPerson = (row.contactPerson ?? "").toLowerCase();
+      const companyName = resolvePartnerCompanyName(row);
 
-      if (companyQ && !companyName.includes(companyQ)) return false;
-      if (contactQ && !contactPerson.includes(contactQ)) return false;
+      if (appliedFilters.company !== "all" && companyName !== appliedFilters.company) {
+        return false;
+      }
       if (
-        appliedFilters.opportunityStage !== "all" &&
-        row.opportunityStage !== appliedFilters.opportunityStage
+        appliedFilters.leadSource !== "all" &&
+        row.leadSource !== appliedFilters.leadSource
       ) {
         return false;
       }
-      if (!isDateInRange(row.lastContactDate, appliedFilters.dateFrom, appliedFilters.dateTo)) {
+      if (
+        appliedFilters.opportunityStage !== "all" &&
+        !(row.crmSubItems ?? []).some(
+          (item) => item.opportunityStage === appliedFilters.opportunityStage
+        )
+      ) {
+        return false;
+      }
+      if (
+        appliedFilters.contactPerson !== "all" &&
+        (row.contactPerson?.trim() ?? "") !== appliedFilters.contactPerson
+      ) {
+        return false;
+      }
+      if (
+        appliedFilters.accountManager !== "all" &&
+        (row.accountManager?.trim() ?? "") !== appliedFilters.accountManager
+      ) {
+        return false;
+      }
+      const lastContactDates = (row.crmSubItems ?? [])
+        .map((item) => item.lastContactDate)
+        .filter(Boolean);
+      if (
+        lastContactDates.length > 0 &&
+        !lastContactDates.some((date) =>
+          isDateInRange(date, appliedFilters.dateFrom, appliedFilters.dateTo)
+        )
+      ) {
+        return false;
+      }
+      if (
+        lastContactDates.length === 0 &&
+        !isDateInRange(row.lastContactDate, appliedFilters.dateFrom, appliedFilters.dateTo)
+      ) {
         return false;
       }
       return true;
@@ -172,6 +207,7 @@ const CrmModulPage = () => {
 
           <CrmModulFilters
             values={draftFilters}
+            options={filterOptions}
             onChange={setDraftFilters}
             onApply={handleApplyFilters}
             onReset={handleResetFilters}

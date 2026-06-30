@@ -410,9 +410,6 @@ function CalendarPage(): JSX.Element {
 
   // ── Event handlers & data fetching (unchanged) ────────────────────────────
 
-  useEffect(() => {
-    console.log("eventsss", events);
-  }, [events]);
 
   const handleSearchByName = async (value: string) => {
     if (value === "") {
@@ -521,10 +518,8 @@ function CalendarPage(): JSX.Element {
             if (user) filteredUsers.push(user);
           });
           setTeamUsers(data.data);
-          console.log("teamusers", data.data);
         }
       } catch (error) {
-        console.log("error", error);
       } finally {
         setIsLoading(false);
         dispatchBusy({ isBusy: false });
@@ -549,7 +544,6 @@ function CalendarPage(): JSX.Element {
     selectedDate.setDate(selectedDate.getDate() - 1);
     const adjustedDate = selectedDate.toISOString().split("T")[0];
     setSelectedDate({ start: startDate, end: adjustedDate });
-    console.log("events", events);
     const hasEventInRange = events.some((event) => {
       if (event.color === "leave-event" || event.color === "holiday-event") {
         const eventStart = new Date(event.start);
@@ -570,16 +564,13 @@ function CalendarPage(): JSX.Element {
   const handleAddTask = async (newTask: UserCalendarInsertDto): Promise<void> => {
     try {
       setIsLoading(true);
-      console.log("addhandle");
       let conf = getConfiguration();
       let api = new UserCalendarApi(conf);
-      console.log("newtask", newTask);
       let data = await api.apiUserCalendarPost(newTask);
       let customYear = new Date(newTask.startDate).getFullYear();
       let customMonth = new Date(newTask.startDate).getMonth() + 1;
       fetchEvents(customYear, customMonth);
     } catch (error) {
-      console.log("error", error);
     } finally {
       setIsLoading(false);
     }
@@ -606,7 +597,6 @@ function CalendarPage(): JSX.Element {
       let customMonth = new Date(updatedTask.startDate).getMonth() + 1;
       fetchEvents(customYear, customMonth);
     } catch (error) {
-      console.log("error", error);
     }
   };
 
@@ -625,7 +615,6 @@ function CalendarPage(): JSX.Element {
       let customMonth = new Date(eventStartDate).getMonth() + 1;
       fetchEvents(customYear, customMonth);
     } catch (error) {
-      console.log("error", error);
     } finally {
       dispatchBusy({ isBusy: false });
     }
@@ -644,7 +633,6 @@ function CalendarPage(): JSX.Element {
         const day = String(date.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       } catch (error) {
-        console.error("Error formatting date:", error);
         return eventInfo.event.extendedProps.start || eventInfo.event.startStr;
       }
     };
@@ -727,8 +715,6 @@ function CalendarPage(): JSX.Element {
                 workLocation: taskData.workLocation || null,
                 isAvailable: taskData.isAvailable || false,
               });
-              console.log("selectedeventttt", taskData.isAvailable);
-              console.log("taskData", taskData);
               setModalEventOpen(true);
             }}
           >
@@ -807,10 +793,8 @@ function CalendarPage(): JSX.Element {
         const now = new Date();
         const year = customYear;
         const month = customMonth;
-        console.log("year and month", year, month);
         const { data: userLeavesAndHolidays } =
           (await api.apiUserCalendarGetEmployeeLeavesByMonthlyGet(year, month, userEmails)) as any;
-        console.log("userLeavesAndHolidays raw response:", userLeavesAndHolidays);
 
         interface LeaveItem {
           pernr: string;
@@ -832,11 +816,9 @@ function CalendarPage(): JSX.Element {
 
         if (userLeavesAndHolidays && typeof userLeavesAndHolidays === "object") {
           if (userLeavesAndHolidays.holidays && Array.isArray(userLeavesAndHolidays.holidays)) {
-            console.log("Found holidays array:", userLeavesAndHolidays.holidays);
             holidayItems.push(...userLeavesAndHolidays.holidays);
           }
           for (const key in userLeavesAndHolidays) {
-            console.log(`Checking key: ${key}`, userLeavesAndHolidays[key]);
             if (key === "holidays" && Array.isArray(userLeavesAndHolidays[key])) {
               holidayItems.push(...userLeavesAndHolidays[key]);
             } else if (key === "leaves" && Array.isArray(userLeavesAndHolidays[key])) {
@@ -856,9 +838,6 @@ function CalendarPage(): JSX.Element {
             }
           });
         }
-
-        console.log("Extracted leave items:", leaveItems);
-        console.log("Extracted holiday items:", holidayItems);
 
         const uniqueLeaves = new Map<string, LeaveItem>();
         leaveItems.forEach((leave: LeaveItem) => {
@@ -943,7 +922,6 @@ function CalendarPage(): JSX.Element {
           setEvents([...calendarEvents, ...leaveEvents, ...holidayEvents]);
         }, 0);
       } catch (error) {
-        console.error("Error fetching events:", error);
       } finally {
         dispatchBusy({ isBusy: false });
       }
@@ -953,12 +931,10 @@ function CalendarPage(): JSX.Element {
 
   useEffect(() => {
     if (selectedUsers.length > 0) {
-      console.log("calıştı");
       const timer = setTimeout(() => {
         let customYear = new Date(selectedEventDate.start).getFullYear();
         let customMonth = new Date(selectedEventDate.start).getMonth() + 1;
         fetchEvents(customYear, customMonth);
-        console.log("calıştı gitti");
       }, 0);
       return () => clearTimeout(timer);
     } else {
@@ -1021,9 +997,7 @@ function CalendarPage(): JSX.Element {
     }
   };
 
-  useEffect(() => {
-    console.log("selectedUsers", selectedUsers);
-  }, [selectedUsers]);
+
 
   const goToCalendar = () => {
     navigate("/calendar");

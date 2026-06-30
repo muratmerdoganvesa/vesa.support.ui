@@ -1,6 +1,6 @@
 import {
   CreateCrmModulDto,
-  CrmCurrencyType,
+  CurrencyType,
   CrmModulDto,
   CrmSubItemDto,
   CrmSubItemInputDto,
@@ -19,7 +19,6 @@ export type CrmModulFormValues = {
   email: string;
   leadSource: LeadSource;
   accountManager: string;
-  opportunityStage: OpportunityStage;
 };
 
 export type CrmSubItemFormValues = {
@@ -27,12 +26,13 @@ export type CrmSubItemFormValues = {
   id?: string;
   solutionModuleIds: string[];
   typeCode: TypeCodes;
-  currencyType: CrmCurrencyType;
+  currencyType: CurrencyType;
   unitPrice: string;
   personCount: string;
   estimatedValue: string;
   expectedCloseDate?: Date;
   lastContactDate?: Date;
+  opportunityStage: OpportunityStage;
 };
 
 export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
@@ -41,21 +41,21 @@ export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
   contactTitle: "",
   phoneNumber: "",
   email: "",
-  leadSource: LeadSource.None,
+  leadSource: LeadSource.NUMBER_0,
   accountManager: "",
-  opportunityStage: OpportunityStage.None,
 });
 
 export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
   clientKey: crypto.randomUUID(),
   solutionModuleIds: [],
-  typeCode: TypeCodes.None,
-  currencyType: CrmCurrencyType.None,
+  typeCode: TypeCodes.NUMBER_0,
+  currencyType: CurrencyType.NUMBER_0,
   unitPrice: "",
   personCount: "",
   estimatedValue: "",
   expectedCloseDate: undefined,
   lastContactDate: undefined,
+  opportunityStage: OpportunityStage.NUMBER_0,
 });
 
 const parseOptionalNumber = (value: string): number | null => {
@@ -95,6 +95,7 @@ const toSubItemInputDto = (item: CrmSubItemFormValues): CrmSubItemInputDto => ({
   ),
   expectedCloseDate: toIsoDateString(item.expectedCloseDate),
   lastContactDate: toIsoDateString(item.lastContactDate),
+  opportunityStage: item.opportunityStage,
 });
 
 export const toCreateDto = (
@@ -108,7 +109,6 @@ export const toCreateDto = (
   email: modul.email.trim() || null,
   leadSource: modul.leadSource,
   accountManager: modul.accountManager.trim() || null,
-  opportunityStage: modul.opportunityStage,
   crmSubItems: subItems.length > 0 ? subItems.map(toSubItemInputDto) : null,
 });
 
@@ -123,18 +123,17 @@ export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues =
   contactTitle: data.contactTitle ?? "",
   phoneNumber: formatPhoneNumberTr(data.phoneNumber ?? ""),
   email: data.email ?? "",
-  leadSource: data.leadSource ?? LeadSource.None,
+  leadSource: data.leadSource ?? LeadSource.NUMBER_0,
   accountManager: data.accountManager ?? "",
-  opportunityStage: data.opportunityStage ?? OpportunityStage.None,
 });
 
 export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFormValues[] =>
   items.map((item) => ({
     clientKey: item.id ?? crypto.randomUUID(),
     id: item.id,
-    solutionModuleIds: item.solutionModuleIds ?? [],
-    typeCode: item.typeCode ?? TypeCodes.None,
-    currencyType: item.currencyType ?? CrmCurrencyType.None,
+    solutionModuleIds: (item.solutionModuleIds ?? []).slice(0, 1),
+    typeCode: item.typeCode ?? TypeCodes.NUMBER_0,
+    currencyType: item.currencyType ?? CurrencyType.NUMBER_0,
     unitPrice: item.unitPrice != null ? String(item.unitPrice) : "",
     personCount: item.personCount != null ? String(item.personCount) : "",
     estimatedValue: calculateEstimatedValueString(
@@ -143,4 +142,5 @@ export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFo
     ),
     expectedCloseDate: parseIsoDate(item.expectedCloseDate),
     lastContactDate: parseIsoDate(item.lastContactDate),
+    opportunityStage: item.opportunityStage ?? OpportunityStage.NUMBER_0,
   }));
