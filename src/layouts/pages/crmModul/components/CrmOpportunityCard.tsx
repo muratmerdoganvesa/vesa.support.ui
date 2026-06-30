@@ -12,7 +12,11 @@ import {
   getOpportunityStageLabel,
   getOpportunityStageProbability,
 } from "../constants";
-import { calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
+import {
+  calculateEstimatedValueString,
+  formatEstimatedValueDisplay,
+  type CrmSubItemFormValues,
+} from "../formMappers";
 import { getOpportunityTitle } from "../utils";
 import { CrmPipelineStageBar } from "./CrmPipelineStageBar";
 import { CrmSubItemFormFields } from "./CrmSubItemFormFields";
@@ -66,19 +70,19 @@ export const CrmOpportunityCard = ({
               )}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-slate-900 truncate leading-snug">{title}</p>
+              <p className="text-lg font-bold text-slate-900 truncate leading-snug">{title}</p>
               <p className="text-sm text-slate-500 mt-1 truncate">{metaParts.join(" · ")}</p>
             </div>
             <Badge
               className={cn(
-                "shrink-0 h-7 px-3 text-xs font-semibold rounded-full border-transparent",
+                "shrink-0 h-8 px-3.5 text-sm font-semibold rounded-full border-0 shadow-none",
                 getOpportunityStageBadgeClass(item.opportunityStage)
               )}
             >
               {getOpportunityStageLabel(item.opportunityStage)}
             </Badge>
-            <span className="text-lg font-bold text-slate-950 tabular-nums shrink-0 min-w-[120px] text-right tracking-tight">
-              {estimated ? `${symbol}${Number(estimated).toLocaleString("tr-TR")}` : "—"}
+            <span className="text-xl font-bold text-slate-950 tabular-nums shrink-0 min-w-[140px] text-right tracking-tight">
+              {formatEstimatedValueDisplay(estimated, symbol)}
             </span>
           </button>
         </CollapsibleTrigger>
@@ -96,7 +100,7 @@ export const CrmOpportunityCard = ({
               <p className="text-sm text-slate-600">
                 Fırsat Değeri:{" "}
                 <span className="font-semibold text-emerald-700 tabular-nums">
-                  {estimated ? `${symbol}${Number(estimated).toLocaleString("tr-TR")}` : "—"}
+                  {formatEstimatedValueDisplay(estimated, symbol)}
                 </span>
               </p>
               <Button

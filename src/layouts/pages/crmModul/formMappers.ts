@@ -83,6 +83,19 @@ export const calculateEstimatedValueString = (
   return total.toFixed(2);
 };
 
+export const formatEstimatedValueDisplay = (
+  estimated: string,
+  symbol: string
+): string => {
+  if (!estimated) return "—";
+  const num = Number(estimated);
+  if (!Number.isFinite(num)) return "—";
+  return `${symbol}${num.toLocaleString("tr-TR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+};
+
 const toSubItemInputDto = (item: CrmSubItemFormValues): CrmSubItemInputDto => ({
   id: item.id ?? null,
   solutionModuleIds: item.solutionModuleIds.length > 0 ? item.solutionModuleIds : null,
