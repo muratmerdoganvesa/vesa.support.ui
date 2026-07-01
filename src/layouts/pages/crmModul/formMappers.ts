@@ -20,6 +20,7 @@ export type CrmModulFormValues = {
   email: string;
   leadSource: LeadSource;
   accountManager: string;
+  sapAccountManager: string;
 };
 
 export type CrmSubItemFormValues = {
@@ -47,6 +48,7 @@ export const emptyCrmModulFormValues = (): CrmModulFormValues => ({
   email: "",
   leadSource: LeadSource.NUMBER_0,
   accountManager: "",
+  sapAccountManager: "",
 });
 
 export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
@@ -150,6 +152,7 @@ export const toCreateDto = (
   email: modul.email.trim() || null,
   leadSource: modul.leadSource,
   accountManager: modul.accountManager.trim() || null,
+  sapAccountManager: modul.sapAccountManager.trim() || null,
   crmSubItems: subItems.length > 0 ? subItems.map(toSubItemInputDto) : null,
 });
 
@@ -167,6 +170,7 @@ export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues =
   email: data.email ?? "",
   leadSource: data.leadSource ?? LeadSource.NUMBER_0,
   accountManager: data.accountManager ?? "",
+  sapAccountManager: data.sapAccountManager ?? "",
 });
 
 export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFormValues[] =>

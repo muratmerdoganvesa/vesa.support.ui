@@ -206,7 +206,7 @@ export const CrmModulFilters = ({
         </FilterSelect>
 
         <FilterSelect
-          label="Hesap Yöneticisi"
+          label="SAP Hesap Yöneticisi"
           value={values.accountManager}
           placeholder="Tümü"
           onValueChange={(v) => handleFieldChange("accountManager", v)}

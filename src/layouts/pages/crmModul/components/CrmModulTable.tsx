@@ -105,7 +105,7 @@ export const CrmModulTable = ({
               Mail
             </TableHead>
             <TableHead className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
-              Hesap Yöneticisi
+              SAP Hesap Yöneticisi
             </TableHead>
             <TableHead className="px-4 py-3 text-xs font-semibold text-slate-600 uppercase tracking-wide whitespace-nowrap">
               Toplam Kişi
@@ -219,7 +219,7 @@ export const CrmModulTable = ({
                     {row.email || "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3.5 text-sm text-slate-600 whitespace-nowrap">
-                    {row.accountManager || "—"}
+                    {row.sapAccountManager || "—"}
                   </TableCell>
                   <TableCell className="px-4 py-3.5 text-sm text-slate-700 font-medium tabular-nums whitespace-nowrap text-center">
                     {aggregates.totalPersonCount > 0 ? aggregates.totalPersonCount : "—"}
