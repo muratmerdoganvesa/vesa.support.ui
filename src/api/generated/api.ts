@@ -4206,6 +4206,12 @@ export interface CreateCrmModulDto {
      * @type {string}
      * @memberof CreateCrmModulDto
      */
+    'companyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmModulDto
+     */
     'partnerCompanyName'?: string | null;
     /**
      * 
@@ -4245,10 +4251,10 @@ export interface CreateCrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {OpportunityStage}
+     * @type {string}
      * @memberof CreateCrmModulDto
      */
-    'opportunityStage'?: OpportunityStage;
+    'sapAccountManager'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemInputDto>}
@@ -4278,7 +4284,19 @@ export interface CreateCrmModulDto {
      * @type {number}
      * @memberof CreateCrmModulDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmModulDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -4291,12 +4309,6 @@ export interface CreateCrmModulDto {
      * @memberof CreateCrmModulDto
      */
     'lastContactDate'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CreateCrmModulDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -4330,12 +4342,6 @@ export interface CreateCrmModulNoteDto {
      * @memberof CreateCrmModulNoteDto
      */
     'crmModulId'?: string;
-    /**
-     * 
-     * @type {string}
-     * @memberof CreateCrmModulNoteDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -4378,7 +4384,19 @@ export interface CreateCrmSubItemDto {
      * @type {number}
      * @memberof CreateCrmSubItemDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CreateCrmSubItemDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -4403,6 +4421,12 @@ export interface CreateCrmSubItemDto {
      * @memberof CreateCrmSubItemDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CreateCrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
 }
 
 
@@ -4918,6 +4942,12 @@ export interface CrmModulDto {
      * @type {string}
      * @memberof CrmModulDto
      */
+    'companyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmModulDto
+     */
     'partnerCompanyName'?: string | null;
     /**
      * 
@@ -4957,10 +4987,10 @@ export interface CrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {OpportunityStage}
+     * @type {string}
      * @memberof CrmModulDto
      */
-    'opportunityStage'?: OpportunityStage;
+    'sapAccountManager'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemDto>}
@@ -4996,7 +5026,19 @@ export interface CrmModulDto {
      * @type {number}
      * @memberof CrmModulDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmModulDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -5009,12 +5051,6 @@ export interface CrmModulDto {
      * @memberof CrmModulDto
      */
     'lastContactDate'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CrmModulDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -5077,12 +5113,6 @@ export interface CrmModulNoteDto {
      * @type {string}
      * @memberof CrmModulNoteDto
      */
-    'nextAction'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof CrmModulNoteDto
-     */
     'notes'?: string | null;
     /**
      * 
@@ -5138,7 +5168,19 @@ export interface CrmSubItemDto {
      * @type {number}
      * @memberof CrmSubItemDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -5163,6 +5205,12 @@ export interface CrmSubItemDto {
      * @memberof CrmSubItemDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
     /**
      * 
      * @type {Array<string>}
@@ -5231,7 +5279,19 @@ export interface CrmSubItemInputDto {
      * @type {number}
      * @memberof CrmSubItemInputDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof CrmSubItemInputDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -5256,6 +5316,12 @@ export interface CrmSubItemInputDto {
      * @memberof CrmSubItemInputDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof CrmSubItemInputDto
+     */
+    'opportunityStage'?: OpportunityStage;
 }
 
 
@@ -18122,6 +18188,12 @@ export interface UpdateCrmModulDto {
      * @type {string}
      * @memberof UpdateCrmModulDto
      */
+    'companyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmModulDto
+     */
     'partnerCompanyName'?: string | null;
     /**
      * 
@@ -18161,10 +18233,10 @@ export interface UpdateCrmModulDto {
     'accountManager'?: string | null;
     /**
      * 
-     * @type {OpportunityStage}
+     * @type {string}
      * @memberof UpdateCrmModulDto
      */
-    'opportunityStage'?: OpportunityStage;
+    'sapAccountManager'?: string | null;
     /**
      * 
      * @type {Array<CrmSubItemInputDto>}
@@ -18194,7 +18266,19 @@ export interface UpdateCrmModulDto {
      * @type {number}
      * @memberof UpdateCrmModulDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmModulDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -18207,12 +18291,6 @@ export interface UpdateCrmModulDto {
      * @memberof UpdateCrmModulDto
      */
     'lastContactDate'?: string | null;
-    /**
-     * 
-     * @type {string}
-     * @memberof UpdateCrmModulDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -18240,12 +18318,6 @@ export interface UpdateCrmModulDto {
  * @interface UpdateCrmModulNoteDto
  */
 export interface UpdateCrmModulNoteDto {
-    /**
-     * 
-     * @type {string}
-     * @memberof UpdateCrmModulNoteDto
-     */
-    'nextAction'?: string | null;
     /**
      * 
      * @type {string}
@@ -18282,7 +18354,19 @@ export interface UpdateCrmSubItemDto {
      * @type {number}
      * @memberof UpdateCrmSubItemDto
      */
+    'discount'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
     'estimatedValue'?: number | null;
+    /**
+     * 
+     * @type {number}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'estimatedDiscountedValue'?: number | null;
     /**
      * 
      * @type {string}
@@ -18307,6 +18391,12 @@ export interface UpdateCrmSubItemDto {
      * @memberof UpdateCrmSubItemDto
      */
     'typeCode'?: TypeCodes;
+    /**
+     * 
+     * @type {OpportunityStage}
+     * @memberof UpdateCrmSubItemDto
+     */
+    'opportunityStage'?: OpportunityStage;
 }
 
 

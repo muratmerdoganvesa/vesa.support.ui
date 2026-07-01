@@ -71,3 +71,65 @@ export const getTypeCodeLabel = (typeCode?: TypeCodes | null): string => {
 };
 
 export const ROWS_PER_PAGE = 15;
+export const GRID_ITEMS_PER_PAGE = 12;
+
+export type CrmModulListViewMode = "table" | "tree" | "grid";
+
+export const DEFAULT_CRM_MODUL_VIEW_MODE: CrmModulListViewMode = "table";
+export const CRM_MODUL_VIEW_MODE_STORAGE_KEY = "crm-modul-list-view-mode-v2";
+
+/** Pipeline görselleştirmesinde gösterilen aktif aşamalar */
+export const PIPELINE_STAGE_FLOW: OpportunityStage[] = [
+  OpportunityStage.NUMBER_1,
+  OpportunityStage.NUMBER_2,
+  OpportunityStage.NUMBER_3,
+  OpportunityStage.NUMBER_4,
+  OpportunityStage.NUMBER_5,
+  OpportunityStage.NUMBER_6,
+];
+
+export const OPPORTUNITY_STAGE_PROBABILITY: Record<OpportunityStage, number> = {
+  [OpportunityStage.NUMBER_0]: 0,
+  [OpportunityStage.NUMBER_1]: 10,
+  [OpportunityStage.NUMBER_2]: 20,
+  [OpportunityStage.NUMBER_3]: 25,
+  [OpportunityStage.NUMBER_4]: 50,
+  [OpportunityStage.NUMBER_5]: 75,
+  [OpportunityStage.NUMBER_6]: 100,
+  [OpportunityStage.NUMBER_7]: 0,
+  [OpportunityStage.NUMBER_8]: 0,
+};
+
+export const CLOSED_OPPORTUNITY_STAGES: OpportunityStage[] = [
+  OpportunityStage.NUMBER_6,
+  OpportunityStage.NUMBER_7,
+  OpportunityStage.NUMBER_8,
+];
+
+export const getOpportunityStageProbability = (stage?: OpportunityStage | null): number => {
+  if (stage == null) return 0;
+  return OPPORTUNITY_STAGE_PROBABILITY[stage] ?? 0;
+};
+
+export const getOpportunityStageBadgeClass = (stage?: OpportunityStage | null): string => {
+  switch (stage) {
+    case OpportunityStage.NUMBER_1:
+      return "bg-[#FFF4E5] text-[#B45309]";
+    case OpportunityStage.NUMBER_2:
+      return "bg-[#FFF4E5] text-[#B45309]";
+    case OpportunityStage.NUMBER_3:
+      return "bg-[#FFF4E5] text-[#B45309]";
+    case OpportunityStage.NUMBER_4:
+      return "bg-[#FFF4E5] text-[#B45309]";
+    case OpportunityStage.NUMBER_5:
+      return "bg-[#FFF4E5] text-[#92400E]";
+    case OpportunityStage.NUMBER_6:
+      return "bg-emerald-50 text-emerald-800";
+    case OpportunityStage.NUMBER_7:
+      return "bg-red-50 text-red-700";
+    case OpportunityStage.NUMBER_8:
+      return "bg-slate-100 text-slate-500";
+    default:
+      return "bg-slate-50 text-slate-500";
+  }
+};

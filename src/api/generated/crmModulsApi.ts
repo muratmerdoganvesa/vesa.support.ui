@@ -73,11 +73,14 @@ export interface CrmSubItemInputDto {
   solutionModuleIds?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
+  discount?: number | null;
   estimatedValue?: number | null;
+  estimatedDiscountedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
+  opportunityStage?: OpportunityStage;
 }
 
 export interface CrmSubItemDto {
@@ -87,17 +90,21 @@ export interface CrmSubItemDto {
   solutionModuleNames?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
+  discount?: number | null;
   estimatedValue?: number | null;
+  estimatedDiscountedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
+  opportunityStage?: OpportunityStage;
   createdDate?: string;
   updatedDate?: string | null;
   uniqNumber?: number;
 }
 
 export interface CreateCrmModulDto {
+  companyName?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -105,11 +112,12 @@ export interface CreateCrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  opportunityStage?: OpportunityStage;
+  sapAccountManager?: string | null;
   crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
 export interface UpdateCrmModulDto {
+  companyName?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -117,12 +125,13 @@ export interface UpdateCrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  opportunityStage?: OpportunityStage;
+  sapAccountManager?: string | null;
   crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
 export interface CrmModulDto {
   id?: string;
+  companyName?: string | null;
   partnerCompanyName?: string | null;
   contactPerson?: string | null;
   contactTitle?: string | null;
@@ -130,13 +139,15 @@ export interface CrmModulDto {
   email?: string | null;
   leadSource?: LeadSource | null;
   accountManager?: string | null;
-  opportunityStage?: OpportunityStage;
+  sapAccountManager?: string | null;
   crmSubItems?: CrmSubItemDto[] | null;
   solutionModuleIds?: string[] | null;
   solutionModuleNames?: string[] | null;
   unitPrice?: number | null;
   personCount?: number | null;
+  discount?: number | null;
   estimatedValue?: number | null;
+  estimatedDiscountedValue?: number | null;
   expectedCloseDate?: string | null;
   lastContactDate?: string | null;
   currencyType?: CrmCurrencyType | null;
@@ -144,6 +155,46 @@ export interface CrmModulDto {
   createdDate?: string;
   updatedDate?: string | null;
   uniqNumber?: number;
+}
+
+export interface CrmAiRaporRequestDto {
+  musteri_adi: string;
+  firsatlar: {
+    ad: string;
+    asama?: string;
+    butce?: string;
+  }[];
+  notlar: {
+    tarih?: string;
+    firsat?: string;
+    not?: string;
+  }[];
+}
+
+export interface CrmAiFirsatAnaliziDto {
+  firsat?: string | null;
+  ozet?: string | null;
+  firsat_skoru?: number | null;
+  gerekce?: string | null;
+  son_not_tarihi?: string | null;
+  onerilen_cozum?: string | null;
+  satis_aksiyonlari?: string[] | null;
+  capraz_satis?: string[] | null;
+  riskler?: string[] | null;
+  rakip_durumu?: string | null;
+  sonraki_adim?: string | null;
+  oncelik_sirasi?: number | null;
+}
+
+export interface CrmAiRaporDataDto {
+  musteri?: string | null;
+  genel_ozet?: string | null;
+  firsat_analizleri?: CrmAiFirsatAnaliziDto[] | null;
+}
+
+export interface CrmAiRaporApiResponseDto {
+  message?: string;
+  rapor?: CrmAiRaporDataDto;
 }
 
 export const CrmModulsApiAxiosParamCreator = function (configuration?: Configuration) {
@@ -318,6 +369,37 @@ export const CrmModulsApiAxiosParamCreator = function (configuration?: Configura
       };
       return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
     },
+    apiCrmModulsIdAiRaporPost: async (
+      id: string,
+      crmAiRaporRequestDto?: CrmAiRaporRequestDto,
+      options: RawAxiosRequestConfig = {}
+    ): Promise<RequestArgs> => {
+      assertParamExists("apiCrmModulsIdAiRaporPost", "id", id);
+      const localVarPath = `/api/CrmModuls/{id}/AiRapor`.replace(
+        `{${"id"}}`,
+        encodeURIComponent(String(id))
+      );
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+      const baseOptions = configuration?.baseOptions;
+      const localVarRequestOptions = { method: "POST", ...baseOptions, ...options };
+      const localVarHeaderParameter = {} as Record<string, string>;
+      const localVarQueryParameter = {} as Record<string, unknown>;
+      await setBearerAuthToObject(localVarHeaderParameter, configuration);
+      localVarHeaderParameter["Content-Type"] = "application/json";
+      setSearchParams(localVarUrlObj, localVarQueryParameter);
+      const headersFromBaseOptions = baseOptions?.headers ?? {};
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      };
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        crmAiRaporRequestDto,
+        localVarRequestOptions,
+        configuration
+      );
+      return { url: toPathString(localVarUrlObj), options: localVarRequestOptions };
+    },
   };
 };
 
@@ -383,6 +465,18 @@ export const CrmModulsApiFp = function (configuration?: Configuration) {
       const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsIdDelete(id, options);
       return createRequestFunction(localVarAxiosArgs, configuration);
     },
+    async apiCrmModulsIdAiRaporPost(
+      id: string,
+      crmAiRaporRequestDto?: CrmAiRaporRequestDto,
+      options?: RawAxiosRequestConfig
+    ): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmAiRaporApiResponseDto>> {
+      const localVarAxiosArgs = await localVarAxiosParamCreator.apiCrmModulsIdAiRaporPost(
+        id,
+        crmAiRaporRequestDto,
+        options
+      );
+      return createRequestFunction(localVarAxiosArgs, configuration);
+    },
   };
 };
 
@@ -438,6 +532,16 @@ export class CrmModulsApi extends BaseAPI {
   public apiCrmModulsIdDelete(id: string, options?: RawAxiosRequestConfig) {
     return CrmModulsApiFp(this.configuration)
       .apiCrmModulsIdDelete(id, options)
+      .then((request) => request(this.axios, this.basePath));
+  }
+
+  public apiCrmModulsIdAiRaporPost(
+    id: string,
+    crmAiRaporRequestDto?: CrmAiRaporRequestDto,
+    options?: RawAxiosRequestConfig
+  ) {
+    return CrmModulsApiFp(this.configuration)
+      .apiCrmModulsIdAiRaporPost(id, crmAiRaporRequestDto, options)
       .then((request) => request(this.axios, this.basePath));
   }
 }

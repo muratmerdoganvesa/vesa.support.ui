@@ -1,6 +1,5 @@
-import { OpportunityStage } from "api/generated";
+import { LeadSource, OpportunityStage } from "api/generated";
 import { Button } from "components/ui/button";
-import { Input } from "components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,20 +11,24 @@ import { Calendar } from "components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarDays, Search, X } from "lucide-react";
+import { CalendarDays, Filter, RotateCcw, Search, X } from "lucide-react";
 import { cn } from "lib/utils";
-import { OPPORTUNITY_STAGE_OPTIONS } from "../constants";
+import { type ReactNode, useMemo } from "react";
+import { CrmModulFilterOptions } from "../utils";
 
 export type CrmModulFilterValues = {
-  companySearch: string;
-  contactSearch: string;
+  company: string;
+  leadSource: LeadSource | "all";
   opportunityStage: OpportunityStage | "all";
+  contactPerson: string;
+  accountManager: string;
   dateFrom?: Date;
   dateTo?: Date;
 };
 
 type CrmModulFiltersProps = {
   values: CrmModulFilterValues;
+  options: CrmModulFilterOptions;
   onChange: (values: CrmModulFilterValues) => void;
   onApply: () => void;
   onReset: () => void;
@@ -35,10 +38,12 @@ const DateFilterButton = ({
   label,
   value,
   onChange,
+  className,
 }: {
   label: string;
   value?: Date;
   onChange: (date?: Date) => void;
+  className?: string;
 }) => (
   <Popover>
     <PopoverTrigger asChild>
@@ -46,8 +51,9 @@ const DateFilterButton = ({
         type="button"
         variant="outline"
         className={cn(
-          "h-9 w-full justify-start gap-2 border-slate-200 font-normal",
-          !value && "text-slate-400"
+          "h-9 w-full sm:w-[160px] justify-start gap-2 border-slate-200 bg-white font-normal shadow-none",
+          !value && "text-slate-400",
+          className
         )}
       >
         <CalendarDays className="size-4 shrink-0 opacity-60" />
@@ -71,7 +77,51 @@ const DateFilterButton = ({
   </Popover>
 );
 
-export const CrmModulFilters = ({ values, onChange, onApply, onReset }: CrmModulFiltersProps) => {
+const FilterSelect = ({
+  label,
+  value,
+  placeholder,
+  onValueChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onValueChange: (value: string) => void;
+  children: ReactNode;
+}) => (
+  <div className="flex min-w-0 flex-col gap-1.5">
+    <label className="text-xs font-medium text-slate-600">{label}</label>
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="h-9 w-full border-slate-200 bg-white shadow-none">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>{children}</SelectContent>
+    </Select>
+  </div>
+);
+
+const countActiveFilters = (values: CrmModulFilterValues): number => {
+  let count = 0;
+  if (values.company !== "all") count += 1;
+  if (values.leadSource !== "all") count += 1;
+  if (values.opportunityStage !== "all") count += 1;
+  if (values.contactPerson !== "all") count += 1;
+  if (values.accountManager !== "all") count += 1;
+  if (values.dateFrom) count += 1;
+  if (values.dateTo) count += 1;
+  return count;
+};
+
+export const CrmModulFilters = ({
+  values,
+  options,
+  onChange,
+  onApply,
+  onReset,
+}: CrmModulFiltersProps) => {
+  const activeFilterCount = useMemo(() => countActiveFilters(values), [values]);
+
   const handleFieldChange = <K extends keyof CrmModulFilterValues>(
     key: K,
     value: CrmModulFilterValues[K]
@@ -80,92 +130,131 @@ export const CrmModulFilters = ({ values, onChange, onApply, onReset }: CrmModul
   };
 
   return (
-    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/40">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Şirket Adı
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
-            <Input
-              value={values.companySearch}
-              onChange={(e) => handleFieldChange("companySearch", e.target.value)}
-              placeholder="Şirket ara..."
-              className="pl-9 h-9 border-slate-200"
-            />
-          </div>
-        </div>
+    <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Filter className="size-4 text-slate-400" aria-hidden />
+        <span className="text-sm font-medium text-slate-700">Filtreler</span>
+        {activeFilterCount > 0 && (
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-100 px-1.5 text-[11px] font-semibold text-indigo-700">
+            {activeFilterCount}
+          </span>
+        )}
+      </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            İlgili Kişi
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
-            <Input
-              value={values.contactSearch}
-              onChange={(e) => handleFieldChange("contactSearch", e.target.value)}
-              placeholder="Kişi ara..."
-              className="pl-9 h-9 border-slate-200"
-            />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <FilterSelect
+          label="Şirket"
+          value={values.company}
+          placeholder="Tümü"
+          onValueChange={(v) => handleFieldChange("company", v)}
+        >
+          <SelectItem value="all">Tümü</SelectItem>
+          {options.companies.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </FilterSelect>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Fırsat Aşaması
-          </label>
-          <Select
-            value={String(values.opportunityStage)}
-            onValueChange={(v) =>
-              handleFieldChange(
-                "opportunityStage",
-                v === "all" ? "all" : (Number(v) as OpportunityStage)
-              )
-            }
-          >
-            <SelectTrigger className="h-9 border-slate-200">
-              <SelectValue placeholder="Tümü" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tümü</SelectItem>
-              {OPPORTUNITY_STAGE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={String(opt.value)}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <FilterSelect
+          label="Lead Kaynağı"
+          value={String(values.leadSource)}
+          placeholder="Tümü"
+          onValueChange={(v) =>
+            handleFieldChange("leadSource", v === "all" ? "all" : (Number(v) as LeadSource))
+          }
+        >
+          <SelectItem value="all">Tümü</SelectItem>
+          {options.leadSources.map((opt) => (
+            <SelectItem key={opt.value} value={String(opt.value)}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </FilterSelect>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Son Temas Başlangıç
-          </label>
+        <FilterSelect
+          label="Fırsat Aşaması"
+          value={String(values.opportunityStage)}
+          placeholder="Tümü"
+          onValueChange={(v) =>
+            handleFieldChange(
+              "opportunityStage",
+              v === "all" ? "all" : (Number(v) as OpportunityStage)
+            )
+          }
+        >
+          <SelectItem value="all">Tümü</SelectItem>
+          {options.opportunityStages.map((opt) => (
+            <SelectItem key={opt.value} value={String(opt.value)}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </FilterSelect>
+
+        <FilterSelect
+          label="İlgili Kişi"
+          value={values.contactPerson}
+          placeholder="Tümü"
+          onValueChange={(v) => handleFieldChange("contactPerson", v)}
+        >
+          <SelectItem value="all">Tümü</SelectItem>
+          {options.contactPersons.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </FilterSelect>
+
+        <FilterSelect
+          label="SAP Hesap Yöneticisi"
+          value={values.accountManager}
+          placeholder="Tümü"
+          onValueChange={(v) => handleFieldChange("accountManager", v)}
+        >
+          <SelectItem value="all">Tümü</SelectItem>
+          {options.accountManagers.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </FilterSelect>
+      </div>
+
+      <div className="mt-3 flex flex-col gap-3 border-t border-slate-200/70 pt-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+          <span className="text-xs font-medium text-slate-600 sm:mr-1 sm:pb-2">Son Temas</span>
           <DateFilterButton
-            label="Başlangıç tarihi"
+            label="Başlangıç"
             value={values.dateFrom}
             onChange={(date) => handleFieldChange("dateFrom", date)}
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Son Temas Bitiş
-          </label>
+          <span className="hidden self-center text-slate-300 sm:block" aria-hidden>
+            —
+          </span>
           <DateFilterButton
-            label="Bitiş tarihi"
+            label="Bitiş"
             value={values.dateTo}
             onChange={(date) => handleFieldChange("dateTo", date)}
           />
         </div>
 
-        <div className="flex items-end gap-2">
-          <Button type="button" onClick={onApply} className="h-9 bg-indigo-600 hover:bg-indigo-700">
+        <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
+          <Button
+            type="button"
+            onClick={onApply}
+            className="h-9 gap-1.5 bg-indigo-600 px-4 hover:bg-indigo-700"
+          >
+            <Search className="size-4" aria-hidden />
             Filtrele
           </Button>
-          <Button type="button" variant="outline" onClick={onReset} className="h-9">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onReset}
+            disabled={activeFilterCount === 0}
+            className="h-9 gap-1.5 border-slate-200 bg-white px-4 shadow-none"
+          >
+            <RotateCcw className="size-3.5" aria-hidden />
             Temizle
           </Button>
         </div>

@@ -12,9 +12,10 @@ import { ListOrdered, Pencil, Plus, Trash2 } from "lucide-react";
 import {
   getCurrencySymbol,
   getCurrencyTypeLabel,
+  getOpportunityStageLabel,
   getTypeCodeLabel,
 } from "../constants";
-import { calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
+import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
 import { formatDateTr, resolveModuleNamesFromIds, toIsoDateString } from "../utils";
 
 type CrmSubItemListProps = {
@@ -68,10 +69,13 @@ export const CrmSubItemList = ({
                 SF Modülü
               </TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Tip</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-600">Fırsat Aşaması</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Para Birimi</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Birim Fiyat</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Kişi</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600">Tahmini Değer</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-600">İndirim (%)</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-600">İndirimli Değer</TableHead>
               <TableHead className="text-xs font-semibold text-slate-600 min-w-[130px]">
                 Beklenen Kapanış
               </TableHead>
@@ -86,6 +90,11 @@ export const CrmSubItemList = ({
           <TableBody>
             {items.map((item, index) => {
               const estimated = calculateEstimatedValueString(item.unitPrice, item.personCount);
+              const discounted = calculateEstimatedDiscountedValueString(
+                item.unitPrice,
+                item.personCount,
+                item.discount
+              );
               const symbol = getCurrencySymbol(item.currencyType);
               const expectedCloseLabel = formatDateTr(toIsoDateString(item.expectedCloseDate));
               const lastContactLabel = formatDateTr(toIsoDateString(item.lastContactDate));
@@ -104,6 +113,9 @@ export const CrmSubItemList = ({
                     {getTypeCodeLabel(item.typeCode)}
                   </TableCell>
                   <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                    {getOpportunityStageLabel(item.opportunityStage)}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 whitespace-nowrap">
                     {getCurrencyTypeLabel(item.currencyType)}
                   </TableCell>
                   <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
@@ -114,6 +126,12 @@ export const CrmSubItemList = ({
                   </TableCell>
                   <TableCell className="text-sm text-slate-700 font-medium tabular-nums whitespace-nowrap">
                     {estimated ? `${symbol} ${estimated}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
+                    {item.discount ? `%${item.discount}` : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-emerald-700 font-medium tabular-nums whitespace-nowrap">
+                    {discounted ? `${symbol} ${discounted}` : "—"}
                   </TableCell>
                   <TableCell className="text-sm text-slate-600 tabular-nums whitespace-nowrap">
                     {expectedCloseLabel}
