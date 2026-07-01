@@ -7,6 +7,18 @@ export type TcmbExchangeRates = {
 };
 
 const TCMB_TODAY_XML_PATH = "/tcmb-kurlar/today.xml";
+const TCMB_API_PATH = "/api/ExchangeRates/tcmb";
+
+type TcmbExchangeRatesApiResponse = {
+  eurTry: number;
+  usdTry: number;
+  fetchedAt: string;
+};
+
+const getAuthHeaders = (): HeadersInit => {
+  const token = localStorage.getItem("accessToken");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const parseForexBuying = (xmlText: string, currencyCode: string): number => {
   const parser = new DOMParser();
@@ -33,18 +45,65 @@ const parseForexBuying = (xmlText: string, currencyCode: string): number => {
   throw new Error(`${currencyCode} kuru bulunamadı`);
 };
 
-export const fetchTcmbExchangeRates = async (): Promise<TcmbExchangeRates> => {
-  const response = await fetch(TCMB_TODAY_XML_PATH, { cache: "no-store" });
-  if (!response.ok) {
+const fetchTcmbExchangeRatesFromXml = async (url: string): Promise<TcmbExchangeRates> => {
+  const response = await fetch(url, { cache: "no-store" });
+  const xmlText = await response.text();
+
+  if (!response.ok || xmlText.trimStart().startsWith("<!")) {
     throw new Error("TCMB kurları alınamadı");
   }
 
-  const xmlText = await response.text();
   return {
     eurTry: parseForexBuying(xmlText, "EUR"),
     usdTry: parseForexBuying(xmlText, "USD"),
     fetchedAt: new Date(),
   };
+};
+
+const fetchTcmbExchangeRatesFromApi = async (): Promise<TcmbExchangeRates> => {
+  const apiBase = import.meta.env.VITE_BASE_PATH;
+  if (!apiBase) {
+    throw new Error("API adresi tanımlı değil");
+  }
+
+  const response = await fetch(`${apiBase}${TCMB_API_PATH}`, {
+    cache: "no-store",
+    headers: getAuthHeaders(),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("TCMB kurları alınamadı");
+  }
+
+  const data = (await response.json()) as TcmbExchangeRatesApiResponse;
+
+  return {
+    eurTry: data.eurTry,
+    usdTry: data.usdTry,
+    fetchedAt: new Date(data.fetchedAt),
+  };
+};
+
+export const fetchTcmbExchangeRates = async (): Promise<TcmbExchangeRates> => {
+  const sources: Array<() => Promise<TcmbExchangeRates>> = import.meta.env.DEV
+    ? [() => fetchTcmbExchangeRatesFromXml(TCMB_TODAY_XML_PATH)]
+    : [
+        () => fetchTcmbExchangeRatesFromXml(TCMB_TODAY_XML_PATH),
+        () => fetchTcmbExchangeRatesFromApi(),
+      ];
+
+  let lastError: unknown;
+
+  for (const loadRates of sources) {
+    try {
+      return await loadRates();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error("TCMB kurları alınamadı");
 };
 
 export const convertAmountToEur = (
