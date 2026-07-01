@@ -29,6 +29,7 @@ import {
   type CrmSubItemFormValues,
 } from "../formMappers";
 import { mergeActiveModulesWithSelected } from "../utils";
+import { useTcmbExchangeRates } from "../hooks/useTcmbExchangeRates";
 
 const CrmModulDetailPage = () => {
   const { id } = useParams();
@@ -46,6 +47,8 @@ const CrmModulDetailPage = () => {
   const [isAiRaporLoading, setIsAiRaporLoading] = useState(false);
   const [aiRaporOpen, setAiRaporOpen] = useState(false);
   const [aiRaporData, setAiRaporData] = useState<CrmAiRaporData | null>(null);
+  const { rates: exchangeRates, loading: exchangeRatesLoading, error: exchangeRatesError } =
+    useTcmbExchangeRates();
 
   useEffect(() => {
     const loadData = async () => {
@@ -219,6 +222,9 @@ const CrmModulDetailPage = () => {
               canSave={canSave}
               canAiRapor={canAiRapor}
               isAiRaporLoading={isAiRaporLoading}
+              exchangeRates={exchangeRates}
+              exchangeRatesLoading={exchangeRatesLoading}
+              exchangeRatesError={exchangeRatesError}
               onBack={() => navigate("/crmModul")}
               onSave={handleSave}
               onAiRapor={handleAiRapor}
@@ -234,6 +240,7 @@ const CrmModulDetailPage = () => {
               items={subItems}
               modules={modules}
               expandedKey={expandedKey}
+              exchangeRates={exchangeRates}
               onExpandedKeyChange={setExpandedKey}
               onChange={handleChangeItem}
               onDelete={handleDeleteItem}
