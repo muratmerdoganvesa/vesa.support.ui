@@ -488,6 +488,31 @@ function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
   }
 }
 
+function readProjectStatusFromCompositeElement(
+  root: HTMLElement | null | undefined,
+): ProjectTypes | null | undefined {
+  if (!root) return undefined;
+  const statusHost = root.classList.contains("gantt-module-status-row__status")
+    ? root
+    : root.querySelector<HTMLElement>(".gantt-module-status-row__status");
+  if (!statusHost) return undefined;
+  const inst = (statusHost as any).ej2_instances?.[0];
+  if (!inst) return undefined;
+  const v = inst.value;
+  if (v == null || v === "") return null;
+  return Number(v) as ProjectTypes;
+}
+
+/** Modüller sekmesindeki birleşik editör dialog kaydına dahil değil; save öncesi DOM'dan okunur. */
+function mergeDialogProjectStatusIntoSaveData(data: any) {
+  const editor = document.querySelector<HTMLElement>(
+    ".e-dialog.e-popup-open .gantt-module-status-editor",
+  );
+  const status = readProjectStatusFromCompositeElement(editor);
+  if (status === undefined) return;
+  applyProjectStatusToRow(data, status);
+}
+
 function appendModuleMultiSelect(
   host: HTMLElement,
   rowData: any,
@@ -1067,6 +1092,7 @@ function ProjectChart() {
         return el;
       },
       write: (args: { column: any; rowData: any; element: HTMLElement }) => {
+        (args.element as any).__ganttEditRowData = args.rowData;
         renderModuleStatusEditor(
           args.element,
           args.rowData,
@@ -1075,6 +1101,11 @@ function ProjectChart() {
         );
       },
       read: (element: HTMLElement, value?: unknown) => {
+        const status = readProjectStatusFromCompositeElement(element);
+        if (status !== undefined) {
+          const rowData = (element as any).__ganttEditRowData;
+          if (rowData) applyProjectStatusToRow(rowData, status);
+        }
         if (Array.isArray(value)) {
           return value.filter(Boolean) as string[];
         }
@@ -1577,6 +1608,7 @@ function ProjectChart() {
 
     if (args.requestType === "beforeAdd") {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
+      mergeDialogProjectStatusIntoSaveData(args.data);
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
       
@@ -1587,6 +1619,7 @@ function ProjectChart() {
       
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
+      mergeDialogProjectStatusIntoSaveData(args.data);
       await updateTask(args.data);
       
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
