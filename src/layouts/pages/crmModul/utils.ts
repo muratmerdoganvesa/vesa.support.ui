@@ -253,9 +253,9 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
       contactSet.add(contactPerson);
     }
 
-    const accountManager = row.accountManager?.trim();
-    if (accountManager) {
-      managerSet.add(accountManager);
+    const sapAccountManager = row.sapAccountManager?.trim();
+    if (sapAccountManager) {
+      managerSet.add(sapAccountManager);
     }
   });
 

@@ -108,7 +108,7 @@ const CrmModulPage = () => {
       }
       if (
         appliedFilters.accountManager !== "all" &&
-        (row.accountManager?.trim() ?? "") !== appliedFilters.accountManager
+        (row.sapAccountManager?.trim() ?? "") !== appliedFilters.accountManager
       ) {
         return false;
       }

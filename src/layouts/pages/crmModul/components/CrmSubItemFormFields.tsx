@@ -115,9 +115,8 @@ export const CrmSubItemFormFields = ({
         <ModuleMultiSelect
           options={modules}
           value={values.solutionModuleIds}
-          onChange={(ids) => handleFieldChange("solutionModuleIds", ids.slice(0, 1))}
+          onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
           placeholder="SuccessFactors modülü seçin..."
-          single
         />
       </Field>
 
