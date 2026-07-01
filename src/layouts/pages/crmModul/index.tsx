@@ -1,27 +1,25 @@
 import { CrmModulDto, CrmModulsApi } from "api/generated";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "components/ui/alert-dialog";
 import { Button } from "components/ui/button";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { useBusy } from "layouts/pages/hooks/useBusy";
-import { AlertTriangle, Handshake, Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Handshake, Plus } from "lucide-react";import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CrmModulFilters, CrmModulFilterValues } from "./components/CrmModulFilters";
+import { CrmModulGridView } from "./components/CrmModulGridView";
 import { CrmModulTable } from "./components/CrmModulTable";
-import { ROWS_PER_PAGE } from "./constants";
-import { buildCrmModulFilterOptions, isDateInRange, resolveCompanyName } from "./utils";
+import { CrmModulTreeView } from "./components/CrmModulTreeView";
+import { CrmModulViewToggle } from "./components/CrmModulViewToggle";
+import {
+  CRM_MODUL_VIEW_MODE_STORAGE_KEY,
+  CrmModulListViewMode,
+  DEFAULT_CRM_MODUL_VIEW_MODE,
+  GRID_ITEMS_PER_PAGE,
+  ROWS_PER_PAGE,
+} from "./constants";
+import { buildCrmModulFilterOptions, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
 
 const defaultFilters: CrmModulFilterValues = {
   company: "all",
@@ -33,6 +31,14 @@ const defaultFilters: CrmModulFilterValues = {
   dateTo: undefined,
 };
 
+const readStoredViewMode = (): CrmModulListViewMode => {
+  const stored = localStorage.getItem(CRM_MODUL_VIEW_MODE_STORAGE_KEY);
+  if (stored === "table" || stored === "tree" || stored === "grid") {
+    return stored;
+  }
+  return DEFAULT_CRM_MODUL_VIEW_MODE;
+};
+
 const CrmModulPage = () => {
   const navigate = useNavigate();
   const dispatchAlert = useAlert();
@@ -42,12 +48,9 @@ const CrmModulPage = () => {
   const [draftFilters, setDraftFilters] = useState<CrmModulFilterValues>(defaultFilters);
   const [appliedFilters, setAppliedFilters] = useState<CrmModulFilterValues>(defaultFilters);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<CrmModulListViewMode>(readStoredViewMode);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedDeleteId, setSelectedDeleteId] = useState<string>("");
-
-  const fetchData = useCallback(async () => {
-    try {
+  const fetchData = useCallback(async () => {    try {
       dispatchBusy({ isBusy: true });
       const crmApi = new CrmModulsApi(getConfiguration());
       const crmResponse = await crmApi.apiCrmModulsGet();
@@ -65,7 +68,14 @@ const CrmModulPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [appliedFilters]);
+  }, [appliedFilters, viewMode]);
+
+  const handleViewModeChange = (mode: CrmModulListViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem(CRM_MODUL_VIEW_MODE_STORAGE_KEY, mode);
+  };
+
+  const pageSize = viewMode === "grid" ? GRID_ITEMS_PER_PAGE : ROWS_PER_PAGE;
 
   const filterOptions = useMemo(() => buildCrmModulFilterOptions(crmData), [crmData]);
 
@@ -123,12 +133,27 @@ const CrmModulPage = () => {
     });
   }, [crmData, appliedFilters]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / ROWS_PER_PAGE));
+  const flatSubItems = useMemo(() => flattenCrmSubItems(filteredRows), [filteredRows]);
+  const allFlatSubItems = useMemo(() => flattenCrmSubItems(crmData), [crmData]);
+
+  const isFlatListView = viewMode === "table";
+  const listCount = isFlatListView ? flatSubItems.length : filteredRows.length;
+  const listAllCount = isFlatListView ? allFlatSubItems.length : crmData.length;
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil((isFlatListView ? flatSubItems.length : filteredRows.length) / pageSize)
+  );
 
   const paginatedRows = useMemo(() => {
-    const start = (currentPage - 1) * ROWS_PER_PAGE;
-    return filteredRows.slice(start, start + ROWS_PER_PAGE);
-  }, [filteredRows, currentPage]);
+    const start = (currentPage - 1) * pageSize;
+    return filteredRows.slice(start, start + pageSize);
+  }, [filteredRows, currentPage, pageSize]);
+
+  const paginatedSubItemEntries = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return flatSubItems.slice(start, start + pageSize);
+  }, [flatSubItems, currentPage, pageSize]);
 
   const handleOpenCreate = () => {
     navigate("/crmModul/detail");
@@ -139,34 +164,7 @@ const CrmModulPage = () => {
     navigate(`/crmModul/detail/${row.id}`);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      dispatchBusy({ isBusy: true });
-      const api = new CrmModulsApi(getConfiguration());
-      await api.apiCrmModulsIdDelete(id);
-      dispatchAlert({ message: "CRM kaydı başarıyla silindi.", type: "success" });
-      fetchData();
-    } catch {
-      dispatchAlert({ message: "Silme işlemi sırasında hata oluştu.", type: "error" });
-    } finally {
-      dispatchBusy({ isBusy: false });
-    }
-  };
-
-  const handleOpenDeleteDialog = (id: string) => {
-    setSelectedDeleteId(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleCloseDeleteDialog = (confirmed: boolean) => {
-    setDeleteDialogOpen(false);
-    if (confirmed && selectedDeleteId) {
-      handleDelete(selectedDeleteId);
-    }
-  };
-
-  const handleApplyFilters = () => {
-    setAppliedFilters({ ...draftFilters });
+  const handleApplyFilters = () => {    setAppliedFilters({ ...draftFilters });
   };
 
   const handleResetFilters = () => {
@@ -213,48 +211,48 @@ const CrmModulPage = () => {
             onReset={handleResetFilters}
           />
 
-          <CrmModulTable
-            rows={paginatedRows}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalCount={filteredRows.length}
-            allCount={crmData.length}
-            onPageChange={setCurrentPage}
-            onEdit={handleOpenEdit}
-            onDelete={handleOpenDeleteDialog}
-          />
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-3">
+            <p className="text-sm text-slate-500">
+              <span className="font-semibold text-slate-700">{listCount}</span>{" "}
+              {isFlatListView ? "fırsat" : "kayıt"} listeleniyor
+            </p>
+            <CrmModulViewToggle value={viewMode} onChange={handleViewModeChange} />
+          </div>
+
+          {viewMode === "tree" ? (
+            <CrmModulTreeView
+              rows={paginatedRows}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={listCount}
+              allCount={listAllCount}
+              onPageChange={setCurrentPage}
+              onEdit={handleOpenEdit}
+            />
+          ) : viewMode === "grid" ? (
+            <CrmModulGridView
+              rows={paginatedRows}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={listCount}
+              allCount={listAllCount}
+              onPageChange={setCurrentPage}
+              onEdit={handleOpenEdit}
+            />
+          ) : (
+            <CrmModulTable
+              entries={paginatedSubItemEntries}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={listCount}
+              allCount={listAllCount}
+              onPageChange={setCurrentPage}
+              onEdit={handleOpenEdit}
+            />
+          )}
         </div>
       </div>
-
-      <AlertDialog
-        open={deleteDialogOpen}
-        onOpenChange={(open) => !open && handleCloseDeleteDialog(false)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="size-5" />
-              Kayıt Silinecektir
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Bu CRM kaydını silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => handleCloseDeleteDialog(false)}>
-              İptal
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => handleCloseDeleteDialog(true)}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
-              Sil
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </DashboardLayout>
   );
 };
-
 export default CrmModulPage;
