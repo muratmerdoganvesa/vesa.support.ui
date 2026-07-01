@@ -18,7 +18,9 @@ import {
   formatEstimatedValueDisplay,
   type CrmSubItemFormValues,
 } from "../formMappers";
+import type { TcmbExchangeRates } from "../tcmbExchangeRates";
 import { getOpportunityTitle } from "../utils";
+import { CurrencyEuroConversion } from "./CurrencyEuroConversion";
 import { CrmPipelineStageBar } from "./CrmPipelineStageBar";
 import { CrmSubItemFormFields } from "./CrmSubItemFormFields";
 
@@ -26,6 +28,7 @@ type CrmOpportunityCardProps = {
   item: CrmSubItemFormValues;
   modules: ListModuleDto[];
   isOpen: boolean;
+  exchangeRates: TcmbExchangeRates | null;
   onOpenChange: (open: boolean) => void;
   onChange: (values: CrmSubItemFormValues) => void;
   onDelete: () => void;
@@ -35,6 +38,7 @@ export const CrmOpportunityCard = ({
   item,
   modules,
   isOpen,
+  exchangeRates,
   onOpenChange,
   onChange,
   onDelete,
@@ -48,6 +52,7 @@ export const CrmOpportunityCard = ({
     item.discount
   );
   const displayValue = item.discount.trim() ? discounted : estimated;
+  const displayAmount = Number(displayValue);
   const symbol = getCurrencySymbol(item.currencyType);
   const hasDiscount = item.discount.trim() !== "" && Number(item.discount) > 0;
   const probability = getOpportunityStageProbability(item.opportunityStage);
@@ -94,14 +99,24 @@ export const CrmOpportunityCard = ({
             >
               {getOpportunityStageLabel(item.opportunityStage)}
             </Badge>
-            <span className="text-xl font-bold text-slate-950 tabular-nums shrink-0 min-w-[140px] text-right tracking-tight">
-              {!isOpen && hasDiscount && estimated && (
-                <span className="block text-sm font-normal text-slate-400 line-through mb-0.5">
-                  {formatEstimatedValueDisplay(estimated, symbol)}
-                </span>
+            <div className="shrink-0 min-w-[160px] text-right">
+              <div className="text-xl font-bold text-slate-950 tabular-nums tracking-tight">
+                {!isOpen && hasDiscount && estimated && (
+                  <span className="block text-sm font-normal text-slate-400 line-through mb-0.5">
+                    {formatEstimatedValueDisplay(estimated, symbol)}
+                  </span>
+                )}
+                {formatEstimatedValueDisplay(displayValue, symbol)}
+              </div>
+              {Number.isFinite(displayAmount) && displayAmount > 0 && (
+                <CurrencyEuroConversion
+                  amount={displayAmount}
+                  currencyType={item.currencyType}
+                  rates={exchangeRates}
+                  className="mt-1"
+                />
               )}
-              {formatEstimatedValueDisplay(displayValue, symbol)}
-            </span>
+            </div>
           </button>
         </CollapsibleTrigger>
 
@@ -114,18 +129,29 @@ export const CrmOpportunityCard = ({
 
             <CrmSubItemFormFields values={item} modules={modules} onChange={onChange} />
 
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              <p className="text-sm text-slate-600">
-                Fırsat Değeri:{" "}
-                <span className="font-semibold text-emerald-700 tabular-nums">
-                  {formatEstimatedValueDisplay(displayValue, symbol)}
-                </span>
-                {hasDiscount && estimated && (
-                  <span className="text-slate-400 ml-2 line-through tabular-nums">
-                    {formatEstimatedValueDisplay(estimated, symbol)}
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 gap-4">
+              <div className="text-sm text-slate-600">
+                <p>
+                  Fırsat Değeri:{" "}
+                  <span className="font-semibold text-emerald-700 tabular-nums">
+                    {formatEstimatedValueDisplay(displayValue, symbol)}
                   </span>
+                  {hasDiscount && estimated && (
+                    <span className="text-slate-400 ml-2 line-through tabular-nums">
+                      {formatEstimatedValueDisplay(estimated, symbol)}
+                    </span>
+                  )}
+                </p>
+                {Number.isFinite(displayAmount) && displayAmount > 0 && (
+                  <CurrencyEuroConversion
+                    amount={displayAmount}
+                    currencyType={item.currencyType}
+                    rates={exchangeRates}
+                    align="left"
+                    className="mt-1"
+                  />
                 )}
-              </p>
+              </div>
               <Button
                 type="button"
                 variant="outline"

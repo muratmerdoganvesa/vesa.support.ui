@@ -89,8 +89,8 @@ export const CrmModulFormFields = ({
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <SectionCard title="Şirket Bilgileri" variant={variant}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Müşteri Adı" htmlFor="crm-company-name" required className="sm:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
+          <Field label="Müşteri Adı" htmlFor="crm-company-name" required className="sm:col-span-12">
             <Input
               id="crm-company-name"
               value={values.companyName}
@@ -99,7 +99,7 @@ export const CrmModulFormFields = ({
               className={inputClass}
             />
           </Field>
-          <Field label="Partner Şirket Adı" htmlFor="crm-partner-company" className="sm:col-span-2">
+          <Field label="Partner Şirket Adı" htmlFor="crm-partner-company" className="sm:col-span-9">
             <Input
               id="crm-partner-company"
               value={values.partnerCompanyName}
@@ -108,7 +108,7 @@ export const CrmModulFormFields = ({
               className={inputClass}
             />
           </Field>
-          <Field label="Lead Kaynağı">
+          <Field label="Lead Kaynağı" className="sm:col-span-3">
             <Select
               value={String(values.leadSource)}
               onValueChange={(v) => handleFieldChange("leadSource", Number(v) as LeadSource)}
@@ -125,12 +125,21 @@ export const CrmModulFormFields = ({
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Sap Hesap Yöneticisi" htmlFor="crm-account-manager">
+          <Field label="Sap Hesap Yöneticisi" htmlFor="crm-sap-account-manager" className="sm:col-span-6">
+            <Input
+              id="crm-sap-account-manager"
+              value={values.sapAccountManager}
+              onChange={(e) => handleFieldChange("sapAccountManager", e.target.value)}
+              placeholder="Sap hesap yöneticisi"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager" className="sm:col-span-6">
             <Input
               id="crm-account-manager"
               value={values.accountManager}
               onChange={(e) => handleFieldChange("accountManager", e.target.value)}
-              placeholder="Sap hesap yöneticisi"
+              placeholder="Hesap yöneticisi"
               className={inputClass}
             />
           </Field>

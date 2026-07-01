@@ -36,6 +36,13 @@ export default defineConfig(() => ({
   },
   server: {
     port: 3000,
+    proxy: {
+      "/tcmb-kurlar": {
+        target: "https://www.tcmb.gov.tr",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/tcmb-kurlar/, "/kurlar"),
+      },
+    },
   },
   define: {
     global: 'window',

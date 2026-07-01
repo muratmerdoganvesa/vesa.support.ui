@@ -4,12 +4,16 @@ import { Button } from "components/ui/button";
 import { getLeadSourceLabel } from "../constants";
 import { type CrmModulFormValues } from "../formMappers";
 import {
+  convertCurrencyTotalsToEur,
+  formatEurRounded,
+  type TcmbExchangeRates,
+} from "../tcmbExchangeRates";
+import {
   calculateCrmDetailStats,
-  formatCurrencyTotalsBlock,
-  formatMoney,
   getCompanyInitials,
   type CrmSubItemFormValues,
 } from "../utils";
+import { CrmExchangeRatesCard } from "./CrmExchangeRatesCard";
 
 type CrmDetailSummaryProps = {
   modulValues: CrmModulFormValues;
@@ -19,6 +23,9 @@ type CrmDetailSummaryProps = {
   canSave: boolean;
   canAiRapor?: boolean;
   isAiRaporLoading?: boolean;
+  exchangeRates: TcmbExchangeRates | null;
+  exchangeRatesLoading: boolean;
+  exchangeRatesError: string | null;
   onBack: () => void;
   onSave: () => void;
   onAiRapor?: () => void;
@@ -45,15 +52,31 @@ const StatCard = ({
   </div>
 );
 
-const CurrencyLines = ({ lines }: { lines: string[] }) => (
-  <>
-    {lines.map((line) => (
-      <p key={line} className="text-base font-bold text-slate-800 tabular-nums leading-snug">
-        {line}
-      </p>
-    ))}
-  </>
-);
+const EurTotalValue = ({
+  totals,
+  exchangeRates,
+  exchangeRatesLoading,
+}: {
+  totals: { try: number; usd: number; eur: number };
+  exchangeRates: TcmbExchangeRates | null;
+  exchangeRatesLoading: boolean;
+}) => {
+  if (exchangeRatesLoading) {
+    return <p className="text-sm text-slate-400">Hesaplanıyor...</p>;
+  }
+
+  if (!exchangeRates) {
+    return <p className="text-sm text-amber-700">Kur bilgisi gerekli</p>;
+  }
+
+  const totalEur = convertCurrencyTotalsToEur(totals, exchangeRates);
+
+  return (
+    <p className="text-2xl font-bold text-slate-900 tabular-nums leading-snug">
+      {formatEurRounded(totalEur)}
+    </p>
+  );
+};
 
 export const CrmDetailSummary = ({
   modulValues,
@@ -63,6 +86,9 @@ export const CrmDetailSummary = ({
   canSave,
   canAiRapor = false,
   isAiRaporLoading = false,
+  exchangeRates,
+  exchangeRatesLoading,
+  exchangeRatesError,
   onBack,
   onSave,
   onAiRapor,
@@ -126,7 +152,7 @@ export const CrmDetailSummary = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mt-5">
           <StatCard
             label="Açık Fırsat"
             icon={<Target className="size-3.5 text-emerald-600" />}
@@ -136,11 +162,21 @@ export const CrmDetailSummary = ({
             </p>
           </StatCard>
 
+          <CrmExchangeRatesCard
+            rates={exchangeRates}
+            loading={exchangeRatesLoading}
+            error={exchangeRatesError}
+          />
+
           <StatCard
             label="Toplam Pipeline"
             icon={<Wallet className="size-3.5 text-teal-700" />}
           >
-            <CurrencyLines lines={formatCurrencyTotalsBlock(stats.pipeline)} />
+            <EurTotalValue
+              totals={stats.pipeline}
+              exchangeRates={exchangeRates}
+              exchangeRatesLoading={exchangeRatesLoading}
+            />
           </StatCard>
 
           <StatCard
@@ -148,19 +184,21 @@ export const CrmDetailSummary = ({
             icon={<TrendingUp className="size-3.5 text-amber-600" />}
             subtext="Aşama olasılığına göre"
           >
-            <CurrencyLines lines={formatCurrencyTotalsBlock(stats.weightedForecast)} />
+            <EurTotalValue
+              totals={stats.weightedForecast}
+              exchangeRates={exchangeRates}
+              exchangeRatesLoading={exchangeRatesLoading}
+            />
           </StatCard>
 
           <StatCard
             label="Kazanılan"
             icon={<TrendingUp className="size-3.5 text-emerald-600" />}
           >
-            <CurrencyLines
-              lines={[
-                formatMoney(stats.won.try, "₺"),
-                formatMoney(stats.won.usd, "$"),
-                formatMoney(stats.won.eur, "€"),
-              ]}
+            <EurTotalValue
+              totals={stats.won}
+              exchangeRates={exchangeRates}
+              exchangeRatesLoading={exchangeRatesLoading}
             />
           </StatCard>
         </div>
