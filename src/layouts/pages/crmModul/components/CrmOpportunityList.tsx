@@ -2,12 +2,14 @@ import { ListModuleDto } from "api/generated";
 import { Button } from "components/ui/button";
 import { Briefcase, Plus } from "lucide-react";
 import { emptyCrmSubItemFormValues, type CrmSubItemFormValues } from "../formMappers";
+import type { TcmbExchangeRates } from "../tcmbExchangeRates";
 import { CrmOpportunityCard } from "./CrmOpportunityCard";
 
 type CrmOpportunityListProps = {
   items: CrmSubItemFormValues[];
   modules: ListModuleDto[];
   expandedKey: string | null;
+  exchangeRates: TcmbExchangeRates | null;
   onExpandedKeyChange: (key: string | null) => void;
   onChange: (values: CrmSubItemFormValues) => void;
   onDelete: (clientKey: string) => void;
@@ -18,6 +20,7 @@ export const CrmOpportunityList = ({
   items,
   modules,
   expandedKey,
+  exchangeRates,
   onExpandedKeyChange,
   onChange,
   onDelete,
@@ -69,6 +72,7 @@ export const CrmOpportunityList = ({
             item={item}
             modules={modules}
             isOpen={expandedKey === item.clientKey}
+            exchangeRates={exchangeRates}
             onOpenChange={(open) => onExpandedKeyChange(open ? item.clientKey : null)}
             onChange={onChange}
             onDelete={() => onDelete(item.clientKey)}

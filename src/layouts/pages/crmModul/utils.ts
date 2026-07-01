@@ -2,6 +2,7 @@ import { format, isValid, parseISO, startOfDay } from "date-fns";
 import { tr } from "date-fns/locale";
 import {
   CrmModulDto,
+  CrmSubItemDto,
   CurrencyType,
   LeadSource,
   ListModuleDto,
@@ -252,9 +253,9 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
       contactSet.add(contactPerson);
     }
 
-    const accountManager = row.accountManager?.trim();
-    if (accountManager) {
-      managerSet.add(accountManager);
+    const sapAccountManager = row.sapAccountManager?.trim();
+    if (sapAccountManager) {
+      managerSet.add(sapAccountManager);
     }
   });
 
@@ -318,6 +319,26 @@ export const mergeActiveModulesWithSelected = (
   return Array.from(merged.values()).sort((a, b) =>
     (a.name ?? "").localeCompare(b.name ?? "", "tr")
   );
+};
+
+export type CrmModulSubItemEntry = {
+  parent: CrmModulDto;
+  item: CrmSubItemDto;
+  key: string;
+};
+
+export const flattenCrmSubItems = (rows: CrmModulDto[]): CrmModulSubItemEntry[] => {
+  const result: CrmModulSubItemEntry[] = [];
+  rows.forEach((parent) => {
+    (parent.crmSubItems ?? []).forEach((item, index) => {
+      result.push({
+        parent,
+        item,
+        key: item.id ?? `${parent.id ?? "parent"}-sub-${index}`,
+      });
+    });
+  });
+  return result;
 };
 
 export const isDateInRange = (  value?: string | null,
