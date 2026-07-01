@@ -101,6 +101,7 @@ import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { font, photoBase64 } from "./font";
 import { ExcelExportProperties } from "@syncfusion/ej2-grids";
+import "./styles.css";
 
 // force css ile rich text editori gizleme
 const customStyles = `
@@ -183,14 +184,6 @@ function normalizeProjectStatusFromRow(row: any): ProjectTypes | null {
     row?.taskData?.ProjectStatus;
   if (raw == null || raw === "") return null;
   return Number(raw) as ProjectTypes;
-}
-
-function getRowParentId(row: any): unknown {
-  return row?.ParentID ?? row?.parentId ?? row?.taskData?.ParentID ?? row?.taskData?.parentId;
-}
-
-function isRootTaskRow(row: any): boolean {
-  return isRootParentId(getRowParentId(row));
 }
 
 const MODULE_GUID_RE =
@@ -411,9 +404,8 @@ function buildLocalRowPatchFromTaskData(
     resources: nextResources,
     modules: modulesArray.slice(),
     moduleIds: modulesArray.slice(),
-    projectStatus: isRootTaskRow(taskData)
-      ? normalizeProjectStatusFromRow(taskData)
-      : (existing?.projectStatus ?? null),
+    projectStatus:
+      normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
   };
 }
 
@@ -435,6 +427,114 @@ function normalizeModuleIdsFromRow(row: any): string[] {
     return t ? [canonicalModuleId(t)] : [];
   }
   return [];
+}
+
+function refreshGanttDialogModuleStatusEditors(
+  rowData: any,
+  moduleList: GanttModuleOption[],
+) {
+  document
+    .querySelectorAll<HTMLElement>(".e-dialog.e-popup-open .gantt-module-status-editor")
+    .forEach((host) => {
+      const statusSlot = host.querySelector(".gantt-module-status-row__status");
+      const hasDropDown = statusSlot?.querySelector(".e-ddl, .e-dropdownlist");
+      if (!hasDropDown) {
+        renderModuleStatusEditor(host, rowData, moduleList, "composite");
+      }
+    });
+}
+
+function renderModuleStatusEditor(
+  host: HTMLElement,
+  rowData: any,
+  moduleList: GanttModuleOption[],
+  layout: "composite" | "modules-only",
+) {
+  host.innerHTML = "";
+  host.className = "gantt-module-status-editor";
+  host.style.width = "100%";
+
+  if (layout === "modules-only") {
+    appendModuleMultiSelect(host, rowData, moduleList);
+    return;
+  }
+
+  const row = document.createElement("div");
+  row.className = "gantt-module-status-row";
+  const moduleHost = document.createElement("div");
+  moduleHost.className = "gantt-module-status-row__modules";
+  const statusHost = document.createElement("div");
+  statusHost.className = "gantt-module-status-row__status";
+  row.append(moduleHost, statusHost);
+  host.appendChild(row);
+  appendModuleMultiSelect(moduleHost, rowData, moduleList);
+  appendStatusDropDown(statusHost, rowData);
+
+  host.closest(".e-edit-form-column")?.classList.add("gantt-modules-tab-column");
+}
+
+function applyModuleIdsToRow(rowData: any, next: string[]) {
+  rowData.moduleIds = next;
+  if (rowData.taskData) {
+    rowData.taskData.moduleIds = next;
+    rowData.taskData.modules = next;
+  }
+}
+
+function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
+  rowData.projectStatus = next;
+  if (rowData.taskData) {
+    rowData.taskData.projectStatus = next;
+  }
+}
+
+function appendModuleMultiSelect(
+  host: HTMLElement,
+  rowData: any,
+  moduleList: GanttModuleOption[],
+) {
+  const ids = normalizeModuleIdsFromRow(rowData);
+  const ms = new MultiSelect({
+    dataSource: moduleList,
+    fields: { text: "name", value: "id" },
+    mode: "Box",
+    placeholder: "Modüller seçin",
+    width: "100%",
+    value: ids,
+    change: (e: { value?: unknown }) => {
+      const v = e.value;
+      const next = Array.isArray(v)
+        ? v.map(String).filter(Boolean).map(canonicalModuleId)
+        : v
+          ? [canonicalModuleId(String(v))]
+          : [];
+      applyModuleIdsToRow(rowData, next);
+    },
+  });
+  ms.appendTo(host);
+  return ms;
+}
+
+function appendStatusDropDown(host: HTMLElement, rowData: any) {
+  const label = document.createElement("label");
+  label.className = "gantt-module-status-row__status-label";
+  label.textContent = "Durum";
+  host.appendChild(label);
+
+  const value = normalizeProjectStatusFromRow(rowData);
+  const ddl = new DropDownList({
+    dataSource: projectTypeOptions,
+    fields: { text: "label", value: "value" },
+    placeholder: "Durum seçin",
+    width: "100%",
+    value: value ?? undefined,
+    change: (e: { value?: number | null }) => {
+      const next = e.value == null ? null : (Number(e.value) as ProjectTypes);
+      applyProjectStatusToRow(rowData, next);
+    },
+  });
+  ddl.appendTo(host);
+  return ddl;
 }
 
 const RESOURCES_ADDITIONAL_PARAMS = {
@@ -499,6 +599,34 @@ function ProjectChart() {
   useEffect(() => {
     projectDataRef.current = projectData;
   }, [projectData]);
+
+  useEffect(() => {
+    const root = document.getElementById(GANTT_INSTANCE_ID);
+    if (!root) return;
+
+    const handleDialogTabClick = (event: MouseEvent) => {
+      const tab = (event.target as HTMLElement).closest(".e-tab");
+      if (!tab) return;
+      const tabLabel = tab.textContent?.trim().toLocaleUpperCase("tr-TR");
+      if (tabLabel !== "MODÜLLER") return;
+
+      const gantt = ganttRef.current as any;
+      const row =
+        gantt?.editModule?.dialogModule?.processedRecord ??
+        gantt?.editModule?.editedRecord;
+      if (!row) return;
+
+      requestAnimationFrame(() => {
+        refreshGanttDialogModuleStatusEditors(
+          row,
+          moduleDataRef.current as GanttModuleOption[],
+        );
+      });
+    };
+
+    root.addEventListener("click", handleDialogTabClick);
+    return () => root.removeEventListener("click", handleDialogTabClick);
+  }, []);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -932,38 +1060,27 @@ function ProjectChart() {
   // Syncfusion column editor setup'ını yalnızca ilk render'da yaptığı için memo stabil olmalı.
   const moduleIdsColumnEdit = useMemo(
     () => ({
-      create: () => document.createElement("input"),
+      create: () => {
+        const el = document.createElement("div");
+        el.className = "gantt-module-status-editor";
+        el.style.width = "100%";
+        return el;
+      },
       write: (args: { column: any; rowData: any; element: HTMLElement }) => {
-        const ids = normalizeModuleIdsFromRow(args.rowData);
-        const ms = new MultiSelect({
-          dataSource: moduleDataRef.current, // ref → her zaman güncel liste
-          fields: { text: "name", value: "id" },
-          mode: "Box",
-          placeholder: "Modüller seçin",
-          width: "100%",
-          value: ids,
-          change: (e: any) => {
-            const v = e.value;
-            const next = Array.isArray(v)
-              ? v.map(String).filter(Boolean).map(canonicalModuleId)
-              : v
-                ? [canonicalModuleId(String(v))]
-                : [];
-            args.rowData.moduleIds = next;
-            if (args.rowData.taskData) {
-              args.rowData.taskData.moduleIds = next;
-              args.rowData.taskData.modules = next;
-            }
-          },
-        });
-        ms.appendTo(args.element);
-        return ms;
+        renderModuleStatusEditor(
+          args.element,
+          args.rowData,
+          moduleDataRef.current as GanttModuleOption[],
+          "composite",
+        );
       },
       read: (element: HTMLElement, value?: unknown) => {
         if (Array.isArray(value)) {
           return value.filter(Boolean) as string[];
         }
-        const inst = (element as any).ej2_instances?.[0];
+        const moduleHost =
+          element.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? element;
+        const inst = (moduleHost as any).ej2_instances?.[0];
         return (inst?.value ?? []) as string[];
       },
     }),
@@ -974,26 +1091,7 @@ function ProjectChart() {
     () => ({
       create: () => document.createElement("input"),
       write: (args: { rowData: any; element: HTMLElement }) => {
-        const isRoot = isRootTaskRow(args.rowData);
-        const value = normalizeProjectStatusFromRow(args.rowData);
-        const ddl = new DropDownList({
-          dataSource: projectTypeOptions,
-          fields: { text: "label", value: "value" },
-          placeholder: isRoot ? "Durum seçin" : "Yalnızca kök görevler için",
-          width: "100%",
-          value: value ?? undefined,
-          enabled: isRoot,
-          change: (e: { value: number | null }) => {
-            if (!isRoot) return;
-            const next = e.value == null ? null : (Number(e.value) as ProjectTypes);
-            args.rowData.projectStatus = next;
-            if (args.rowData.taskData) {
-              args.rowData.taskData.projectStatus = next;
-            }
-          },
-        });
-        ddl.appendTo(args.element);
-        return ddl;
+        appendStatusDropDown(args.element, args.rowData);
       },
       read: (element: HTMLElement, value?: unknown) => {
         const inst = (element as any).ej2_instances?.[0];
@@ -1022,7 +1120,6 @@ function ProjectChart() {
     { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
     { type: "Notes" as DialogFieldType, headerText: "Notes" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
-    { type: "Custom" as DialogFieldType, headerText: "Durum", fields: ["projectStatus"] },
   ];
   const addDialogFields: AddDialogFieldSettingsModel[] = [
     { type: "General" as DialogFieldType, headerText: "General" },
@@ -1030,7 +1127,6 @@ function ProjectChart() {
     { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
     { type: "Notes" as DialogFieldType, headerText: "Notes" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
-    { type: "Custom" as DialogFieldType, headerText: "Durum", fields: ["projectStatus"] },
   ];
   const toolbarOptions = [
     "Add",
@@ -1160,11 +1256,7 @@ function ProjectChart() {
         taskId: args.taskData.TaskID,
         users: usersForInsert(args.taskData.resources),
         moduleIds: moduleIdsPayload,
-        ...(isRootParentId(args.taskData.ParentID)
-          ? {
-              projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? undefined,
-            }
-          : {}),
+        projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? undefined,
       };
 
       const api = new ProjectTasksApi(config);
@@ -1347,11 +1439,7 @@ function ProjectChart() {
         taskId: taskData.TaskID,
         users: taskData.resources,
         moduleIds: moduleIdsPayload,
-        ...(isRootParentId(taskData.ParentID)
-          ? {
-              projectStatus: normalizeProjectStatusFromRow(taskData) ?? undefined,
-            }
-          : {}),
+        projectStatus: normalizeProjectStatusFromRow(taskData) ?? undefined,
       };
 
       const api = new ProjectTasksApi(config);
@@ -1382,9 +1470,7 @@ function ProjectChart() {
         if (body.users !== undefined) patch.resources = body.users;
         patch.moduleIds = moduleIdsPayload.slice();
         patch.modules = moduleIdsPayload.slice();
-        if (isRootParentId(taskData.ParentID)) {
-          patch.projectStatus = normalizeProjectStatusFromRow(taskData);
-        }
+        patch.projectStatus = normalizeProjectStatusFromRow(taskData);
         setProjectData((prev) =>
           prev.map((t: any) => (t.Id === taskData.Id ? { ...t, ...patch } : t))
         );
@@ -1532,6 +1618,14 @@ function ProjectChart() {
             row.taskData.moduleIds = normalizedIds;
             row.taskData.modules = normalizedIds;
           }
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              refreshGanttDialogModuleStatusEditors(
+                row,
+                moduleDataRef.current as GanttModuleOption[],
+              );
+            });
+          });
         } catch (e) {
           console.error("GetTaskModules:", e);
         }
@@ -1822,7 +1916,6 @@ function ProjectChart() {
             <AddDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
             <AddDialogFieldDirective type="Notes" headerText="Notes" />
             <AddDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
-            <AddDialogFieldDirective type="Custom" headerText="Durum" fields={["projectStatus"]} />
           </AddDialogFieldsDirective>
           <EditDialogFieldsDirective>
             <EditDialogFieldDirective type="General" headerText="General" />
@@ -1830,7 +1923,6 @@ function ProjectChart() {
             <EditDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
             <EditDialogFieldDirective type="Notes" headerText="Notes" />
             <EditDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
-            <EditDialogFieldDirective type="Custom" headerText="Durum" fields={["projectStatus"]} />
           </EditDialogFieldsDirective>
           <Inject
             services={[
