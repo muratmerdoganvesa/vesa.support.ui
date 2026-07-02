@@ -12,9 +12,9 @@ const VIEW_OPTIONS: {
   label: string;
   icon: typeof List;
 }[] = [
-  { value: "table", label: "Satır", icon: List },
-  { value: "tree", label: "Ağaç", icon: ListTree },
-  { value: "grid", label: "Kart", icon: LayoutGrid },
+  { value: "table", label: "Fırsat Görünümü", icon: List },
+  { value: "tree", label: "Müşteri Fırsat Listesi", icon: ListTree },
+  { value: "grid", label: "Müşteri Kartları", icon: LayoutGrid },
 ];
 
 export const CrmModulViewToggle = ({ value, onChange }: CrmModulViewToggleProps) => (

@@ -11,7 +11,7 @@ import { Calendar } from "components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { CalendarDays, Filter, RotateCcw, Search, X } from "lucide-react";
+import { CalendarDays, Filter, X } from "lucide-react";
 import { cn } from "lib/utils";
 import { type ReactNode, useMemo } from "react";
 import { CrmModulFilterOptions } from "../utils";
@@ -30,8 +30,6 @@ type CrmModulFiltersProps = {
   values: CrmModulFilterValues;
   options: CrmModulFilterOptions;
   onChange: (values: CrmModulFilterValues) => void;
-  onApply: () => void;
-  onReset: () => void;
 };
 
 const DateFilterButton = ({
@@ -117,8 +115,6 @@ export const CrmModulFilters = ({
   values,
   options,
   onChange,
-  onApply,
-  onReset,
 }: CrmModulFiltersProps) => {
   const activeFilterCount = useMemo(() => countActiveFilters(values), [values]);
 
@@ -220,44 +216,21 @@ export const CrmModulFilters = ({
         </FilterSelect>
       </div>
 
-      <div className="mt-3 flex flex-col gap-3 border-t border-slate-200/70 pt-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <span className="text-xs font-medium text-slate-600 sm:mr-1 sm:pb-2">Son Temas</span>
-          <DateFilterButton
-            label="Başlangıç"
-            value={values.dateFrom}
-            onChange={(date) => handleFieldChange("dateFrom", date)}
-          />
-          <span className="hidden self-center text-slate-300 sm:block" aria-hidden>
-            —
-          </span>
-          <DateFilterButton
-            label="Bitiş"
-            value={values.dateTo}
-            onChange={(date) => handleFieldChange("dateTo", date)}
-          />
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2 sm:ml-auto">
-          <Button
-            type="button"
-            onClick={onApply}
-            className="h-9 gap-1.5 bg-indigo-600 px-4 hover:bg-indigo-700"
-          >
-            <Search className="size-4" aria-hidden />
-            Filtrele
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onReset}
-            disabled={activeFilterCount === 0}
-            className="h-9 gap-1.5 border-slate-200 bg-white px-4 shadow-none"
-          >
-            <RotateCcw className="size-3.5" aria-hidden />
-            Temizle
-          </Button>
-        </div>
+      <div className="mt-3 flex flex-col gap-2 border-t border-slate-200/70 pt-3 sm:flex-row sm:items-end">
+        <span className="text-xs font-medium text-slate-600 sm:mr-1 sm:pb-2">Son Temas</span>
+        <DateFilterButton
+          label="Başlangıç"
+          value={values.dateFrom}
+          onChange={(date) => handleFieldChange("dateFrom", date)}
+        />
+        <span className="hidden self-center text-slate-300 sm:block" aria-hidden>
+          —
+        </span>
+        <DateFilterButton
+          label="Bitiş"
+          value={values.dateTo}
+          onChange={(date) => handleFieldChange("dateTo", date)}
+        />
       </div>
     </div>
   );

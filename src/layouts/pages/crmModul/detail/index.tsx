@@ -21,10 +21,12 @@ import {
 } from "../components/CrmOpportunityList";
 import {
   crmModulDtoToFormValues,
-  crmSubItemDtosToFormValues,
+  resolveSubItemsFromCrmModulDto,
   emptyCrmModulFormValues,
   toCreateDto,
   toUpdateDto,
+  validateCrmModulEmail,
+  validateSubItems,
   type CrmModulFormValues,
   type CrmSubItemFormValues,
 } from "../formMappers";
@@ -65,8 +67,10 @@ const CrmModulDetailPage = () => {
           const response = await crmApi.apiCrmModulsIdGet(id);
           const data = response.data;
           setModules(mergeActiveModulesWithSelected(activeModules, data));
+          const loadedSubItems = resolveSubItemsFromCrmModulDto(data);
           setModulValues(crmModulDtoToFormValues(data));
-          setSubItems(crmSubItemDtosToFormValues(data.crmSubItems ?? []));
+          setSubItems(loadedSubItems);
+          setExpandedKey(loadedSubItems[0]?.clientKey ?? null);
           setUniqNumber(data.uniqNumber);
         } else {
           setModules(activeModules);
@@ -115,6 +119,22 @@ const CrmModulDetailPage = () => {
   const handleSave = async () => {
     if (!modulValues.companyName.trim()) {
       dispatchAlert({ message: "Müşteri adı zorunludur.", type: "error" });
+      return;
+    }
+
+    const emailError = validateCrmModulEmail(modulValues.email);
+    if (emailError) {
+      dispatchAlert({ message: emailError, type: "error" });
+      return;
+    }
+
+    const subItemError = validateSubItems(subItems);
+    if (subItemError) {
+      dispatchAlert({ message: subItemError, type: "error" });
+      const invalidItem = subItems.find((item) => validateSubItems([item]));
+      if (invalidItem) {
+        setExpandedKey(invalidItem.clientKey);
+      }
       return;
     }
 

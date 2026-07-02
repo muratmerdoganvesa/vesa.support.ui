@@ -12,7 +12,7 @@ import {
 import { cn } from "lib/utils";
 import { LEAD_SOURCE_OPTIONS } from "../constants";
 import { type CrmModulFormValues } from "../formMappers";
-import { formatPhoneNumberTr } from "../utils";
+import { resolvePhoneNumberInput } from "../utils";
 
 type CrmModulFormFieldsProps = {
   values: CrmModulFormValues;
@@ -81,7 +81,7 @@ export const CrmModulFormFields = ({
   };
 
   const handlePhoneChange = (raw: string) => {
-    handleFieldChange("phoneNumber", formatPhoneNumberTr(raw));
+    handleFieldChange("phoneNumber", resolvePhoneNumberInput(values.phoneNumber, raw));
   };
 
   const inputClass = "h-10 bg-white border-slate-200";
@@ -187,6 +187,7 @@ export const CrmModulFormFields = ({
               onChange={(e) => handleFieldChange("email", e.target.value)}
               placeholder="email@ornek.com"
               className={inputClass}
+              aria-invalid={values.email.trim() !== "" && !values.email.includes("@")}
             />
           </Field>
         </div>

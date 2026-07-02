@@ -388,3 +388,22 @@ export const formatPhoneNumberTr = (value: string): string => {
   formatted += `-${d.slice(9, 11)}`;
   return formatted;
 };
+
+/**
+ * Telefon input değişimini işler.
+ * Format karakteri (parantez, tire) silindiğinde ilgili rakamı da kaldırır.
+ */
+export const resolvePhoneNumberInput = (previousValue: string, nextRawValue: string): string => {
+  const nextDigits = stripPhoneDigits(nextRawValue);
+  const previousDigits = stripPhoneDigits(previousValue);
+
+  const isDeleting = nextRawValue.length < previousValue.length;
+  const deletedFormatCharOnly =
+    isDeleting && nextDigits.length === previousDigits.length && previousDigits.length > 0;
+
+  if (deletedFormatCharOnly) {
+    return formatPhoneNumberTr(previousDigits.slice(0, -1));
+  }
+
+  return formatPhoneNumberTr(nextRawValue);
+};
