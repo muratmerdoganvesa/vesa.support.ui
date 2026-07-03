@@ -30,6 +30,7 @@ export interface CreateCrmSubItemDto {
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
   opportunityStage?: OpportunityStage;
+  opportunityGroupId?: string | null;
 }
 
 export interface UpdateCrmSubItemDto {
@@ -42,6 +43,7 @@ export interface UpdateCrmSubItemDto {
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
   opportunityStage?: OpportunityStage;
+  opportunityGroupId?: string | null;
 }
 
 export const CrmSubItemsApiAxiosParamCreator = function (configuration?: Configuration) {

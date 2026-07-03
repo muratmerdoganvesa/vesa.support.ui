@@ -12,6 +12,7 @@ import {
   calculateEstimatedDiscountedValueString,
   calculateEstimatedValueString,
   emptyCrmSubItemFormValues,
+  validatePricingGroup,
   type CrmSubItemFormValues,
 } from "../formMappers";
 import { CrmSubItemFormFields } from "./CrmSubItemFormFields";
@@ -23,6 +24,7 @@ type CrmSubItemDialogProps = {
   isEditMode?: boolean;
   modules: ListModuleDto[];
   onSave: (values: CrmSubItemFormValues) => void;
+  onValidationError?: (message: string) => void;
 };
 
 export const CrmSubItemDialog = ({
@@ -32,6 +34,7 @@ export const CrmSubItemDialog = ({
   isEditMode = false,
   modules,
   onSave,
+  onValidationError,
 }: CrmSubItemDialogProps) => {
   const [values, setValues] = useState<CrmSubItemFormValues>(emptyCrmSubItemFormValues());
 
@@ -42,6 +45,12 @@ export const CrmSubItemDialog = ({
   }, [open, initialValues]);
 
   const handleSave = () => {
+    const pricingError = validatePricingGroup(values);
+    if (pricingError) {
+      onValidationError?.(pricingError);
+      return;
+    }
+
     onSave({
       ...values,
       estimatedValue: calculateEstimatedValueString(values.unitPrice, values.personCount),
