@@ -1,7 +1,6 @@
-import { ArrowLeft, Save, Sparkles, Target, TrendingUp, Trophy, Wallet } from "lucide-react";
+import { ArrowLeft, Save, Sparkles } from "lucide-react";
 import { Button } from "components/ui/button";
 import { Badge } from "components/ui/badge";
-import { cn } from "lib/utils";
 import { getLeadSourceLabel } from "../constants";
 import { type CrmModulFormValues, type CrmOpportunityFormValues } from "../formMappers";
 import {
@@ -9,11 +8,8 @@ import {
   formatEurRounded,
   type TcmbExchangeRates,
 } from "../tcmbExchangeRates";
-import {
-  calculateCrmDetailStatsFromOpportunities,
-  getCompanyInitials,
-} from "../utils";
-import { CrmExchangeRatesCard } from "./CrmExchangeRatesCard";
+import { calculateCrmDetailStatsFromOpportunities, getCompanyInitials } from "../utils";
+import { CrmRecordAuditMeta } from "./CrmRecordAuditMeta";
 
 type CrmDetailSummaryProps = {
   modulValues: CrmModulFormValues;
@@ -23,121 +19,38 @@ type CrmDetailSummaryProps = {
   canSave: boolean;
   canAiRapor?: boolean;
   isAiRaporLoading?: boolean;
+  updatedDate?: string | null;
+  updatedBy?: string | null;
   exchangeRates: TcmbExchangeRates | null;
   exchangeRatesLoading: boolean;
-  exchangeRatesError: string | null;
   onBack: () => void;
   onSave: () => void;
   onAiRapor?: () => void;
 };
 
-type StatTheme = "emerald" | "sky" | "indigo" | "amber" | "teal";
-
-const STAT_THEME_STYLES: Record<
-  StatTheme,
-  { card: string; accent: string; iconWrap: string; icon: string; label: string; value: string }
-> = {
-  emerald: {
-    card: "bg-emerald-50/80 border-emerald-200/80",
-    accent: "bg-emerald-500",
-    iconWrap: "bg-emerald-100",
-    icon: "text-emerald-600",
-    label: "text-emerald-800/70",
-    value: "text-emerald-950",
-  },
-  sky: {
-    card: "bg-sky-50/80 border-sky-200/80",
-    accent: "bg-sky-500",
-    iconWrap: "bg-sky-100",
-    icon: "text-sky-600",
-    label: "text-sky-800/70",
-    value: "text-sky-950",
-  },
-  indigo: {
-    card: "bg-indigo-50/80 border-indigo-200/80",
-    accent: "bg-indigo-500",
-    iconWrap: "bg-indigo-100",
-    icon: "text-indigo-600",
-    label: "text-indigo-800/70",
-    value: "text-indigo-950",
-  },
-  amber: {
-    card: "bg-amber-50/80 border-amber-200/80",
-    accent: "bg-amber-500",
-    iconWrap: "bg-amber-100",
-    icon: "text-amber-600",
-    label: "text-amber-800/70",
-    value: "text-amber-950",
-  },
-  teal: {
-    card: "bg-teal-50/80 border-teal-200/80",
-    accent: "bg-teal-500",
-    iconWrap: "bg-teal-100",
-    icon: "text-teal-600",
-    label: "text-teal-800/70",
-    value: "text-teal-950",
-  },
-};
-
-const StatCard = ({
-  label,
-  icon,
-  children,
-  subtext,
-  theme,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  subtext?: string;
-  theme: StatTheme;
-}) => {
-  const t = STAT_THEME_STYLES[theme];
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-xl border px-3.5 py-3 min-w-0 shadow-sm",
-        t.card
-      )}
-    >
-      <div className={cn("absolute top-0 left-0 right-0 h-1", t.accent)} />
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <span className={cn("text-[10px] font-bold uppercase tracking-wider", t.label)}>
-          {label}
-        </span>
-        <span className={cn("flex size-8 items-center justify-center rounded-lg shrink-0", t.iconWrap)}>
-          <span className={t.icon}>{icon}</span>
-        </span>
-      </div>
-      <div className={cn("text-2xl font-bold tabular-nums leading-none", t.value)}>{children}</div>
-      {subtext && <p className={cn("text-[10px] mt-1.5 font-medium", t.label)}>{subtext}</p>}
-    </div>
-  );
-};
-
-const EurTotalValue = ({
-  totals,
+const PipelineEurTotal = ({
+  opportunities,
   exchangeRates,
   exchangeRatesLoading,
-  valueClassName,
 }: {
-  totals: { try: number; usd: number; eur: number };
+  opportunities: CrmOpportunityFormValues[];
   exchangeRates: TcmbExchangeRates | null;
   exchangeRatesLoading: boolean;
-  valueClassName?: string;
 }) => {
+  const stats = calculateCrmDetailStatsFromOpportunities(opportunities);
+
   if (exchangeRatesLoading) {
-    return <span className="text-base font-medium opacity-60">...</span>;
+    return <span className="text-2xl font-bold text-slate-400">...</span>;
   }
 
   if (!exchangeRates) {
-    return <span className="text-sm font-semibold text-amber-700">Kur gerekli</span>;
+    return <span className="text-lg font-semibold text-amber-700">Kur yüklenemedi</span>;
   }
 
-  const totalEur = convertCurrencyTotalsToEur(totals, exchangeRates);
+  const totalEur = convertCurrencyTotalsToEur(stats.pipeline, exchangeRates);
 
   return (
-    <span className={cn("text-2xl font-bold tabular-nums leading-none", valueClassName)}>
+    <span className="text-3xl sm:text-4xl font-bold text-indigo-700 tabular-nums leading-none">
       {formatEurRounded(totalEur)}
     </span>
   );
@@ -151,26 +64,25 @@ export const CrmDetailSummary = ({
   canSave,
   canAiRapor = false,
   isAiRaporLoading = false,
+  updatedDate,
+  updatedBy,
   exchangeRates,
   exchangeRatesLoading,
-  exchangeRatesError,
   onBack,
   onSave,
   onAiRapor,
 }: CrmDetailSummaryProps) => {
-  const stats = calculateCrmDetailStatsFromOpportunities(opportunities);
   const companyName = modulValues.companyName.trim() || "Yeni Müşteri";
   const initials = getCompanyInitials(companyName);
   const leadLabel = getLeadSourceLabel(modulValues.leadSource);
   const recordId = uniqNumber ? `#${uniqNumber}` : isEditMode ? "" : "Yeni kayıt";
-  const skyTheme = STAT_THEME_STYLES.sky;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-md overflow-hidden">
       <div className="h-1.5 bg-gradient-to-r from-indigo-600 via-violet-500 to-amber-500" />
 
       <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-br from-slate-50/80 via-white to-indigo-50/30">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
             <div className="size-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
               <span className="text-lg font-bold text-white tracking-wide">{initials}</span>
@@ -184,7 +96,10 @@ export const CrmDetailSummary = ({
                   </Badge>
                 )}
                 {leadLabel !== "—" && (
-                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 font-medium text-xs">
+                  <Badge
+                    variant="outline"
+                    className="border-amber-300 bg-amber-50 text-amber-800 font-medium text-xs"
+                  >
                     {leadLabel}
                   </Badge>
                 )}
@@ -228,59 +143,24 @@ export const CrmDetailSummary = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 p-4 bg-slate-50/40">
-        <StatCard
-          label="Açık Fırsat"
-          theme="emerald"
-          icon={<Target className="size-4" />}
-        >
-          {stats.openOpportunityCount}
-        </StatCard>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 p-4 bg-slate-50/40">
+        <CrmRecordAuditMeta
+          updatedDate={updatedDate}
+          updatedBy={updatedBy}
+          variant="banner"
+        />
 
-        <div
-          className={cn(
-            "relative overflow-hidden rounded-xl border px-3.5 py-3 min-w-0 shadow-sm col-span-2 sm:col-span-1",
-            skyTheme.card
-          )}
-        >
-          <div className={cn("absolute top-0 left-0 right-0 h-1", skyTheme.accent)} />
-          <CrmExchangeRatesCard
-            rates={exchangeRates}
-            loading={exchangeRatesLoading}
-            error={exchangeRatesError}
-            compact
-            themed
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 px-5 py-4 text-right min-w-[200px]">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600/80 mb-2">
+            Pipeline Toplamı
+          </p>
+          <PipelineEurTotal
+            opportunities={opportunities}
+            exchangeRates={exchangeRates}
+            exchangeRatesLoading={exchangeRatesLoading}
           />
+          <p className="text-[10px] text-indigo-600/70 mt-1.5 font-medium">TCMB kuru · EUR</p>
         </div>
-
-        <StatCard label="Pipeline" theme="indigo" icon={<Wallet className="size-4" />}>
-          <EurTotalValue
-            totals={stats.pipeline}
-            exchangeRates={exchangeRates}
-            exchangeRatesLoading={exchangeRatesLoading}
-          />
-        </StatCard>
-
-        <StatCard
-          label="Tahmin"
-          theme="amber"
-          icon={<TrendingUp className="size-4" />}
-          subtext="Aşama olasılığı"
-        >
-          <EurTotalValue
-            totals={stats.weightedForecast}
-            exchangeRates={exchangeRates}
-            exchangeRatesLoading={exchangeRatesLoading}
-          />
-        </StatCard>
-
-        <StatCard label="Kazanılan" theme="teal" icon={<Trophy className="size-4" />}>
-          <EurTotalValue
-            totals={stats.won}
-            exchangeRates={exchangeRates}
-            exchangeRatesLoading={exchangeRatesLoading}
-          />
-        </StatCard>
       </div>
     </div>
   );

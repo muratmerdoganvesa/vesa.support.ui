@@ -4,13 +4,11 @@ import {
   CrmModulDto,
   CrmSubItemDto,
   CurrencyType,
-  LeadSource,
   ListModuleDto,
   OpportunityStage,
   TypeCodes,
 } from "api/generated";
 import {
-  getLeadSourceLabel,
   getOpportunityStageLabel,
   getOpportunityStageProbability,
   getTypeCodeLabel,
@@ -146,6 +144,76 @@ export const calculateCrmDetailStatsFromOpportunities = (
   return { openOpportunityCount, pipeline, weightedForecast, won };
 };
 
+const mergeCurrencyTotals = (left: CurrencyTotals, right: CurrencyTotals): CurrencyTotals => ({
+  try: left.try + right.try,
+  usd: left.usd + right.usd,
+  eur: left.eur + right.eur,
+});
+
+export type CrmListPageStats = {
+  filteredCustomerCount: number;
+  totalCustomerCount: number;
+  opportunityPackageCount: number;
+  openPackageCount: number;
+  wonPackageCount: number;
+  pipeline: CurrencyTotals;
+  won: CurrencyTotals;
+  lastUpdated: {
+    id?: string;
+    companyName: string;
+    updatedDate?: string | null;
+    updatedBy?: string | null;
+  } | null;
+};
+
+export const buildCrmListPageStats = (
+  filteredRows: CrmModulDto[],
+  totalRows: CrmModulDto[]
+): CrmListPageStats => {
+  let pipeline = emptyCurrencyTotals();
+  let won = emptyCurrencyTotals();
+  let opportunityPackageCount = 0;
+  let openPackageCount = 0;
+  let wonPackageCount = 0;
+
+  filteredRows.forEach((row) => {
+    const opportunities = resolveOpportunitiesFromCrmModulDto(row);
+    opportunityPackageCount += opportunities.length;
+    const stats = calculateCrmDetailStatsFromOpportunities(opportunities);
+    openPackageCount += stats.openOpportunityCount;
+    wonPackageCount += opportunities.filter(
+      (opp) => (opp.opportunityStage ?? OpportunityStage.NUMBER_0) === OpportunityStage.NUMBER_6
+    ).length;
+    pipeline = mergeCurrencyTotals(pipeline, stats.pipeline);
+    won = mergeCurrencyTotals(won, stats.won);
+  });
+
+  const lastUpdatedRow = [...filteredRows]
+    .filter((row) => row.updatedDate)
+    .sort(
+      (a, b) =>
+        new Date(b.updatedDate as string).getTime() - new Date(a.updatedDate as string).getTime()
+    )[0];
+
+  return {
+    filteredCustomerCount: filteredRows.length,
+    totalCustomerCount: totalRows.length,
+    opportunityPackageCount,
+    openPackageCount,
+    wonPackageCount,
+    pipeline,
+    won,
+    lastUpdated: lastUpdatedRow
+      ? {
+          id: lastUpdatedRow.id,
+          companyName: resolveCompanyName(lastUpdatedRow),
+          updatedDate: lastUpdatedRow.updatedDate,
+          updatedBy: lastUpdatedRow.updatedBy,
+        }
+      : null,
+  };
+};
+
 /** @deprecated calculateCrmDetailStatsFromOpportunities kullanın */
 export const calculateCrmDetailStats = (items: CrmSubItemFormValues[]): CrmDetailStats =>
   calculateCrmDetailStatsFromOpportunities(
@@ -262,10 +330,27 @@ export const formatInlineList = (items: string[]): string => {
   return items.join(", ");
 };
 
-export const formatDateTr = (value?: string | null): string => {  if (!value) return "—";
+export const formatDateTr = (value?: string | null): string => {
+  if (!value) return "—";
   const date = parseISO(value);
   if (!isValid(date)) return "—";
   return format(date, "dd.MM.yyyy", { locale: tr });
+};
+
+export const formatDateTimeTr = (value?: string | null): string => {
+  if (!value) return "—";
+  const date = parseISO(value);
+  if (!isValid(date)) return "—";
+  return format(date, "dd MMM yyyy, HH:mm", { locale: tr });
+};
+
+export const formatCrmUpdatedBy = (value?: string | null): string => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "—";
+  if (trimmed.includes("@")) {
+    return trimmed.split("@")[0]?.replace(/[._]/g, " ") ?? trimmed;
+  }
+  return trimmed;
 };
 
 export const toIsoDateString = (date?: Date): string | null => {
@@ -304,7 +389,7 @@ export type CrmModulFilterOption<T extends string | number = string> = {
 
 export type CrmModulFilterOptions = {
   companies: CrmModulFilterOption[];
-  leadSources: CrmModulFilterOption<LeadSource>[];
+  partnerCompanies: CrmModulFilterOption[];
   opportunityStages: CrmModulFilterOption<OpportunityStage>[];
   contactPersons: CrmModulFilterOption[];
   accountManagers: CrmModulFilterOption[];
@@ -312,7 +397,7 @@ export type CrmModulFilterOptions = {
 
 export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterOptions => {
   const companySet = new Set<string>();
-  const leadSourceMap = new Map<LeadSource, string>();
+  const partnerCompanySet = new Set<string>();
   const stageMap = new Map<OpportunityStage, string>();
   const contactSet = new Set<string>();
   const managerSet = new Set<string>();
@@ -323,8 +408,9 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
       companySet.add(companyName);
     }
 
-    if (row.leadSource != null && row.leadSource !== LeadSource.NUMBER_0) {
-      leadSourceMap.set(row.leadSource, getLeadSourceLabel(row.leadSource));
+    const partnerCompanyName = row.partnerCompanyName?.trim();
+    if (partnerCompanyName) {
+      partnerCompanySet.add(partnerCompanyName);
     }
 
     (row.crmSubItems ?? []).forEach((item) => {
@@ -352,8 +438,8 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
 
   return {
     companies: sortByLabel(Array.from(companySet).map((value) => ({ value, label: value }))),
-    leadSources: sortByLabel(
-      Array.from(leadSourceMap.entries()).map(([value, label]) => ({ value, label }))
+    partnerCompanies: sortByLabel(
+      Array.from(partnerCompanySet).map((value) => ({ value, label: value }))
     ),
     opportunityStages: sortByLabel(
       Array.from(stageMap.entries()).map(([value, label]) => ({ value, label }))

@@ -156,6 +156,7 @@ export interface CrmModulDto {
   typeCode?: TypeCodes | null;
   createdDate?: string;
   updatedDate?: string | null;
+  updatedBy?: string | null;
   uniqNumber?: number;
 }
 
