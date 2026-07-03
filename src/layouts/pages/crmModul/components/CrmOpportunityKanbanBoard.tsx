@@ -150,8 +150,10 @@ export type CrmOpportunityKanbanBoardProps = {
   showCompany?: boolean;
   selectedCardId?: string | null;
   density?: "default" | "compact";
+  layout?: "scroll" | "fill";
   maxHeightClass?: string;
   showColumnTotals?: boolean;
+  className?: string;
   onOpenCard: (card: CrmKanbanOpportunity) => void;
 };
 
@@ -160,15 +162,23 @@ export const CrmOpportunityKanbanBoard = ({
   showCompany = false,
   selectedCardId = null,
   density = "default",
+  layout = "scroll",
   maxHeightClass,
   showColumnTotals = true,
+  className,
   onOpenCard,
 }: CrmOpportunityKanbanBoardProps) => {
   const compact = density === "compact";
-  const resolvedMaxHeight =
-    maxHeightClass ?? (compact ? "max-h-[168px]" : "max-h-[calc(100vh-320px)]");
-  const columnWidth = compact ? "w-[148px]" : "w-[260px]";
-  const columnGap = compact ? "gap-2" : "gap-3";
+  const fill = layout === "fill";
+  const resolvedMaxHeight = fill
+    ? "h-full max-h-full"
+    : maxHeightClass ?? (compact ? "max-h-[168px]" : "max-h-[calc(100vh-320px)]");
+  const columnWidth = fill
+    ? "flex-1 min-w-0 basis-0"
+    : compact
+      ? "w-[148px]"
+      : "w-[260px]";
+  const columnGap = compact ? "gap-2" : fill ? "gap-2" : "gap-3";
   const byStage = KANBAN_PIPELINE_COLUMNS.reduce(
     (acc, stage) => {
       acc[stage] = opportunities.filter((o) => o.stage === stage);
@@ -186,8 +196,8 @@ export const CrmOpportunityKanbanBoard = ({
   ];
 
   return (
-    <div className="overflow-x-auto">
-      <div className={cn("flex min-w-max items-start", columnGap)}>
+    <div className={cn(fill ? "h-full min-h-0 overflow-hidden" : "overflow-x-auto", className)}>
+      <div className={cn("flex min-w-0", columnGap, fill ? "h-full items-stretch" : "min-w-max items-start")}>
         {displayColumns.map((stage) => {
           const cards = byStage[stage] ?? [];
           const styles = COLUMN_STYLES[stage];
@@ -199,7 +209,7 @@ export const CrmOpportunityKanbanBoard = ({
               key={stage}
               className={cn(
                 columnWidth,
-                "shrink-0 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col",
+                "shrink-0 rounded-lg border border-slate-200 bg-slate-50/50 flex flex-col min-h-0",
                 resolvedMaxHeight
               )}
             >
@@ -232,8 +242,9 @@ export const CrmOpportunityKanbanBoard = ({
 
               <div
                 className={cn(
-                  "flex-1 overflow-y-auto space-y-1.5",
-                  compact ? "p-1.5 min-h-[52px]" : "p-2 space-y-2 min-h-[120px]"
+                  "flex-1 min-h-0 overflow-y-auto space-y-1.5",
+                  compact ? "p-1.5" : "p-2 space-y-2",
+                  !fill && (compact ? "min-h-[52px]" : "min-h-[120px]")
                 )}
               >
                 {cards.length === 0 ? (

@@ -50,7 +50,7 @@ export const PipelineStageBadge = ({ stage }: { stage?: OpportunityStage | null 
 };
 
 export const OPPORTUNITY_TABLE_COLUMN_COUNT = 7;
-export const LIST_TABLE_COLUMN_COUNT = 8;
+export const LIST_TABLE_COLUMN_COUNT = 10;
 
 export const CrmOpportunityTableHeader = () => (
   <TableRow className="border-b border-slate-200 bg-slate-50/70 hover:bg-slate-50/70">
@@ -103,6 +103,12 @@ export const CrmListTableHeader = () => (
     </TableHead>
     <TableHead className="min-w-[140px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-800">
       Pipeline Durumu
+    </TableHead>
+    <TableHead className="min-w-[150px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Son Güncelleme
+    </TableHead>
+    <TableHead className="min-w-[120px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Güncelleyen
     </TableHead>
   </TableRow>
 );

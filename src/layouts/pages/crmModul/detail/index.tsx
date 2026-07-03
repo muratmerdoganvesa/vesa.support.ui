@@ -1,4 +1,4 @@
-import { CrmModulNotesApi, ListModuleDto, ModuleApi } from "api/generated";
+import { CrmModulNotesApi, CrmModulDto, ListModuleDto, ModuleApi } from "api/generated";
 import { CrmModulsApi } from "api/generated/crmModulsApi";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -13,6 +13,7 @@ import type { CrmAiRaporData } from "../aiRaporTypes";
 import { CrmAiRaporModal } from "../components/CrmAiRaporModal";
 import { normalizeAiRaporResponse } from "../normalizeAiRapor";
 import { CrmDetailActionBar } from "../components/CrmDetailActionBar";
+import { CrmDetailPipelineKanban } from "../components/CrmDetailPipelineKanban";
 import { CrmDetailSummary } from "../components/CrmDetailSummary";
 import { CrmModulFormFields } from "../components/CrmModulForm";
 import { CrmModulNotePanel } from "../components/CrmModulNotePanel";
@@ -45,6 +46,8 @@ const CrmModulDetailPage = () => {
   const [opportunities, setOpportunities] = useState<CrmOpportunityFormValues[]>([]);
   const [modules, setModules] = useState<ListModuleDto[]>([]);
   const [uniqNumber, setUniqNumber] = useState<number | undefined>();
+  const [updatedDate, setUpdatedDate] = useState<string | null>(null);
+  const [updatedBy, setUpdatedBy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [isAiRaporLoading, setIsAiRaporLoading] = useState(false);
@@ -53,8 +56,7 @@ const CrmModulDetailPage = () => {
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const autoSaveLockRef = useRef(false);
   const pendingExpandedKeyRef = useRef<string | null>(null);
-  const { rates: exchangeRates, loading: exchangeRatesLoading, error: exchangeRatesError } =
-    useTcmbExchangeRates();
+  const { rates: exchangeRates, loading: exchangeRatesLoading } = useTcmbExchangeRates();
 
   const resolveExpandedKey = useCallback(
     (loadedOpportunities: CrmOpportunityFormValues[], currentKey: string | null) => {
@@ -71,20 +73,30 @@ const CrmModulDetailPage = () => {
     []
   );
 
+  const applyServerData = useCallback(
+    (data: CrmModulDto, activeModules: ListModuleDto[]) => {
+      setModules(mergeActiveModulesWithSelected(activeModules, data));
+      const loadedOpportunities = resolveOpportunitiesFromCrmModulDto(data);
+      setModulValues(crmModulDtoToFormValues(data));
+      setOpportunities(loadedOpportunities);
+      setUniqNumber(data.uniqNumber);
+      setUpdatedDate(data.updatedDate ?? null);
+      setUpdatedBy(data.updatedBy ?? null);
+      return loadedOpportunities;
+    },
+    []
+  );
+
   const syncFromServer = useCallback(
     async (crmModulId: string, preserveKey?: string | null) => {
       const conf = getConfiguration();
       const crmApi = new CrmModulsApi(conf);
       const response = await crmApi.apiCrmModulsIdGet(crmModulId);
       const data = response.data;
-      setModules((prev) => mergeActiveModulesWithSelected(prev, data));
-      const loadedOpportunities = resolveOpportunitiesFromCrmModulDto(data);
-      setModulValues(crmModulDtoToFormValues(data));
-      setOpportunities(loadedOpportunities);
-      setUniqNumber(data.uniqNumber);
+      const loadedOpportunities = applyServerData(data, modules);
       setExpandedKey((current) => resolveExpandedKey(loadedOpportunities, preserveKey ?? current));
     },
-    [resolveExpandedKey]
+    [applyServerData, modules, resolveExpandedKey]
   );
 
   const autoPersist = useCallback(
@@ -156,17 +168,15 @@ const CrmModulDetailPage = () => {
           const crmApi = new CrmModulsApi(conf);
           const response = await crmApi.apiCrmModulsIdGet(id);
           const data = response.data;
-          setModules(mergeActiveModulesWithSelected(activeModules, data));
-          const loadedOpportunities = resolveOpportunitiesFromCrmModulDto(data);
-          setModulValues(crmModulDtoToFormValues(data));
-          setOpportunities(loadedOpportunities);
+          const loadedOpportunities = applyServerData(data, activeModules);
           setExpandedKey((current) => resolveExpandedKey(loadedOpportunities, current));
-          setUniqNumber(data.uniqNumber);
         } else {
           setModules(activeModules);
           setModulValues(emptyCrmModulFormValues());
           setOpportunities([]);
           setUniqNumber(undefined);
+          setUpdatedDate(null);
+          setUpdatedBy(null);
         }
       } catch {
         dispatchAlert({
@@ -185,7 +195,7 @@ const CrmModulDetailPage = () => {
     };
 
     loadData();
-  }, [id, resolveExpandedKey]);
+  }, [id, applyServerData, resolveExpandedKey]);
 
   const handleAddOpportunity = () => {
     const newOpp = createNewOpportunity();
@@ -355,12 +365,20 @@ const CrmModulDetailPage = () => {
                 canSave={canSave}
                 canAiRapor={canAiRapor}
                 isAiRaporLoading={isAiRaporLoading}
+                updatedDate={updatedDate}
+                updatedBy={updatedBy}
                 exchangeRates={exchangeRates}
                 exchangeRatesLoading={exchangeRatesLoading}
-                exchangeRatesError={exchangeRatesError}
                 onBack={() => navigate("/crmModul")}
                 onSave={handleSave}
                 onAiRapor={handleAiRapor}
+              />
+
+              <CrmDetailPipelineKanban
+                opportunities={opportunities}
+                modules={modules}
+                expandedKey={expandedKey}
+                onExpandedKeyChange={setExpandedKey}
               />
             </div>
 

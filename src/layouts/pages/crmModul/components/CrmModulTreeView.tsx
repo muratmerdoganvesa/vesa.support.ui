@@ -11,7 +11,7 @@ import {
 import { Building2, CornerDownRight } from "lucide-react";
 import { Fragment } from "react";
 import { getLeadSourceLabel } from "../constants";
-import { resolveCompanyName, resolvePartnerCompanyName } from "../utils";
+import { resolveCompanyName, resolvePartnerCompanyName, formatDateTimeTr, formatCrmUpdatedBy } from "../utils";
 import {
   CrmOpportunityTableHeader,
   OPPORTUNITY_TABLE_COLUMN_COUNT,
@@ -58,18 +58,33 @@ const CompanyHeaderRow = ({
         {partnerName}
       </TableCell>
       <TableCell className="px-4 py-2.5" colSpan={4}>
-        <div className="flex flex-wrap items-center gap-2">
-          {subItemCount > 0 && (
-            <Badge variant="outline" className="border-indigo-200 bg-white text-xs font-normal text-indigo-700">
-              {subItemCount} fırsat
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {subItemCount > 0 && (
+              <Badge variant="outline" className="border-indigo-200 bg-white text-xs font-normal text-indigo-700">
+                {subItemCount} fırsat
+              </Badge>
+            )}
+            <Badge variant="outline" className="border-slate-200 bg-white text-xs font-normal">
+              {getLeadSourceLabel(row.leadSource)}
             </Badge>
-          )}
-          <Badge variant="outline" className="border-slate-200 bg-white text-xs font-normal">
-            {getLeadSourceLabel(row.leadSource)}
-          </Badge>
-          {row.contactPerson && (
-            <span className="text-xs text-slate-600">{row.contactPerson}</span>
-          )}
+            {row.contactPerson && (
+              <span className="text-xs text-slate-600">{row.contactPerson}</span>
+            )}
+          </div>
+          <div className="sm:text-right shrink-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              Son güncelleme
+            </p>
+            <p className="text-sm font-bold text-slate-800 tabular-nums">
+              {formatDateTimeTr(row.updatedDate)}
+            </p>
+            {formatCrmUpdatedBy(row.updatedBy) !== "—" && (
+              <p className="text-xs font-semibold text-indigo-700 mt-0.5">
+                {formatCrmUpdatedBy(row.updatedBy)}
+              </p>
+            )}
+          </div>
         </div>
       </TableCell>
     </TableRow>

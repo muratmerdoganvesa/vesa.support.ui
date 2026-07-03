@@ -11,6 +11,8 @@ import { cn } from "lib/utils";
 import { getLeadSourceLabel } from "../constants";
 import {
   aggregateCrmModulSubItems,
+  formatCrmUpdatedBy,
+  formatDateTimeTr,
   formatInlineList,
   formatPhoneNumberTr,
   getCompanyInitials,
@@ -137,7 +139,21 @@ const CrmModulCard = ({
           </div>
         )}
 
-        <div className="mt-auto space-y-2 border-t border-slate-100 pt-3">
+        <div className="mt-auto space-y-3 border-t border-slate-100 pt-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">
+              Son Güncelleme
+            </p>
+            <p className="text-base font-bold text-slate-900 tabular-nums leading-tight">
+              {formatDateTimeTr(row.updatedDate)}
+            </p>
+            {formatCrmUpdatedBy(row.updatedBy) !== "—" && (
+              <p className="text-sm font-semibold text-indigo-700 mt-1">
+                {formatCrmUpdatedBy(row.updatedBy)}
+              </p>
+            )}
+          </div>
+
           {stageListText !== "—" && (
             <div>
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">

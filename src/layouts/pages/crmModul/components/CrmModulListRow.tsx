@@ -1,6 +1,6 @@
 import { CrmModulDto, CrmSubItemDto } from "api/generated";
 import { TableCell, TableRow } from "components/ui/table";
-import { formatSolutionModuleNames, resolvePartnerCompanyName } from "../utils";
+import { formatCrmUpdatedBy, formatDateTimeTr, formatSolutionModuleNames, resolvePartnerCompanyName } from "../utils";
 import {
   formatSubItemTotal,
   PipelineStageBadge,
@@ -44,6 +44,12 @@ export const CrmModulListRow = ({ parent, item, onEdit }: CrmModulListRowProps) 
       </TableCell>
       <TableCell className="px-4 py-3 whitespace-nowrap">
         <PipelineStageBadge stage={item.opportunityStage} />
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm whitespace-nowrap text-slate-700 tabular-nums">
+        {formatDateTimeTr(parent.updatedDate)}
+      </TableCell>
+      <TableCell className="px-4 py-3 text-sm font-medium whitespace-nowrap text-indigo-700">
+        {formatCrmUpdatedBy(parent.updatedBy)}
       </TableCell>
     </TableRow>
   );
