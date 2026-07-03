@@ -8,18 +8,21 @@ import { useBusy } from "layouts/pages/hooks/useBusy";
 import { Handshake, Plus } from "lucide-react";import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CrmModulFilters, CrmModulFilterValues } from "./components/CrmModulFilters";
+import { CrmModulKanbanView } from "./components/CrmModulKanbanView";
 import { CrmModulGridView } from "./components/CrmModulGridView";
 import { CrmModulTable } from "./components/CrmModulTable";
 import { CrmModulTreeView } from "./components/CrmModulTreeView";
 import { CrmModulViewToggle } from "./components/CrmModulViewToggle";
 import {
+  CRM_MODUL_KANBAN_SCOPE_STORAGE_KEY,
   CRM_MODUL_VIEW_MODE_STORAGE_KEY,
+  CrmKanbanScope,
   CrmModulListViewMode,
   DEFAULT_CRM_MODUL_VIEW_MODE,
   GRID_ITEMS_PER_PAGE,
   ROWS_PER_PAGE,
 } from "./constants";
-import { buildCrmModulFilterOptions, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
+import { buildCrmModulFilterOptions, buildKanbanOpportunities, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
 
 const defaultFilters: CrmModulFilterValues = {
   company: "all",
@@ -33,10 +36,15 @@ const defaultFilters: CrmModulFilterValues = {
 
 const readStoredViewMode = (): CrmModulListViewMode => {
   const stored = localStorage.getItem(CRM_MODUL_VIEW_MODE_STORAGE_KEY);
-  if (stored === "table" || stored === "tree" || stored === "grid") {
+  if (stored === "table" || stored === "tree" || stored === "grid" || stored === "kanban") {
     return stored;
   }
   return DEFAULT_CRM_MODUL_VIEW_MODE;
+};
+
+const readStoredKanbanScope = (): CrmKanbanScope => {
+  const stored = localStorage.getItem(CRM_MODUL_KANBAN_SCOPE_STORAGE_KEY);
+  return stored === "customer" ? "customer" : "all";
 };
 
 const CrmModulPage = () => {
@@ -48,6 +56,8 @@ const CrmModulPage = () => {
   const [filters, setFilters] = useState<CrmModulFilterValues>(defaultFilters);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<CrmModulListViewMode>(readStoredViewMode);
+  const [kanbanScope, setKanbanScope] = useState<CrmKanbanScope>(readStoredKanbanScope);
+  const [kanbanCustomerId, setKanbanCustomerId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {    try {
       dispatchBusy({ isBusy: true });
@@ -131,9 +141,32 @@ const CrmModulPage = () => {
 
   const flatSubItems = useMemo(() => flattenCrmSubItems(filteredRows), [filteredRows]);
   const allFlatSubItems = useMemo(() => flattenCrmSubItems(crmData), [crmData]);
+  const kanbanOpportunities = useMemo(
+    () => buildKanbanOpportunities(filteredRows),
+    [filteredRows]
+  );
+  const kanbanCustomerOptions = useMemo(
+    () =>
+      filteredRows
+        .filter((row) => row.id)
+        .map((row) => ({ id: row.id as string, name: resolveCompanyName(row) }))
+        .sort((a, b) => a.name.localeCompare(b.name, "tr")),
+    [filteredRows]
+  );
+
+  useEffect(() => {
+    if (filters.company === "all") return;
+    const match = kanbanCustomerOptions.find((c) => c.name === filters.company);
+    if (match) setKanbanCustomerId(match.id);
+  }, [filters.company, kanbanCustomerOptions]);
 
   const isFlatListView = viewMode === "table";
-  const listCount = isFlatListView ? flatSubItems.length : filteredRows.length;
+  const isKanbanView = viewMode === "kanban";
+  const listCount = isFlatListView
+    ? flatSubItems.length
+    : isKanbanView
+      ? kanbanOpportunities.length
+      : filteredRows.length;
   const listAllCount = isFlatListView ? allFlatSubItems.length : crmData.length;
 
   const totalPages = Math.max(
@@ -153,6 +186,12 @@ const CrmModulPage = () => {
 
   const handleOpenCreate = () => {
     navigate("/crmModul/detail");
+  };
+
+  const handleKanbanScopeChange = (scope: CrmKanbanScope) => {
+    setKanbanScope(scope);
+    localStorage.setItem(CRM_MODUL_KANBAN_SCOPE_STORAGE_KEY, scope);
+    if (scope === "all") setKanbanCustomerId(null);
   };
 
   const handleOpenEdit = (row: CrmModulDto) => {
@@ -200,12 +239,22 @@ const CrmModulPage = () => {
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-3">
             <p className="text-sm text-slate-500">
               <span className="font-semibold text-slate-700">{listCount}</span>{" "}
-              {isFlatListView ? "fırsat" : "kayıt"} listeleniyor
+              {isFlatListView ? "fırsat" : isKanbanView ? "fırsat paketi" : "kayıt"} listeleniyor
             </p>
             <CrmModulViewToggle value={viewMode} onChange={handleViewModeChange} />
           </div>
 
-          {viewMode === "tree" ? (
+          {viewMode === "kanban" ? (
+            <CrmModulKanbanView
+              opportunities={kanbanOpportunities}
+              scope={kanbanScope}
+              selectedCustomerId={kanbanCustomerId}
+              customerOptions={kanbanCustomerOptions}
+              onScopeChange={handleKanbanScopeChange}
+              onCustomerChange={setKanbanCustomerId}
+              onOpenOpportunity={(id) => navigate(`/crmModul/detail/${id}`)}
+            />
+          ) : viewMode === "tree" ? (
             <CrmModulTreeView
               rows={paginatedRows}
               currentPage={currentPage}

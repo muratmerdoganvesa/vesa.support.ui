@@ -81,6 +81,7 @@ export interface CrmSubItemInputDto {
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
   opportunityStage?: OpportunityStage;
+  opportunityGroupId?: string | null;
 }
 
 export interface CrmSubItemDto {
@@ -98,6 +99,7 @@ export interface CrmSubItemDto {
   currencyType?: CrmCurrencyType | null;
   typeCode?: TypeCodes | null;
   opportunityStage?: OpportunityStage;
+  opportunityGroupId?: string | null;
   createdDate?: string;
   updatedDate?: string | null;
   uniqNumber?: number;

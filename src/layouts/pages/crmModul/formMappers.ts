@@ -24,7 +24,8 @@ export type CrmModulFormValues = {
   sapAccountManager: string;
 };
 
-export type CrmSubItemFormValues = {
+/** Tek modül kalemi — fiyatlandırma ve tarihler kalem bazında */
+export type CrmKalemFormValues = {
   clientKey: string;
   id?: string;
   solutionModuleIds: string[];
@@ -37,6 +38,21 @@ export type CrmSubItemFormValues = {
   estimatedDiscountedValue: string;
   expectedCloseDate?: Date;
   lastContactDate?: Date;
+  /** API'den yüklenen kalemleri fırsat paketine gruplamak için */
+  createdDate?: string;
+};
+
+/** Fırsat paketi — durum (pipeline) fırsat seviyesinde ortak */
+export type CrmOpportunityFormValues = {
+  clientKey: string;
+  opportunityStage: OpportunityStage;
+  kalems: CrmKalemFormValues[];
+  /** Paketteki en eski kalem oluşturma tarihi (API'den) */
+  createdDate?: string;
+};
+
+/** @deprecated CrmOpportunityFormValues kullanın — geriye dönük uyumluluk */
+export type CrmSubItemFormValues = CrmKalemFormValues & {
   opportunityStage: OpportunityStage;
 };
 
@@ -61,7 +77,7 @@ export const validateCrmModulEmail = (email: string): string | null => {
   return null;
 };
 
-export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
+export const emptyCrmKalemFormValues = (): CrmKalemFormValues => ({
   clientKey: crypto.randomUUID(),
   solutionModuleIds: [],
   typeCode: TypeCodes.NUMBER_0,
@@ -73,16 +89,26 @@ export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
   estimatedDiscountedValue: "",
   expectedCloseDate: undefined,
   lastContactDate: startOfDay(new Date()),
+});
+
+export const emptyCrmOpportunityFormValues = (): CrmOpportunityFormValues => ({
+  clientKey: crypto.randomUUID(),
+  opportunityStage: OpportunityStage.NUMBER_0,
+  kalems: [emptyCrmKalemFormValues()],
+});
+
+export const emptyCrmSubItemFormValues = (): CrmSubItemFormValues => ({
+  ...emptyCrmKalemFormValues(),
   opportunityStage: OpportunityStage.NUMBER_0,
 });
 
 /** Para birimi, birim fiyat veya kişi sayısından biri doldurulduysa true */
-export const isPricingGroupTouched = (item: CrmSubItemFormValues): boolean =>
+export const isPricingGroupTouched = (item: CrmKalemFormValues): boolean =>
   item.currencyType !== CurrencyType.NUMBER_0 ||
   item.unitPrice.trim() !== "" ||
   item.personCount.trim() !== "";
 
-export const validatePricingGroup = (item: CrmSubItemFormValues): string | null => {
+export const validatePricingGroup = (item: CrmKalemFormValues): string | null => {
   if (!isPricingGroupTouched(item)) return null;
 
   if (item.currencyType === CurrencyType.NUMBER_0) {
@@ -115,14 +141,32 @@ export const validatePricingGroup = (item: CrmSubItemFormValues): string | null 
   return null;
 };
 
-export const validateSubItems = (items: CrmSubItemFormValues[]): string | null => {
-  for (let index = 0; index < items.length; index += 1) {
-    const error = validatePricingGroup(items[index]);
-    if (error) {
-      return `Fırsat ${index + 1}: ${error}`;
+export const validateOpportunities = (opportunities: CrmOpportunityFormValues[]): string | null => {
+  for (let oppIndex = 0; oppIndex < opportunities.length; oppIndex += 1) {
+    const opp = opportunities[oppIndex];
+    for (let kalemIndex = 0; kalemIndex < opp.kalems.length; kalemIndex += 1) {
+      const error = validatePricingGroup(opp.kalems[kalemIndex]);
+      if (error) {
+        return `Fırsat ${oppIndex + 1}, Kalem ${kalemIndex + 1}: ${error}`;
+      }
     }
   }
   return null;
+};
+
+/** @deprecated validateOpportunities kullanın */
+export const validateSubItems = (items: CrmSubItemFormValues[]): string | null =>
+  validateOpportunities(
+    items.map((item) => ({
+      clientKey: item.clientKey,
+      opportunityStage: item.opportunityStage,
+      kalems: [stripOpportunityStage(item)],
+    }))
+  );
+
+const stripOpportunityStage = (item: CrmSubItemFormValues): CrmKalemFormValues => {
+  const { opportunityStage: _stage, ...kalem } = item;
+  return kalem;
 };
 
 const parseOptionalNumber = (value: string): number | null => {
@@ -182,28 +226,40 @@ export const formatEstimatedValueDisplay = (
 
 const parseDiscountPercent = (value: string): number => parseOptionalInt(value) ?? 0;
 
-const toSubItemInputDto = (item: CrmSubItemFormValues): CrmSubItemInputDto => ({
-  id: item.id ?? null,
-  solutionModuleIds: item.solutionModuleIds.length > 0 ? item.solutionModuleIds : null,
-  typeCode: item.typeCode,
-  currencyType: item.currencyType,
-  unitPrice: parseOptionalNumber(item.unitPrice),
-  personCount: parseOptionalInt(item.personCount),
-  discount: parseDiscountPercent(item.discount),
+const toKalemInputDto = (
+  kalem: CrmKalemFormValues,
+  opportunityStage: OpportunityStage,
+  opportunityClientKey: string
+): CrmSubItemInputDto => ({
+  id: kalem.id ?? null,
+  solutionModuleIds: kalem.solutionModuleIds.length > 0 ? kalem.solutionModuleIds : null,
+  typeCode: kalem.typeCode,
+  currencyType: kalem.currencyType,
+  unitPrice: parseOptionalNumber(kalem.unitPrice),
+  personCount: parseOptionalInt(kalem.personCount),
+  discount: parseDiscountPercent(kalem.discount),
   estimatedValue: parseOptionalNumber(
-    calculateEstimatedValueString(item.unitPrice, item.personCount)
+    calculateEstimatedValueString(kalem.unitPrice, kalem.personCount)
   ),
   estimatedDiscountedValue: parseOptionalNumber(
-    calculateEstimatedDiscountedValueString(item.unitPrice, item.personCount, item.discount)
+    calculateEstimatedDiscountedValueString(kalem.unitPrice, kalem.personCount, kalem.discount)
   ),
-  expectedCloseDate: toIsoDateString(item.expectedCloseDate),
-  lastContactDate: toIsoDateString(item.lastContactDate),
-  opportunityStage: item.opportunityStage,
+  expectedCloseDate: toIsoDateString(kalem.expectedCloseDate),
+  lastContactDate: toIsoDateString(kalem.lastContactDate),
+  opportunityStage,
+  opportunityGroupId: opportunityClientKey,
 });
+
+export const opportunitiesToSubItemDtos = (
+  opportunities: CrmOpportunityFormValues[]
+): CrmSubItemInputDto[] =>
+  opportunities.flatMap((opp) =>
+    opp.kalems.map((kalem) => toKalemInputDto(kalem, opp.opportunityStage, opp.clientKey))
+  );
 
 export const toCreateDto = (
   modul: CrmModulFormValues,
-  subItems: CrmSubItemFormValues[]
+  opportunities: CrmOpportunityFormValues[]
 ): CreateCrmModulDto => ({
   companyName: modul.companyName.trim() || null,
   partnerCompanyName: modul.partnerCompanyName.trim() || null,
@@ -214,13 +270,28 @@ export const toCreateDto = (
   leadSource: modul.leadSource,
   accountManager: modul.accountManager.trim() || null,
   sapAccountManager: modul.sapAccountManager.trim() || null,
-  crmSubItems: subItems.length > 0 ? subItems.map(toSubItemInputDto) : null,
+  crmSubItems:
+    opportunities.length > 0 ? opportunitiesToSubItemDtos(opportunities) : null,
 });
 
 export const toUpdateDto = (
   modul: CrmModulFormValues,
+  opportunities: CrmOpportunityFormValues[]
+): UpdateCrmModulDto => toCreateDto(modul, opportunities);
+
+/** @deprecated opportunitiesToSubItemDtos kullanın */
+export const toCreateDtoFromSubItems = (
+  modul: CrmModulFormValues,
   subItems: CrmSubItemFormValues[]
-): UpdateCrmModulDto => toCreateDto(modul, subItems);
+): CreateCrmModulDto =>
+  toCreateDto(
+    modul,
+    subItems.map((item) => ({
+      clientKey: item.clientKey,
+      opportunityStage: item.opportunityStage,
+      kalems: [stripOpportunityStage(item)],
+    }))
+  );
 
 export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues => ({
   companyName: data.companyName?.trim() || data.partnerCompanyName?.trim() || "",
@@ -234,11 +305,10 @@ export const crmModulDtoToFormValues = (data: CrmModulDto): CrmModulFormValues =
   sapAccountManager: data.sapAccountManager ?? "",
 });
 
-const mapCrmSubItemDtoToFormValues = (item: CrmSubItemDto): CrmSubItemFormValues => {
+const mapCrmSubItemDtoToKalem = (item: CrmSubItemDto): CrmKalemFormValues => {
   const unitPrice = item.unitPrice != null ? String(item.unitPrice) : "";
   const personCount = item.personCount != null ? String(item.personCount) : "";
   const discount = item.discount != null ? String(item.discount) : "";
-
   return {
     clientKey: item.id ?? crypto.randomUUID(),
     id: item.id,
@@ -256,12 +326,74 @@ const mapCrmSubItemDtoToFormValues = (item: CrmSubItemDto): CrmSubItemFormValues
     ),
     expectedCloseDate: parseIsoDate(item.expectedCloseDate),
     lastContactDate: parseIsoDate(item.lastContactDate),
-    opportunityStage: item.opportunityStage ?? OpportunityStage.NUMBER_0,
+    createdDate: item.createdDate,
   };
 };
 
+const splitLegacyKalemByModules = (kalem: CrmKalemFormValues): CrmKalemFormValues[] => {
+  const ids = kalem.solutionModuleIds;
+  if (ids.length <= 1) {
+    return [kalem];
+  }
+  return ids.map((moduleId): CrmKalemFormValues => ({
+    ...kalem,
+    clientKey: crypto.randomUUID(),
+    id: undefined,
+    solutionModuleIds: [moduleId],
+  }));
+};
+
+const resolveOpportunityGroupKey = (item: CrmSubItemDto): string => {
+  if (item.opportunityGroupId) return item.opportunityGroupId;
+  // opportunityGroupId yoksa her kalem ayrı fırsat
+  return `legacy:${item.id ?? crypto.randomUUID()}`;
+};
+
+const pickEarliestCreatedDate = (kalems: CrmKalemFormValues[]): string | undefined => {
+  const dates = kalems
+    .map((k) => k.createdDate)
+    .filter((d): d is string => Boolean(d));
+  if (dates.length === 0) return undefined;
+  return dates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+};
+
+export const crmSubItemDtosToOpportunities = (
+  items: CrmSubItemDto[]
+): CrmOpportunityFormValues[] => {
+  const groups = new Map<string, { stage: OpportunityStage; kalems: CrmKalemFormValues[] }>();
+  const hasGroupMarkers = items.some((item) => Boolean(item.opportunityGroupId));
+
+  items.forEach((item) => {
+    const key = resolveOpportunityGroupKey(item);
+    const kalem = mapCrmSubItemDtoToKalem(item);
+    const kalems = hasGroupMarkers ? [kalem] : splitLegacyKalemByModules(kalem);
+    const stage = item.opportunityStage ?? OpportunityStage.NUMBER_0;
+
+    const existing = groups.get(key);
+    if (existing) {
+      existing.kalems.push(...kalems);
+      if (stage !== OpportunityStage.NUMBER_0) {
+        existing.stage = stage;
+      }
+    } else {
+      groups.set(key, { stage, kalems });
+    }
+  });
+
+  return Array.from(groups.entries()).map(([groupKey, group]) => ({
+    clientKey: groupKey.startsWith("legacy:") ? crypto.randomUUID() : groupKey,
+    opportunityStage: group.stage,
+    kalems: group.kalems,
+    createdDate: pickEarliestCreatedDate(group.kalems),
+  }));
+};
+
+/** @deprecated crmSubItemDtosToOpportunities kullanın */
 export const crmSubItemDtosToFormValues = (items: CrmSubItemDto[]): CrmSubItemFormValues[] =>
-  items.map(mapCrmSubItemDtoToFormValues);
+  items.map((item) => ({
+    ...mapCrmSubItemDtoToKalem(item),
+    opportunityStage: item.opportunityStage ?? OpportunityStage.NUMBER_0,
+  }));
 
 const hasLegacySubItemData = (data: CrmModulDto): boolean =>
   (data.solutionModuleIds?.length ?? 0) > 0 ||
@@ -276,10 +408,12 @@ const hasLegacySubItemData = (data: CrmModulDto): boolean =>
   (data.typeCode != null && data.typeCode !== TypeCodes.NUMBER_0);
 
 /** Kayıtlı fırsatları yükler; eski modül düzeyindeki veriyi de tek fırsata dönüştürür */
-export const resolveSubItemsFromCrmModulDto = (data: CrmModulDto): CrmSubItemFormValues[] => {
+export const resolveOpportunitiesFromCrmModulDto = (
+  data: CrmModulDto
+): CrmOpportunityFormValues[] => {
   const subItems = data.crmSubItems ?? [];
   if (subItems.length > 0) {
-    return crmSubItemDtosToFormValues(subItems);
+    return crmSubItemDtosToOpportunities(subItems);
   }
 
   if (!hasLegacySubItemData(data)) {
@@ -290,24 +424,39 @@ export const resolveSubItemsFromCrmModulDto = (data: CrmModulDto): CrmSubItemFor
   const personCount = data.personCount != null ? String(data.personCount) : "";
   const discount = data.discount != null ? String(data.discount) : "";
 
+  const legacyKalem: CrmKalemFormValues = {
+    clientKey: crypto.randomUUID(),
+    solutionModuleIds: (data.solutionModuleIds ?? []).map(String),
+    typeCode: data.typeCode ?? TypeCodes.NUMBER_0,
+    currencyType: data.currencyType ?? CurrencyType.NUMBER_0,
+    unitPrice,
+    personCount,
+    discount,
+    estimatedValue: calculateEstimatedValueString(unitPrice, personCount),
+    estimatedDiscountedValue: calculateEstimatedDiscountedValueString(
+      unitPrice,
+      personCount,
+      discount
+    ),
+    expectedCloseDate: parseIsoDate(data.expectedCloseDate),
+    lastContactDate: parseIsoDate(data.lastContactDate),
+  };
+
   return [
     {
       clientKey: crypto.randomUUID(),
-      solutionModuleIds: (data.solutionModuleIds ?? []).map(String),
-      typeCode: data.typeCode ?? TypeCodes.NUMBER_0,
-      currencyType: data.currencyType ?? CurrencyType.NUMBER_0,
-      unitPrice,
-      personCount,
-      discount,
-      estimatedValue: calculateEstimatedValueString(unitPrice, personCount),
-      estimatedDiscountedValue: calculateEstimatedDiscountedValueString(
-        unitPrice,
-        personCount,
-        discount
-      ),
-      expectedCloseDate: parseIsoDate(data.expectedCloseDate),
-      lastContactDate: parseIsoDate(data.lastContactDate),
       opportunityStage: OpportunityStage.NUMBER_0,
+      kalems: splitLegacyKalemByModules(legacyKalem),
     },
   ];
+};
+
+/** @deprecated resolveOpportunitiesFromCrmModulDto kullanın */
+export const resolveSubItemsFromCrmModulDto = (data: CrmModulDto): CrmSubItemFormValues[] => {
+  return resolveOpportunitiesFromCrmModulDto(data).flatMap((opp) =>
+    opp.kalems.map((kalem) => ({
+      ...kalem,
+      opportunityStage: opp.opportunityStage,
+    }))
+  );
 };

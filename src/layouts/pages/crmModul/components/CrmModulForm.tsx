@@ -34,7 +34,7 @@ const SectionCard = ({
   <section
     className={cn(
       variant === "detail"
-        ? "rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4"
+        ? "rounded-xl border border-slate-200/60 bg-white shadow-sm p-4 space-y-3"
         : "rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-4",
       className
     )}
@@ -84,7 +84,7 @@ export const CrmModulFormFields = ({
     handleFieldChange("phoneNumber", resolvePhoneNumberInput(values.phoneNumber, raw));
   };
 
-  const inputClass = "h-10 bg-white border-slate-200";
+  const inputClass = variant === "detail" ? "h-9 bg-white border-slate-200" : "h-10 bg-white border-slate-200";
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
