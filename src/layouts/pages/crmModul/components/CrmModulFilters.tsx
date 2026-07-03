@@ -1,4 +1,4 @@
-import { LeadSource, OpportunityStage } from "api/generated";
+import { OpportunityStage } from "api/generated";
 import { Button } from "components/ui/button";
 import {
   Select,
@@ -18,12 +18,22 @@ import { CrmModulFilterOptions } from "../utils";
 
 export type CrmModulFilterValues = {
   company: string;
-  leadSource: LeadSource | "all";
+  partnerCompany: string;
   opportunityStage: OpportunityStage | "all";
   contactPerson: string;
   accountManager: string;
   dateFrom?: Date;
   dateTo?: Date;
+};
+
+export const DEFAULT_CRM_MODUL_FILTERS: CrmModulFilterValues = {
+  company: "all",
+  partnerCompany: "all",
+  opportunityStage: "all",
+  contactPerson: "all",
+  accountManager: "all",
+  dateFrom: undefined,
+  dateTo: undefined,
 };
 
 type CrmModulFiltersProps = {
@@ -102,7 +112,7 @@ const FilterSelect = ({
 const countActiveFilters = (values: CrmModulFilterValues): number => {
   let count = 0;
   if (values.company !== "all") count += 1;
-  if (values.leadSource !== "all") count += 1;
+  if (values.partnerCompany !== "all") count += 1;
   if (values.opportunityStage !== "all") count += 1;
   if (values.contactPerson !== "all") count += 1;
   if (values.accountManager !== "all") count += 1;
@@ -125,6 +135,10 @@ export const CrmModulFilters = ({
     onChange({ ...values, [key]: value });
   };
 
+  const handleClearFilters = () => {
+    onChange(DEFAULT_CRM_MODUL_FILTERS);
+  };
+
   return (
     <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
       <div className="mb-3 flex items-center gap-2">
@@ -134,6 +148,18 @@ export const CrmModulFilters = ({
           <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-100 px-1.5 text-[11px] font-semibold text-indigo-700">
             {activeFilterCount}
           </span>
+        )}
+        {activeFilterCount > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            className="ml-auto h-8 gap-1.5 text-xs font-semibold text-slate-600 hover:text-indigo-700 hover:bg-indigo-50"
+          >
+            <X className="size-3.5" />
+            Filtreleri Temizle
+          </Button>
         )}
       </div>
 
@@ -153,16 +179,14 @@ export const CrmModulFilters = ({
         </FilterSelect>
 
         <FilterSelect
-          label="Lead Kaynağı"
-          value={String(values.leadSource)}
+          label="Partner Firma"
+          value={values.partnerCompany}
           placeholder="Tümü"
-          onValueChange={(v) =>
-            handleFieldChange("leadSource", v === "all" ? "all" : (Number(v) as LeadSource))
-          }
+          onValueChange={(v) => handleFieldChange("partnerCompany", v)}
         >
           <SelectItem value="all">Tümü</SelectItem>
-          {options.leadSources.map((opt) => (
-            <SelectItem key={opt.value} value={String(opt.value)}>
+          {options.partnerCompanies.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
             </SelectItem>
           ))}

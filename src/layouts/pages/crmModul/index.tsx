@@ -5,9 +5,12 @@ import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { useBusy } from "layouts/pages/hooks/useBusy";
-import { Handshake, Plus } from "lucide-react";import { useCallback, useEffect, useMemo, useState } from "react";
+import { Handshake, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CrmModulFilters, CrmModulFilterValues } from "./components/CrmModulFilters";
+import { cn } from "lib/utils";
+import { CrmModulFilters, DEFAULT_CRM_MODUL_FILTERS } from "./components/CrmModulFilters";
+import { CrmModulListStatsBar } from "./components/CrmModulListStatsBar";
 import { CrmModulKanbanView } from "./components/CrmModulKanbanView";
 import { CrmModulGridView } from "./components/CrmModulGridView";
 import { CrmModulTable } from "./components/CrmModulTable";
@@ -22,17 +25,8 @@ import {
   GRID_ITEMS_PER_PAGE,
   ROWS_PER_PAGE,
 } from "./constants";
-import { buildCrmModulFilterOptions, buildKanbanOpportunities, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
-
-const defaultFilters: CrmModulFilterValues = {
-  company: "all",
-  leadSource: "all",
-  opportunityStage: "all",
-  contactPerson: "all",
-  accountManager: "all",
-  dateFrom: undefined,
-  dateTo: undefined,
-};
+import { buildCrmModulFilterOptions, buildCrmListPageStats, buildKanbanOpportunities, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
+import { useTcmbExchangeRates } from "./hooks/useTcmbExchangeRates";
 
 const readStoredViewMode = (): CrmModulListViewMode => {
   const stored = localStorage.getItem(CRM_MODUL_VIEW_MODE_STORAGE_KEY);
@@ -53,13 +47,15 @@ const CrmModulPage = () => {
   const dispatchBusy = useBusy();
 
   const [crmData, setCrmData] = useState<CrmModulDto[]>([]);
-  const [filters, setFilters] = useState<CrmModulFilterValues>(defaultFilters);
+  const [filters, setFilters] = useState(DEFAULT_CRM_MODUL_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<CrmModulListViewMode>(readStoredViewMode);
   const [kanbanScope, setKanbanScope] = useState<CrmKanbanScope>(readStoredKanbanScope);
   const [kanbanCustomerId, setKanbanCustomerId] = useState<string | null>(null);
+  const { rates: exchangeRates, loading: exchangeRatesLoading } = useTcmbExchangeRates();
 
-  const fetchData = useCallback(async () => {    try {
+  const fetchData = useCallback(async () => {
+    try {
       dispatchBusy({ isBusy: true });
       const crmApi = new CrmModulsApi(getConfiguration());
       const crmResponse = await crmApi.apiCrmModulsGet();
@@ -95,7 +91,10 @@ const CrmModulPage = () => {
       if (filters.company !== "all" && companyName !== filters.company) {
         return false;
       }
-      if (filters.leadSource !== "all" && row.leadSource !== filters.leadSource) {
+      if (
+        filters.partnerCompany !== "all" &&
+        (row.partnerCompanyName?.trim() ?? "") !== filters.partnerCompany
+      ) {
         return false;
       }
       if (
@@ -144,6 +143,14 @@ const CrmModulPage = () => {
   const kanbanOpportunities = useMemo(
     () => buildKanbanOpportunities(filteredRows),
     [filteredRows]
+  );
+  const listPageStats = useMemo(
+    () => buildCrmListPageStats(filteredRows, crmData),
+    [filteredRows, crmData]
+  );
+  const isFiltered = useMemo(
+    () => filteredRows.length !== crmData.length,
+    [filteredRows.length, crmData.length]
   );
   const kanbanCustomerOptions = useMemo(
     () =>
@@ -203,9 +210,14 @@ const CrmModulPage = () => {
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="mt-2 mx-1">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-linear-to-r from-slate-50 to-white">
+      <div className={cn("mt-2 mx-1", isKanbanView && "h-[calc(100dvh-5.5rem)]")}>
+        <div
+          className={cn(
+            "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden",
+            isKanbanView && "h-full flex flex-col"
+          )}
+        >
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-linear-to-r from-slate-50 to-white shrink-0">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-lg bg-indigo-600 flex items-center justify-center shadow-sm shrink-0">
                 <Handshake className="size-5 text-white" />
@@ -230,13 +242,23 @@ const CrmModulPage = () => {
             </Button>
           </div>
 
-          <CrmModulFilters
-            values={filters}
-            options={filterOptions}
-            onChange={setFilters}
+          <div className="shrink-0">
+            <CrmModulFilters
+              values={filters}
+              options={filterOptions}
+              onChange={setFilters}
+            />
+          </div>
+
+          <CrmModulListStatsBar
+            stats={listPageStats}
+            isFiltered={isFiltered}
+            exchangeRates={exchangeRates}
+            exchangeRatesLoading={exchangeRatesLoading}
+            onOpenCustomer={(customerId) => navigate(`/crmModul/detail/${customerId}`)}
           />
 
-          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-3 shrink-0">
             <p className="text-sm text-slate-500">
               <span className="font-semibold text-slate-700">{listCount}</span>{" "}
               {isFlatListView ? "fırsat" : isKanbanView ? "fırsat paketi" : "kayıt"} listeleniyor

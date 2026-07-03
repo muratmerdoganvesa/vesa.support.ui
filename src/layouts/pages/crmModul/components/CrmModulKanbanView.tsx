@@ -36,8 +36,8 @@ export const CrmModulKanbanView = ({
       : opportunities;
 
   return (
-    <div className="border-t border-slate-100">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 bg-slate-50/60 border-b border-slate-100">
+    <div className="flex flex-col flex-1 min-h-0 border-t border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-2.5 bg-slate-50/60 border-b border-slate-100 shrink-0">
         <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm">
           <button
             type="button"
@@ -90,7 +90,7 @@ export const CrmModulKanbanView = ({
       </div>
 
       {scope === "customer" && !selectedCustomerId ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+        <div className="flex flex-1 flex-col items-center justify-center text-center px-4 min-h-0">
           <Building2 className="size-8 text-slate-300 mb-3" />
           <p className="text-base font-medium text-slate-600">Müşteri seçin</p>
           <p className="text-sm text-slate-400 mt-1">
@@ -98,10 +98,11 @@ export const CrmModulKanbanView = ({
           </p>
         </div>
       ) : (
-        <div className="p-4">
+        <div className="flex-1 min-h-0 p-3 overflow-hidden">
           <CrmOpportunityKanbanBoard
             opportunities={visibleOpportunities}
             showCompany={scope === "all"}
+            layout="fill"
             onOpenCard={(card) => onOpenOpportunity(card.crmModulId)}
           />
         </div>
