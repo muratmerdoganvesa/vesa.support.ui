@@ -42,12 +42,14 @@ export const CrmDetailPipelineKanban = ({
           {kanbanCards.length} paket
         </span>
       </div>
-      <div className="p-3">
+      <div className="px-2 pb-2 pt-1 h-[210px]">
         <CrmOpportunityKanbanBoard
           opportunities={kanbanCards}
           selectedCardId={expandedKey}
+          layout="fill"
           density="compact"
           showColumnTotals={false}
+          className="h-full"
           onOpenCard={(card) => {
             onExpandedKeyChange(card.id);
             const el = document.getElementById(`opp-card-${card.id}`);

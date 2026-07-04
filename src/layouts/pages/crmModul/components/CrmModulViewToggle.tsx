@@ -1,4 +1,4 @@
-import { Columns3, LayoutGrid, List, ListTree } from "lucide-react";
+import { Columns3, BarChart3, List, ListTree, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { CrmModulListViewMode } from "../constants";
 
@@ -14,8 +14,9 @@ const VIEW_OPTIONS: {
 }[] = [
   { value: "table", label: "Fırsat Görünümü", icon: List },
   { value: "tree", label: "Müşteri Fırsat Listesi", icon: ListTree },
-  { value: "grid", label: "Müşteri Kartları", icon: LayoutGrid },
   { value: "kanban", label: "Pipeline Kanban", icon: Columns3 },
+  { value: "grid", label: "Müşteri Kartları", icon: Users },
+  { value: "chart", label: "Grafik", icon: BarChart3 },
 ];
 
 export const CrmModulViewToggle = ({ value, onChange }: CrmModulViewToggleProps) => (

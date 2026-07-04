@@ -2,27 +2,30 @@ import { ListModuleDto } from "api/generated";
 import { Badge } from "components/ui/badge";
 import { Button } from "components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "components/ui/collapsible";
+import { Input } from "components/ui/input";
+import { Label } from "components/ui/label";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { cn } from "lib/utils";
 import {
-  getCurrencySymbol,
   getOpportunityStageBadgeClass,
   getOpportunityStageLabel,
   getOpportunityStageProbability,
 } from "../constants";
 import {
   emptyCrmKalemFormValues,
-  formatEstimatedValueDisplay,
   type CrmKalemFormValues,
   type CrmOpportunityFormValues,
 } from "../formMappers";
 import type { TcmbExchangeRates } from "../tcmbExchangeRates";
+import { convertCurrencyTotalsToEur, formatEurRounded } from "../tcmbExchangeRates";
 import {
   calculateOpportunityTotals,
+  formatNonZeroCurrencyTotals,
   formatOpportunityCreatedLabel,
   getOpportunityDisplayTitle,
+  hasOpportunityAmount,
 } from "../utils";
 import { CurrencyEuroConversion } from "./CurrencyEuroConversion";
 import { CrmKalemGrid } from "./CrmKalemGrid";
@@ -166,27 +169,38 @@ export const CrmOpportunityCard = ({
               {stageLabel}
             </Badge>
 
-            <div className={cn("shrink-0 text-right", isOpen ? "min-w-[72px]" : "min-w-[56px]")}>
-              {totals.primaryAmount > 0 ? (
+            <div className={cn("shrink-0 text-right", isOpen ? "min-w-[88px]" : "min-w-[56px]")}>
+              {hasOpportunityAmount(totals) ? (
                 <>
                   <p
                     className={cn(
-                      "font-bold text-slate-900 tabular-nums leading-none",
-                      isOpen ? "text-base" : "text-sm"
+                      "font-bold text-slate-900 tabular-nums leading-tight",
+                      isOpen
+                        ? totals.hasMultipleCurrencies
+                          ? "text-xs"
+                          : "text-base leading-none"
+                        : totals.hasMultipleCurrencies
+                          ? "text-[10px]"
+                          : "text-sm leading-none"
                     )}
                   >
-                    {formatEstimatedValueDisplay(
-                      String(totals.primaryAmount),
-                      getCurrencySymbol(totals.primaryCurrency)
-                    )}
+                    {formatNonZeroCurrencyTotals(totals.currencyTotals)}
                   </p>
-                  {isOpen && (
-                    <CurrencyEuroConversion
-                      amount={totals.primaryAmount}
-                      currencyType={totals.primaryCurrency}
-                      rates={exchangeRates}
-                      className="text-[10px]"
-                    />
+                  {isOpen && exchangeRates && (
+                    totals.hasMultipleCurrencies ? (
+                      <p className="text-[10px] font-semibold text-teal-800 tabular-nums mt-0.5">
+                        {formatEurRounded(
+                          convertCurrencyTotalsToEur(totals.currencyTotals, exchangeRates)
+                        )}
+                      </p>
+                    ) : (
+                      <CurrencyEuroConversion
+                        amount={totals.primaryAmount}
+                        currencyType={totals.primaryCurrency}
+                        rates={exchangeRates}
+                        className="text-[10px]"
+                      />
+                    )
                   )}
                 </>
               ) : (
@@ -198,6 +212,22 @@ export const CrmOpportunityCard = ({
 
         <CollapsibleContent>
           <div className="border-t border-slate-100">
+            <div className="px-3 py-2 border-b border-slate-100 bg-white">
+              <Label htmlFor={`opp-name-${opportunity.clientKey}`} className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
+                Fırsat Adı
+              </Label>
+              <Input
+                id={`opp-name-${opportunity.clientKey}`}
+                value={opportunity.name}
+                onChange={(e) => onChange({ ...opportunity, name: e.target.value })}
+                onBlur={(e) =>
+                  onChange({ ...opportunity, name: e.target.value }, { autoSave: true })
+                }
+                placeholder="Örn. EC Lisans Paketi, 2026 Yenileme..."
+                className="mt-1 h-9 bg-slate-50/50 border-slate-200"
+              />
+            </div>
+
             <div className="flex items-center gap-2 px-3 py-1.5 border-b border-slate-100 bg-slate-50/60 flex-wrap">
               <div className="flex-1 min-w-[200px]">
                 <CrmPipelineStageBar

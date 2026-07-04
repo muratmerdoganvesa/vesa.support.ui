@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "lib/utils";
 import { CrmModulFilters, DEFAULT_CRM_MODUL_FILTERS } from "./components/CrmModulFilters";
-import { CrmModulListStatsBar } from "./components/CrmModulListStatsBar";
+import { CrmModulChartsView } from "./components/CrmModulChartsView";
 import { CrmModulKanbanView } from "./components/CrmModulKanbanView";
 import { CrmModulGridView } from "./components/CrmModulGridView";
 import { CrmModulTable } from "./components/CrmModulTable";
@@ -22,15 +22,14 @@ import {
   CrmKanbanScope,
   CrmModulListViewMode,
   DEFAULT_CRM_MODUL_VIEW_MODE,
-  GRID_ITEMS_PER_PAGE,
   ROWS_PER_PAGE,
 } from "./constants";
-import { buildCrmModulFilterOptions, buildCrmListPageStats, buildKanbanOpportunities, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
+import { buildCrmChartStats, buildCrmModulFilterOptions, buildKanbanOpportunities, flattenCrmSubItems, isDateInRange, resolveCompanyName } from "./utils";
 import { useTcmbExchangeRates } from "./hooks/useTcmbExchangeRates";
 
 const readStoredViewMode = (): CrmModulListViewMode => {
   const stored = localStorage.getItem(CRM_MODUL_VIEW_MODE_STORAGE_KEY);
-  if (stored === "table" || stored === "tree" || stored === "grid" || stored === "kanban") {
+  if (stored === "table" || stored === "chart" || stored === "tree" || stored === "grid" || stored === "kanban") {
     return stored;
   }
   return DEFAULT_CRM_MODUL_VIEW_MODE;
@@ -80,7 +79,7 @@ const CrmModulPage = () => {
     localStorage.setItem(CRM_MODUL_VIEW_MODE_STORAGE_KEY, mode);
   };
 
-  const pageSize = viewMode === "grid" ? GRID_ITEMS_PER_PAGE : ROWS_PER_PAGE;
+  const pageSize = ROWS_PER_PAGE;
 
   const filterOptions = useMemo(() => buildCrmModulFilterOptions(crmData), [crmData]);
 
@@ -106,8 +105,8 @@ const CrmModulPage = () => {
         return false;
       }
       if (
-        filters.contactPerson !== "all" &&
-        (row.contactPerson?.trim() ?? "") !== filters.contactPerson
+        filters.typeCode !== "all" &&
+        !(row.crmSubItems ?? []).some((item) => item.typeCode === filters.typeCode)
       ) {
         return false;
       }
@@ -144,14 +143,7 @@ const CrmModulPage = () => {
     () => buildKanbanOpportunities(filteredRows),
     [filteredRows]
   );
-  const listPageStats = useMemo(
-    () => buildCrmListPageStats(filteredRows, crmData),
-    [filteredRows, crmData]
-  );
-  const isFiltered = useMemo(
-    () => filteredRows.length !== crmData.length,
-    [filteredRows.length, crmData.length]
-  );
+  const chartStats = useMemo(() => buildCrmChartStats(filteredRows), [filteredRows]);
   const kanbanCustomerOptions = useMemo(
     () =>
       filteredRows
@@ -168,9 +160,13 @@ const CrmModulPage = () => {
   }, [filters.company, kanbanCustomerOptions]);
 
   const isFlatListView = viewMode === "table";
+  const isChartView = viewMode === "chart";
   const isKanbanView = viewMode === "kanban";
+  const isCustomerListView = viewMode === "grid";
   const listCount = isFlatListView
     ? flatSubItems.length
+    : isChartView
+      ? chartStats.customerCount
     : isKanbanView
       ? kanbanOpportunities.length
       : filteredRows.length;
@@ -250,23 +246,30 @@ const CrmModulPage = () => {
             />
           </div>
 
-          <CrmModulListStatsBar
-            stats={listPageStats}
-            isFiltered={isFiltered}
-            exchangeRates={exchangeRates}
-            exchangeRatesLoading={exchangeRatesLoading}
-            onOpenCustomer={(customerId) => navigate(`/crmModul/detail/${customerId}`)}
-          />
-
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-6 py-3 shrink-0">
             <p className="text-sm text-slate-500">
               <span className="font-semibold text-slate-700">{listCount}</span>{" "}
-              {isFlatListView ? "fırsat" : isKanbanView ? "fırsat paketi" : "kayıt"} listeleniyor
+              {isFlatListView
+                ? "fırsat"
+                : isChartView
+                  ? "müşteri · grafik özeti"
+                  : isKanbanView
+                    ? "fırsat paketi"
+                    : isCustomerListView
+                      ? "müşteri"
+                      : "kayıt"}{" "}
+              listeleniyor
             </p>
             <CrmModulViewToggle value={viewMode} onChange={handleViewModeChange} />
           </div>
 
-          {viewMode === "kanban" ? (
+          {viewMode === "chart" ? (
+            <CrmModulChartsView
+              stats={chartStats}
+              exchangeRates={exchangeRates}
+              exchangeRatesLoading={exchangeRatesLoading}
+            />
+          ) : viewMode === "kanban" ? (
             <CrmModulKanbanView
               opportunities={kanbanOpportunities}
               scope={kanbanScope}
