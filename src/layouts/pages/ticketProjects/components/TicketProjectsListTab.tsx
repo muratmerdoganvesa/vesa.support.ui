@@ -15,6 +15,8 @@ import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeH
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Badge } from "components/ui/badge";
+import { Checkbox } from "components/ui/checkbox";
+import { Label } from "components/ui/label";
 import {
   Table,
   TableBody,
@@ -57,8 +59,11 @@ const TicketProjectsListTab = () => {
   const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [showInactive, setShowInactive] = useState(false);
 
   const filtered = projectsData.filter((row) => {
+    if (!showInactive && !row.isActive) return false;
+
     const q = search.toLowerCase();
     return (
       row.name?.toLowerCase().includes(q) ||
@@ -72,6 +77,11 @@ const TicketProjectsListTab = () => {
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
+    setPage(1);
+  };
+
+  const handleShowInactiveChange = (checked: boolean) => {
+    setShowInactive(checked);
     setPage(1);
   };
 
@@ -225,6 +235,20 @@ const TicketProjectsListTab = () => {
               className="w-64 pl-8"
             />
           </div>
+        </div>
+
+        <div className="flex h-8 items-center gap-2">
+          <Checkbox
+            id="show-inactive-projects"
+            checked={showInactive}
+            onCheckedChange={(checked) => handleShowInactiveChange(checked === true)}
+          />
+          <Label
+            htmlFor="show-inactive-projects"
+            className="cursor-pointer text-sm font-medium text-foreground select-none"
+          >
+            Pasifleri göster
+          </Label>
         </div>
       </div>
 
