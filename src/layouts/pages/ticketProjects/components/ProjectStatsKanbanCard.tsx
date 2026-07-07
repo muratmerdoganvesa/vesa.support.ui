@@ -1,5 +1,4 @@
 import { memo, type KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
 import { Building2, CalendarClock } from "lucide-react";
 import { cn } from "lib/utils";
 import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
@@ -50,7 +49,6 @@ const ProjectStatsKanbanCard = ({
   cardBorderClass,
   highlightPersonIds,
 }: ProjectStatsKanbanCardProps) => {
-  const navigate = useNavigate();
   const displayName = buildDisplayName(item);
   const statusLabel =
     item.kind === "project" ? "Seçilmedi" : getProjectStatusLabel(item.projectStatus);
@@ -59,16 +57,16 @@ const ProjectStatsKanbanCard = ({
 
   const handleCardClick = () => {
     if (!canNavigateToGantt) return;
-    navigate(
-      `/projectmanagement/chart?cid=${encodeURIComponent(item.workCompanyId as string)}&pid=${encodeURIComponent(item.projectId)}`,
-      {
-        state: {
-          workCompanyName: item.customerName,
-          projectName: item.projectDescription,
-          projectSubName: item.projectSubDescription,
-        },
-      },
-    );
+
+    const params = new URLSearchParams({
+      cid: item.workCompanyId as string,
+      pid: item.projectId,
+    });
+    if (item.customerName) params.set("wcn", item.customerName);
+    if (item.projectDescription) params.set("pn", item.projectDescription);
+    if (item.projectSubDescription) params.set("psn", item.projectSubDescription);
+
+    window.open(`/projectmanagement/chart?${params.toString()}`, "_blank", "noopener,noreferrer");
   };
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -93,7 +91,7 @@ const ProjectStatsKanbanCard = ({
       )}
       aria-label={
         canNavigateToGantt
-          ? `${displayName} kartı, gantt chart tablosunu açmak için tıklayın`
+          ? `${displayName} kartı, gantt chart tablosunu yeni sekmede açmak için tıklayın`
           : `${displayName} kartı`
       }
     >

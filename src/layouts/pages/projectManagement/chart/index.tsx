@@ -656,12 +656,15 @@ function ProjectChart() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Kritik ID'ler URL'de, display bilgileri state'te (F5 sonrası da çalışır)
+  // Kritik ID'ler URL'de, display bilgileri state'te (F5 sonrası da çalışır);
+  // yeni sekmede açılan linkler state taşımadığından wcn/pn/psn query param'ları fallback olarak kullanılır.
   const workCompanyId = searchParams.get("cid");
   const projectId = searchParams.get("pid");
-  const workCompanyName: string = location.state?.workCompanyName ?? "";
-  const projectName: string = location.state?.projectName ?? "";
-  const projectSubName: string | undefined = location.state?.projectSubName;
+  const workCompanyName: string =
+    location.state?.workCompanyName ?? searchParams.get("wcn") ?? "";
+  const projectName: string = location.state?.projectName ?? searchParams.get("pn") ?? "";
+  const projectSubName: string | undefined =
+    location.state?.projectSubName ?? searchParams.get("psn") ?? undefined;
   const [pdfSettings, setPdfSettings] = useState({
     fileName: ``,
     pageSize: "A0",
