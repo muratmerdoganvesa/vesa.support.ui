@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Pencil, Trash2, Building2, Search,
   ChevronLeft, ChevronRight, ChevronDown, X, Download,
@@ -50,7 +49,6 @@ const formatDate = (dateStr: string | null | undefined): string => {
 const TicketProjectsListTab = () => {
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
-  const navigate = useNavigate();
 
   const [isQuestionMessageBoxOpen, setIsQuestionMessageBoxOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string>("");
@@ -329,7 +327,13 @@ const TicketProjectsListTab = () => {
                       <button
                         type="button"
                         aria-label="Düzenle"
-                        onClick={() => navigate(`/ticketProjects/detail/${row.id}`)}
+                        onClick={() =>
+                          window.open(
+                            `/ticketProjects/detail/${row.id}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
                         className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <Pencil className="size-4" />
