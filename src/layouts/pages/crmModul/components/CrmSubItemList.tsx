@@ -57,7 +57,7 @@ export const CrmSubItemList = ({
       <div className="rounded-lg border border-dashed border-slate-200 bg-white py-10 text-center">
         <p className="text-sm text-slate-500">Henüz modül eklenmedi.</p>
         <p className="text-xs text-slate-400 mt-1">
-          SuccessFactors modülü, fiyat ve diğer detaylar için modül ekleyin.
+          Çözüm modülü, fiyat ve diğer detaylar için kalem ekleyin.
         </p>
       </div>
     ) : (

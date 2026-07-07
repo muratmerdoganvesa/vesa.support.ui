@@ -115,12 +115,12 @@ export const CrmSubItemFormFields = ({
 
   return (
     <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
-      <Field label="SuccessFactors Modülü" className="sm:col-span-2 lg:col-span-3">
-        <ModuleMultiSelect
-          options={modules}
-          value={values.solutionModuleIds}
-          onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
-          placeholder="SuccessFactors modülü seçin..."
+      <Field label="Çözüm Modülü" className="sm:col-span-2 lg:col-span-3">
+          <ModuleMultiSelect
+            options={modules}
+            value={values.solutionModuleIds}
+            onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
+            placeholder="Modül seçin..."
         />
       </Field>
 

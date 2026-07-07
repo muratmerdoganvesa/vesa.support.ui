@@ -1,6 +1,7 @@
 import { ListModuleDto } from "api/generated";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "lib/utils";
 
 type ModuleMultiSelectProps = {
@@ -13,6 +14,10 @@ type ModuleMultiSelectProps = {
   single?: boolean;
 };
 
+const PANEL_MIN_WIDTH = 280;
+const PANEL_MAX_HEIGHT = 320;
+const PANEL_GAP = 6;
+
 export const ModuleMultiSelect = ({
   options,
   value,
@@ -23,33 +28,87 @@ export const ModuleMultiSelect = ({
 }: ModuleMultiSelectProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const updatePanelPosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.max(rect.width, PANEL_MIN_WIDTH);
+    const left = Math.min(rect.left, window.innerWidth - width - 8);
+    const spaceBelow = window.innerHeight - rect.bottom - PANEL_GAP;
+    const spaceAbove = rect.top - PANEL_GAP;
+    const shouldOpenUpward = spaceBelow < 220 && spaceAbove > spaceBelow;
+
+    setPanelStyle({
+      position: "fixed",
+      left: Math.max(8, left),
+      width,
+      zIndex: 1400,
+      ...(shouldOpenUpward
+        ? { bottom: window.innerHeight - rect.top + PANEL_GAP }
+        : { top: rect.bottom + PANEL_GAP }),
+    });
+  }, []);
 
   useEffect(() => {
+    if (!open) return;
+
+    updatePanelPosition();
+    const frame = requestAnimationFrame(() => searchRef.current?.focus());
+
+    const handleReposition = () => updatePanelPosition();
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [open, updatePanelPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+
     const handleOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
+      setSearch("");
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
         setOpen(false);
         setSearch("");
       }
     };
+
     document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, []);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
 
   const optionMap = useMemo(
     () => new Map(options.filter((o) => o.id).map((o) => [o.id as string, o])),
     [options]
   );
 
-  const selectedModules = useMemo(
-    () => {
-      const ids = single ? value.slice(0, 1) : value;
-      return ids
-        .map((id) => optionMap.get(id))
-        .filter((module): module is ListModuleDto => Boolean(module));
-    },
-    [value, optionMap, single]
-  );
+  const selectedModules = useMemo(() => {
+    const ids = single ? value.slice(0, 1) : value;
+    return ids
+      .map((id) => optionMap.get(id))
+      .filter((module): module is ListModuleDto => Boolean(module));
+  }, [value, optionMap, single]);
 
   const filteredOptions = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -80,20 +139,100 @@ export const ModuleMultiSelect = ({
     onChange(value.filter((id) => id !== moduleId));
   };
 
+  const listMaxHeight = Math.min(PANEL_MAX_HEIGHT - 52, window.innerHeight * 0.42);
+
+  const dropdownPanel =
+    open &&
+    createPortal(
+      <div
+        ref={panelRef}
+        style={panelStyle}
+        className="rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-100"
+        role="listbox"
+        aria-multiselectable={!single}
+      >
+        <div className="p-2 border-b border-slate-100 bg-slate-50/80">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400 pointer-events-none" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Modül ara..."
+              className="w-full h-9 pl-8 pr-3 text-sm border border-slate-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
+              aria-label="Modül ara"
+            />
+          </div>
+        </div>
+
+        <ul
+          className="overflow-y-auto py-1 overscroll-contain"
+          style={{ maxHeight: Math.max(listMaxHeight, 120) }}
+        >
+          {filteredOptions.length === 0 ? (
+            <li className="px-3 py-3 text-sm text-slate-400 text-center">Sonuç bulunamadı.</li>
+          ) : (
+            filteredOptions.map((option) => {
+              const optionId = option.id ?? "";
+              const isSelected = single ? value[0] === optionId : value.includes(optionId);
+              return (
+                <li key={optionId}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => handleToggle(optionId)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-left hover:bg-indigo-50/50 transition-colors",
+                      isSelected && "bg-indigo-50/80"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "size-4 flex items-center justify-center shrink-0",
+                        single ? "rounded-full border-2" : "rounded border",
+                        isSelected
+                          ? single
+                            ? "border-indigo-600"
+                            : "bg-indigo-600 border-indigo-600 text-white"
+                          : "border-slate-300 bg-white"
+                      )}
+                    >
+                      {isSelected &&
+                        (single ? (
+                          <span className="size-2 rounded-full bg-indigo-600" />
+                        ) : (
+                          <Check className="size-3" />
+                        ))}
+                    </span>
+                    <span className="truncate">{option.name}</span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      </div>,
+      document.body
+    );
+
   return (
-    <div ref={ref} className="relative w-full">
+    <div className="relative w-full">
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setOpen((prev) => !prev)}
         className={cn(
           "w-full min-h-10 flex flex-wrap items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-md bg-white text-left text-sm",
           "focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all",
+          open && "ring-2 ring-indigo-100 border-indigo-400",
           disabled && "opacity-60 cursor-not-allowed"
         )}
         aria-expanded={open}
         aria-haspopup="listbox"
-        aria-label="SuccessFactors modülü seçin"
+        aria-label="Çözüm modülü seçin"
       >
         {selectedModules.length === 0 ? (
           <span className="text-muted-foreground">{placeholder}</span>
@@ -141,74 +280,7 @@ export const ModuleMultiSelect = ({
         />
       </button>
 
-      {open && (
-        <div
-          className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden"
-          role="listbox"
-          aria-multiselectable={!single}
-        >
-          <div className="p-2 border-b border-slate-100">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400 pointer-events-none" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Modül ara..."
-                className="w-full h-9 pl-8 pr-3 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
-                aria-label="Modül ara"
-              />
-            </div>
-          </div>
-
-          <ul className="max-h-56 overflow-y-auto py-1">
-            {filteredOptions.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-slate-400">Sonuç bulunamadı.</li>
-            ) : (
-              filteredOptions.map((option) => {
-                const optionId = option.id ?? "";
-                const isSelected = single
-                  ? value[0] === optionId
-                  : value.includes(optionId);
-                return (
-                  <li key={optionId}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleToggle(optionId)}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50 transition-colors",
-                        isSelected && "bg-indigo-50/60"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "size-4 flex items-center justify-center shrink-0",
-                          single ? "rounded-full border-2" : "rounded border",
-                          isSelected
-                            ? single
-                              ? "border-indigo-600"
-                              : "bg-indigo-600 border-indigo-600 text-white"
-                            : "border-slate-300 bg-white"
-                        )}
-                      >
-                        {isSelected &&
-                          (single ? (
-                            <span className="size-2 rounded-full bg-indigo-600" />
-                          ) : (
-                            <Check className="size-3" />
-                          ))}
-                      </span>
-                      <span className="truncate">{option.name}</span>
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-        </div>
-      )}
+      {dropdownPanel}
     </div>
   );
 };

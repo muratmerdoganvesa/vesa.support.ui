@@ -3,7 +3,7 @@ import { CrmModulsApi } from "api/generated/crmModulsApi";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import { useAlert } from "layouts/pages/hooks/useAlert";
+import { useAlert, AppAlertType } from "layouts/pages/hooks/useAlert";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import axios from "axios";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -25,6 +25,7 @@ import {
   crmModulDtoToFormValues,
   resolveOpportunitiesFromCrmModulDto,
   emptyCrmModulFormValues,
+  mergeOpportunitiesWithServer,
   toCreateDto,
   toUpdateDto,
   validateCrmModulEmail,
@@ -54,8 +55,11 @@ const CrmModulDetailPage = () => {
   const [aiRaporOpen, setAiRaporOpen] = useState(false);
   const [aiRaporData, setAiRaporData] = useState<CrmAiRaporData | null>(null);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const autoSaveLockRef = useRef(false);
   const pendingExpandedKeyRef = useRef<string | null>(null);
+  const opportunitiesRef = useRef(opportunities);
+  opportunitiesRef.current = opportunities;
   const { rates: exchangeRates, loading: exchangeRatesLoading } = useTcmbExchangeRates();
 
   const resolveExpandedKey = useCallback(
@@ -74,26 +78,42 @@ const CrmModulDetailPage = () => {
   );
 
   const applyServerData = useCallback(
-    (data: CrmModulDto, activeModules: ListModuleDto[]) => {
+    (
+      data: CrmModulDto,
+      activeModules: ListModuleDto[],
+      previousOpportunities?: CrmOpportunityFormValues[]
+    ) => {
       setModules(mergeActiveModulesWithSelected(activeModules, data));
       const loadedOpportunities = resolveOpportunitiesFromCrmModulDto(data);
+      const mergedOpportunities =
+        previousOpportunities && previousOpportunities.length > 0
+          ? mergeOpportunitiesWithServer(previousOpportunities, loadedOpportunities)
+          : loadedOpportunities;
       setModulValues(crmModulDtoToFormValues(data));
-      setOpportunities(loadedOpportunities);
+      setOpportunities(mergedOpportunities);
       setUniqNumber(data.uniqNumber);
       setUpdatedDate(data.updatedDate ?? null);
       setUpdatedBy(data.updatedBy ?? null);
-      return loadedOpportunities;
+      return mergedOpportunities;
     },
     []
   );
 
   const syncFromServer = useCallback(
-    async (crmModulId: string, preserveKey?: string | null) => {
+    async (
+      crmModulId: string,
+      preserveKey?: string | null,
+      previousOpportunities?: CrmOpportunityFormValues[]
+    ) => {
       const conf = getConfiguration();
       const crmApi = new CrmModulsApi(conf);
       const response = await crmApi.apiCrmModulsIdGet(crmModulId);
       const data = response.data;
-      const loadedOpportunities = applyServerData(data, modules);
+      const loadedOpportunities = applyServerData(
+        data,
+        modules,
+        previousOpportunities
+      );
       setExpandedKey((current) => resolveExpandedKey(loadedOpportunities, preserveKey ?? current));
     },
     [applyServerData, modules, resolveExpandedKey]
@@ -131,8 +151,12 @@ const CrmModulDetailPage = () => {
 
         if (id) {
           await api.apiCrmModulsIdPut(id, toUpdateDto(nextModul, nextOpportunities));
-          await syncFromServer(id);
-          dispatchAlert({ message: "Değişiklikler kaydedildi.", type: "success" });
+          await syncFromServer(id, undefined, nextOpportunities);
+          dispatchAlert({
+            type: AppAlertType.Success,
+            title: "Kaydedildi",
+            message: "Değişiklikler otomatik olarak kaydedildi.",
+          });
           return;
         }
 
@@ -143,7 +167,11 @@ const CrmModulDetailPage = () => {
         }
 
         navigate(`/crmModul/${newId}`, { replace: true });
-        dispatchAlert({ message: "Kayıt oluşturuldu.", type: "success" });
+        dispatchAlert({
+          type: AppAlertType.Success,
+          title: "Kayıt oluşturuldu",
+          message: "Yeni müşteri kaydı başarıyla oluşturuldu.",
+        });
       } catch {
         dispatchAlert({ message: "Otomatik kayıt sırasında hata oluştu.", type: "error" });
       } finally {
@@ -242,10 +270,10 @@ const CrmModulDetailPage = () => {
       return;
     }
 
-    const oppError = validateOpportunities(opportunities);
+    const oppError = validateOpportunities(opportunitiesRef.current);
     if (oppError) {
       dispatchAlert({ message: oppError, type: "error" });
-      const invalidOpp = opportunities.find((opp) =>
+      const invalidOpp = opportunitiesRef.current.find((opp) =>
         opp.kalems.some((k) => validateOpportunities([{ ...opp, kalems: [k] }]))
       );
       if (invalidOpp) {
@@ -255,22 +283,38 @@ const CrmModulDetailPage = () => {
     }
 
     try {
-      dispatchBusy({ isBusy: true });
+      setIsSaving(true);
       const api = new CrmModulsApi(getConfiguration());
 
       if (id) {
-        await api.apiCrmModulsIdPut(id, toUpdateDto(modulValues, opportunities));
-        dispatchAlert({ message: "CRM kaydı başarıyla güncellendi.", type: "success" });
-      } else {
-        await api.apiCrmModulsPost(toCreateDto(modulValues, opportunities));
-        dispatchAlert({ message: "CRM kaydı başarıyla oluşturuldu.", type: "success" });
+        await api.apiCrmModulsIdPut(id, toUpdateDto(modulValues, opportunitiesRef.current));
+        await syncFromServer(id, expandedKey, opportunitiesRef.current);
+        const companyLabel = modulValues.companyName.trim() || "Müşteri kaydı";
+        dispatchAlert({
+          type: AppAlertType.Success,
+          title: "Kaydedildi",
+          message: `${companyLabel} güncellendi.`,
+        });
+        return;
       }
 
-      navigate("/crmModul");
+      const response = await api.apiCrmModulsPost(toCreateDto(modulValues, opportunitiesRef.current));
+      const newId = response.data?.id;
+      if (!newId) {
+        throw new Error("CRM kaydı oluşturulamadı.");
+      }
+
+      pendingExpandedKeyRef.current = expandedKey;
+      navigate(`/crmModul/${newId}`, { replace: true });
+      dispatchAlert({
+        type: AppAlertType.Success,
+        title: "Kayıt oluşturuldu",
+        message: `${modulValues.companyName.trim() || "Müşteri"} kaydı oluşturuldu.`,
+      });
     } catch {
       dispatchAlert({ message: "İşlem sırasında hata oluştu.", type: "error" });
     } finally {
-      dispatchBusy({ isBusy: false });
+      setIsSaving(false);
     }
   };
 
@@ -359,16 +403,14 @@ const CrmModulDetailPage = () => {
             <div className="space-y-3 mb-3">
               <CrmDetailSummary
                 modulValues={modulValues}
-                opportunities={opportunities}
                 uniqNumber={uniqNumber}
                 isEditMode={isEditMode}
                 canSave={canSave}
                 canAiRapor={canAiRapor}
                 isAiRaporLoading={isAiRaporLoading}
+                isSaving={isSaving}
                 updatedDate={updatedDate}
                 updatedBy={updatedBy}
-                exchangeRates={exchangeRates}
-                exchangeRatesLoading={exchangeRatesLoading}
                 onBack={() => navigate("/crmModul")}
                 onSave={handleSave}
                 onAiRapor={handleAiRapor}
@@ -410,7 +452,7 @@ const CrmModulDetailPage = () => {
             canSave={canSave}
             companyNameMissing={companyNameMissing}
             opportunityCount={opportunities.length}
-            isAutoSaving={isAutoSaving}
+            isAutoSaving={isAutoSaving || isSaving}
             onBack={() => navigate("/crmModul")}
             onSave={handleSave}
           />

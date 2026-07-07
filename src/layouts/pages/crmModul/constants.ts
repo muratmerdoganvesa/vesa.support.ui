@@ -73,7 +73,7 @@ export const getTypeCodeLabel = (typeCode?: TypeCodes | null): string => {
 export const ROWS_PER_PAGE = 15;
 export const GRID_ITEMS_PER_PAGE = 12;
 
-export type CrmModulListViewMode = "table" | "tree" | "grid" | "kanban";
+export type CrmModulListViewMode = "table" | "chart" | "tree" | "grid" | "kanban";
 
 export const DEFAULT_CRM_MODUL_VIEW_MODE: CrmModulListViewMode = "table";
 export const CRM_MODUL_VIEW_MODE_STORAGE_KEY = "crm-modul-list-view-mode-v2";

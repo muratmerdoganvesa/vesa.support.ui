@@ -10,7 +10,7 @@ import {
 } from "../constants";
 import { formatEstimatedValueDisplay } from "../formMappers";
 import type { CrmKanbanOpportunity } from "../utils";
-import { formatDateTr, getCompanyInitials } from "../utils";
+import { formatDateTr, formatNonZeroCurrencyTotals, getCompanyInitials, hasOpportunityAmount } from "../utils";
 
 const COLUMN_STYLES: Record<OpportunityStage, { header: string; dot: string }> = {
   [OpportunityStage.NUMBER_0]: {
@@ -64,11 +64,9 @@ const KanbanCard = ({
   compact?: boolean;
   onOpen: () => void;
 }) => {
-  const symbol = getCurrencySymbol(card.primaryCurrency);
-  const amountLabel =
-    card.primaryAmount > 0
-      ? formatEstimatedValueDisplay(String(card.primaryAmount), symbol)
-      : null;
+  const amountLabel = hasOpportunityAmount(card.currencyTotals)
+    ? formatNonZeroCurrencyTotals(card.currencyTotals)
+    : null;
   const closeLabel = card.expectedCloseDate ? formatDateTr(card.expectedCloseDate) : null;
 
   if (compact) {
@@ -134,11 +132,11 @@ const KanbanCard = ({
         )}
       </div>
       {amountLabel && (
-        <p className="mt-2 text-sm font-bold text-indigo-700 tabular-nums">
+        <p className={cn(
+          "mt-2 font-bold text-indigo-700 tabular-nums",
+          card.hasMultipleCurrencies ? "text-xs leading-snug" : "text-sm"
+        )}>
           {amountLabel}
-          {card.hasMultipleCurrencies && (
-            <span className="text-[10px] font-normal text-slate-400 ml-1">(çoklu PB)</span>
-          )}
         </p>
       )}
     </button>
@@ -151,6 +149,7 @@ export type CrmOpportunityKanbanBoardProps = {
   selectedCardId?: string | null;
   density?: "default" | "compact";
   layout?: "scroll" | "fill";
+  stageScale?: "default" | "large";
   maxHeightClass?: string;
   showColumnTotals?: boolean;
   className?: string;
@@ -163,6 +162,7 @@ export const CrmOpportunityKanbanBoard = ({
   selectedCardId = null,
   density = "default",
   layout = "scroll",
+  stageScale = "default",
   maxHeightClass,
   showColumnTotals = true,
   className,
@@ -170,15 +170,20 @@ export const CrmOpportunityKanbanBoard = ({
 }: CrmOpportunityKanbanBoardProps) => {
   const compact = density === "compact";
   const fill = layout === "fill";
+  const large = stageScale === "large" && !compact;
   const resolvedMaxHeight = fill
     ? "h-full max-h-full"
     : maxHeightClass ?? (compact ? "max-h-[168px]" : "max-h-[calc(100vh-320px)]");
   const columnWidth = fill
-    ? "flex-1 min-w-0 basis-0"
+    ? large
+      ? "flex-none w-[280px] min-w-[280px]"
+      : "flex-1 min-w-[200px] basis-0"
     : compact
       ? "w-[148px]"
-      : "w-[260px]";
-  const columnGap = compact ? "gap-2" : fill ? "gap-2" : "gap-3";
+      : large
+        ? "w-[300px]"
+        : "w-[260px]";
+  const columnGap = compact ? "gap-1.5" : large ? "gap-3" : fill ? "gap-1.5" : "gap-3";
   const byStage = KANBAN_PIPELINE_COLUMNS.reduce(
     (acc, stage) => {
       acc[stage] = opportunities.filter((o) => o.stage === stage);
@@ -196,8 +201,19 @@ export const CrmOpportunityKanbanBoard = ({
   ];
 
   return (
-    <div className={cn(fill ? "h-full min-h-0 overflow-hidden" : "overflow-x-auto", className)}>
-      <div className={cn("flex min-w-0", columnGap, fill ? "h-full items-stretch" : "min-w-max items-start")}>
+    <div
+      className={cn(
+        fill && large ? "h-full min-h-0 overflow-x-auto overflow-y-hidden" : fill ? "h-full min-h-0 overflow-hidden" : "overflow-x-auto",
+        className
+      )}
+    >
+      <div
+        className={cn(
+          "flex min-w-0",
+          columnGap,
+          fill && large ? "h-full min-w-max items-stretch" : fill ? "h-full items-stretch" : "min-w-max items-start"
+        )}
+      >
         {displayColumns.map((stage) => {
           const cards = byStage[stage] ?? [];
           const styles = COLUMN_STYLES[stage];
@@ -216,35 +232,49 @@ export const CrmOpportunityKanbanBoard = ({
               <div
                 className={cn(
                   "shrink-0 border-b rounded-t-lg",
-                  compact ? "px-2 py-1.5" : "px-3 py-2.5",
+                  compact ? "px-2 py-1.5" : large ? "px-4 py-3.5" : "px-3 py-2.5",
                   styles.header
                 )}
                 title={compact && probability > 0 ? `%${probability} olasılık` : undefined}
               >
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("rounded-full shrink-0", compact ? "size-1.5" : "size-2", styles.dot)} />
-                  <span className={cn("font-bold truncate", compact ? "text-[10px]" : "text-sm")}>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "rounded-full shrink-0",
+                      compact ? "size-1.5" : large ? "size-3" : "size-2",
+                      styles.dot
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "font-bold truncate min-w-0",
+                      compact ? "text-[10px]" : large ? "text-base" : "text-sm"
+                    )}
+                    title={getOpportunityStageLabel(stage)}
+                  >
                     {getOpportunityStageLabel(stage)}
                   </span>
                   <span
                     className={cn(
                       "ml-auto font-bold tabular-nums opacity-80",
-                      compact ? "text-[9px]" : "text-xs"
+                      compact ? "text-[9px]" : large ? "text-sm" : "text-xs"
                     )}
                   >
                     {cards.length}
                   </span>
                 </div>
                 {!compact && probability > 0 && (
-                  <p className="text-[10px] mt-0.5 opacity-70 pl-4">%{probability} olasılık</p>
+                  <p className={cn("mt-1 opacity-70 pl-5", large ? "text-xs" : "text-[10px]")}>
+                    %{probability} olasılık
+                  </p>
                 )}
               </div>
 
               <div
                 className={cn(
-                  "flex-1 min-h-0 overflow-y-auto space-y-1.5",
-                  compact ? "p-1.5" : "p-2 space-y-2",
-                  !fill && (compact ? "min-h-[52px]" : "min-h-[120px]")
+                  "flex-1 min-h-0 overflow-y-auto",
+                  compact ? "p-1.5 space-y-1.5" : large ? "p-3 space-y-2.5" : "p-2 space-y-2",
+                  !fill && (compact ? "min-h-[52px]" : large ? "min-h-[160px]" : "min-h-[120px]")
                 )}
               >
                 {cards.length === 0 ? (
@@ -278,7 +308,7 @@ export const CrmOpportunityKanbanBoard = ({
                 );
                 if (columnTotal <= 0 || currencies.size !== 1) return null;
                 return (
-                  <div className="shrink-0 px-3 py-2 border-t border-slate-200/80 text-xs text-slate-500 bg-white/60 rounded-b-xl">
+                  <div className={cn("shrink-0 border-t border-slate-200/80 text-slate-500 bg-white/60 rounded-b-xl", large ? "px-4 py-2.5 text-sm" : "px-3 py-2 text-xs")}>
                     Toplam:{" "}
                     <span className="font-semibold text-slate-700 tabular-nums">
                       {formatEstimatedValueDisplay(

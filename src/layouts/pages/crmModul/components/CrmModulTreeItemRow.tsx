@@ -2,7 +2,7 @@ import { CrmSubItemDto } from "api/generated";
 import { TableCell, TableRow } from "components/ui/table";
 import { CornerDownRight } from "lucide-react";
 import { cn } from "lib/utils";
-import { formatSolutionModuleNames } from "../utils";
+import { formatSolutionModuleNames, resolveSubItemDisplayTitle } from "../utils";
 import {
   formatSubItemTotal,
   PipelineStageBadge,
@@ -15,6 +15,7 @@ type CrmModulTreeItemRowProps = {
 
 export const CrmModulTreeItemRow = ({ item, isLast = false }: CrmModulTreeItemRowProps) => {
   const moduleName = formatSolutionModuleNames(item.solutionModuleNames);
+  const title = resolveSubItemDisplayTitle(item);
 
   return (
     <TableRow
@@ -29,7 +30,14 @@ export const CrmModulTreeItemRow = ({ item, isLast = false }: CrmModulTreeItemRo
       <TableCell className="px-4 py-2.5 pl-6">
         <div className="flex min-w-[100px] items-center gap-2">
           <CornerDownRight className="size-3.5 shrink-0 text-indigo-400" />
-          <span className="text-sm font-medium whitespace-nowrap text-slate-700">{moduleName}</span>
+          <span className="text-sm font-medium whitespace-nowrap text-slate-700" title={title}>
+            {title}
+          </span>
+          {moduleName !== "—" && title !== moduleName && (
+            <span className="text-xs text-slate-400 truncate max-w-[120px]" title={moduleName}>
+              ({moduleName})
+            </span>
+          )}
         </div>
       </TableCell>
       <TableCell className="px-4 py-2.5 text-center text-sm tabular-nums whitespace-nowrap text-slate-700">
