@@ -4,7 +4,6 @@ import {
   CrmModulDto,
   CrmSubItemDto,
   CurrencyType,
-  LeadSource,
   ListModuleDto,
   OpportunityStage,
   TypeCodes,
@@ -15,7 +14,7 @@ import {
   getOpportunityStageProbability,
   getTypeCodeLabel,
 } from "./constants";
-import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, type CrmSubItemFormValues } from "./formMappers";
+import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, resolveOpportunitiesFromCrmModulDto, type CrmKalemFormValues, type CrmOpportunityFormValues, type CrmSubItemFormValues } from "./formMappers";
 
 export type CrmModulListAggregates = {
   totalPersonCount: number;
@@ -86,17 +85,16 @@ export type CrmDetailStats = {
 
 const emptyCurrencyTotals = (): CurrencyTotals => ({ try: 0, usd: 0, eur: 0 });
 
-const parseItemEstimatedValue = (item: CrmSubItemFormValues): number => {
+const parseKalemEstimatedValue = (kalem: CrmKalemFormValues): number => {
   const calculated = calculateEstimatedDiscountedValueString(
-    item.unitPrice,
-    item.personCount,
-    item.discount
+    kalem.unitPrice,
+    kalem.personCount,
+    kalem.discount
   );
   if (!calculated) return 0;
   const parsed = Number(calculated);
   return Number.isFinite(parsed) ? parsed : 0;
 };
-
 const addToCurrencyTotal = (totals: CurrencyTotals, currency: CurrencyType, amount: number) => {
   switch (currency) {
     case CurrencyType.NUMBER_1:
@@ -113,32 +111,358 @@ const addToCurrencyTotal = (totals: CurrencyTotals, currency: CurrencyType, amou
   }
 };
 
-export const calculateCrmDetailStats = (items: CrmSubItemFormValues[]): CrmDetailStats => {
+export const calculateCrmDetailStatsFromOpportunities = (
+  opportunities: CrmOpportunityFormValues[]
+): CrmDetailStats => {
   const pipeline = emptyCurrencyTotals();
   const weightedForecast = emptyCurrencyTotals();
   const won = emptyCurrencyTotals();
   let openOpportunityCount = 0;
 
-  items.forEach((item) => {
-    const amount = parseItemEstimatedValue(item);
-    const stage = item.opportunityStage ?? OpportunityStage.NUMBER_0;
+  opportunities.forEach((opp) => {
+    const stage = opp.opportunityStage ?? OpportunityStage.NUMBER_0;
     const isWon = stage === OpportunityStage.NUMBER_6;
     const isLostOrCancelled =
       stage === OpportunityStage.NUMBER_7 || stage === OpportunityStage.NUMBER_8;
 
     if (!isWon && !isLostOrCancelled) {
       openOpportunityCount += 1;
-      addToCurrencyTotal(pipeline, item.currencyType, amount);
-      const probability = getOpportunityStageProbability(stage) / 100;
-      addToCurrencyTotal(weightedForecast, item.currencyType, amount * probability);
+      opp.kalems.forEach((kalem) => {
+        const amount = parseKalemEstimatedValue(kalem);
+        addToCurrencyTotal(pipeline, kalem.currencyType, amount);
+        const probability = getOpportunityStageProbability(stage) / 100;
+        addToCurrencyTotal(weightedForecast, kalem.currencyType, amount * probability);
+      });
     }
 
     if (isWon) {
-      addToCurrencyTotal(won, item.currencyType, amount);
+      opp.kalems.forEach((kalem) => {
+        addToCurrencyTotal(won, kalem.currencyType, parseKalemEstimatedValue(kalem));
+      });
     }
   });
 
   return { openOpportunityCount, pipeline, weightedForecast, won };
+};
+
+const mergeCurrencyTotals = (left: CurrencyTotals, right: CurrencyTotals): CurrencyTotals => ({
+  try: left.try + right.try,
+  usd: left.usd + right.usd,
+  eur: left.eur + right.eur,
+});
+
+export type CrmListPageStats = {
+  filteredCustomerCount: number;
+  totalCustomerCount: number;
+  opportunityPackageCount: number;
+  openPackageCount: number;
+  wonPackageCount: number;
+  pipeline: CurrencyTotals;
+  won: CurrencyTotals;
+  lastUpdated: {
+    id?: string;
+    companyName: string;
+    updatedDate?: string | null;
+    updatedBy?: string | null;
+  } | null;
+};
+
+export type RecentlyUpdatedCustomer = {
+  id: string;
+  companyName: string;
+  updatedDate?: string | null;
+  updatedBy?: string | null;
+  opportunityCount: number;
+};
+
+export type CrmChartStageSlice = {
+  label: string;
+  count: number;
+};
+
+export type CrmChartStats = {
+  customerCount: number;
+  opportunityPackageCount: number;
+  openPackageCount: number;
+  wonPackageCount: number;
+  pipeline: CurrencyTotals;
+  won: CurrencyTotals;
+  stageSlices: CrmChartStageSlice[];
+  leadSourceSlices: CrmChartStageSlice[];
+  moduleSlices: CrmChartStageSlice[];
+};
+
+export const buildCrmChartStats = (rows: CrmModulDto[]): CrmChartStats => {
+  let pipeline = emptyCurrencyTotals();
+  let won = emptyCurrencyTotals();
+  let opportunityPackageCount = 0;
+  let openPackageCount = 0;
+  let wonPackageCount = 0;
+  const stageMap = new Map<string, number>();
+  const leadMap = new Map<string, number>();
+  const moduleMap = new Map<string, number>();
+
+  rows.forEach((row) => {
+    const leadLabel = getLeadSourceLabel(row.leadSource);
+    if (leadLabel !== "—") {
+      leadMap.set(leadLabel, (leadMap.get(leadLabel) ?? 0) + 1);
+    }
+
+    const opportunities = resolveOpportunitiesFromCrmModulDto(row);
+    opportunityPackageCount += opportunities.length;
+
+    opportunities.forEach((opp) => {
+      const stage = opp.opportunityStage ?? OpportunityStage.NUMBER_0;
+      const stageLabel = getOpportunityStageLabel(stage);
+      if (stageLabel !== "—" && stage !== OpportunityStage.NUMBER_0) {
+        stageMap.set(stageLabel, (stageMap.get(stageLabel) ?? 0) + 1);
+      }
+
+      if (stage === OpportunityStage.NUMBER_6) {
+        wonPackageCount += 1;
+      } else if (
+        stage !== OpportunityStage.NUMBER_0 &&
+        stage !== OpportunityStage.NUMBER_7 &&
+        stage !== OpportunityStage.NUMBER_8
+      ) {
+        openPackageCount += 1;
+      }
+    });
+
+    (row.crmSubItems ?? []).forEach((item) => {
+      (item.solutionModuleNames ?? []).forEach((name) => {
+        const trimmed = name?.trim();
+        if (!trimmed) return;
+        moduleMap.set(trimmed, (moduleMap.get(trimmed) ?? 0) + 1);
+      });
+    });
+
+    const stats = calculateCrmDetailStatsFromOpportunities(opportunities);
+    pipeline = mergeCurrencyTotals(pipeline, stats.pipeline);
+    won = mergeCurrencyTotals(won, stats.won);
+  });
+
+  const toSlices = (map: Map<string, number>): CrmChartStageSlice[] =>
+    Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
+
+  return {
+    customerCount: rows.length,
+    opportunityPackageCount,
+    openPackageCount,
+    wonPackageCount,
+    pipeline,
+    won,
+    stageSlices: toSlices(stageMap),
+    leadSourceSlices: toSlices(leadMap),
+    moduleSlices: toSlices(moduleMap).slice(0, 8),
+  };
+};
+
+export const buildRecentlyUpdatedCustomers = (
+  rows: CrmModulDto[],
+  limit = 5
+): RecentlyUpdatedCustomer[] =>
+  [...rows]
+    .filter((row): row is CrmModulDto & { id: string; updatedDate: string } =>
+      Boolean(row.id && row.updatedDate)
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.updatedDate).getTime() - new Date(a.updatedDate).getTime()
+    )
+    .slice(0, limit)
+    .map((row) => ({
+      id: row.id,
+      companyName: resolveCompanyName(row),
+      updatedDate: row.updatedDate,
+      updatedBy: row.updatedBy,
+      opportunityCount: row.crmSubItems?.length ?? 0,
+    }));
+
+export const buildCrmListPageStats = (
+  filteredRows: CrmModulDto[],
+  totalRows: CrmModulDto[]
+): CrmListPageStats => {
+  let pipeline = emptyCurrencyTotals();
+  let won = emptyCurrencyTotals();
+  let opportunityPackageCount = 0;
+  let openPackageCount = 0;
+  let wonPackageCount = 0;
+
+  filteredRows.forEach((row) => {
+    const opportunities = resolveOpportunitiesFromCrmModulDto(row);
+    opportunityPackageCount += opportunities.length;
+    const stats = calculateCrmDetailStatsFromOpportunities(opportunities);
+    openPackageCount += stats.openOpportunityCount;
+    wonPackageCount += opportunities.filter(
+      (opp) => (opp.opportunityStage ?? OpportunityStage.NUMBER_0) === OpportunityStage.NUMBER_6
+    ).length;
+    pipeline = mergeCurrencyTotals(pipeline, stats.pipeline);
+    won = mergeCurrencyTotals(won, stats.won);
+  });
+
+  const lastUpdatedRow = [...filteredRows]
+    .filter((row) => row.updatedDate)
+    .sort(
+      (a, b) =>
+        new Date(b.updatedDate as string).getTime() - new Date(a.updatedDate as string).getTime()
+    )[0];
+
+  return {
+    filteredCustomerCount: filteredRows.length,
+    totalCustomerCount: totalRows.length,
+    opportunityPackageCount,
+    openPackageCount,
+    wonPackageCount,
+    pipeline,
+    won,
+    lastUpdated: lastUpdatedRow
+      ? {
+          id: lastUpdatedRow.id,
+          companyName: resolveCompanyName(lastUpdatedRow),
+          updatedDate: lastUpdatedRow.updatedDate,
+          updatedBy: lastUpdatedRow.updatedBy,
+        }
+      : null,
+  };
+};
+
+/** @deprecated calculateCrmDetailStatsFromOpportunities kullanın */
+export const calculateCrmDetailStats = (items: CrmSubItemFormValues[]): CrmDetailStats =>
+  calculateCrmDetailStatsFromOpportunities(
+    items.map((item) => {
+      const { opportunityStage, ...kalem } = item;
+      return {
+        clientKey: item.clientKey,
+        opportunityStage,
+        kalems: [kalem],
+      };
+    })
+  );
+
+export type OpportunityTotals = {
+  currencyTotals: CurrencyTotals;
+  primaryAmount: number;
+  primaryCurrency: CurrencyType;
+  hasMultipleCurrencies: boolean;
+};
+
+const countActiveCurrencies = (totals: CurrencyTotals): number =>
+  (totals.eur > 0 ? 1 : 0) + (totals.usd > 0 ? 1 : 0) + (totals.try > 0 ? 1 : 0);
+
+const resolvePrimaryFromCurrencyTotals = (
+  currencyTotals: CurrencyTotals
+): { primaryAmount: number; primaryCurrency: CurrencyType } => {
+  if (currencyTotals.eur > 0) {
+    return { primaryAmount: currencyTotals.eur, primaryCurrency: CurrencyType.NUMBER_3 };
+  }
+  if (currencyTotals.usd > 0) {
+    return { primaryAmount: currencyTotals.usd, primaryCurrency: CurrencyType.NUMBER_2 };
+  }
+  if (currencyTotals.try > 0) {
+    return { primaryAmount: currencyTotals.try, primaryCurrency: CurrencyType.NUMBER_1 };
+  }
+  return { primaryAmount: 0, primaryCurrency: CurrencyType.NUMBER_0 };
+};
+
+export const formatNonZeroCurrencyTotals = (totals: CurrencyTotals): string => {
+  const parts: string[] = [];
+  if (totals.eur > 0) parts.push(formatMoney(totals.eur, "€"));
+  if (totals.usd > 0) parts.push(formatMoney(totals.usd, "$"));
+  if (totals.try > 0) parts.push(formatMoney(totals.try, "₺"));
+  return parts.length > 0 ? parts.join(" + ") : "—";
+};
+
+export const hasOpportunityAmount = (totals: OpportunityTotals | CurrencyTotals): boolean => {
+  const currencyTotals = "currencyTotals" in totals ? totals.currencyTotals : totals;
+  return currencyTotals.eur > 0 || currencyTotals.usd > 0 || currencyTotals.try > 0;
+};
+
+export const calculateOpportunityTotals = (
+  opportunity: CrmOpportunityFormValues
+): OpportunityTotals => {
+  const currencyTotals = emptyCurrencyTotals();
+
+  opportunity.kalems.forEach((kalem) => {
+    const amount = parseKalemEstimatedValue(kalem);
+    if (amount > 0 && kalem.currencyType !== CurrencyType.NUMBER_0) {
+      addToCurrencyTotal(currencyTotals, kalem.currencyType, amount);
+    }
+  });
+
+  const { primaryAmount, primaryCurrency } = resolvePrimaryFromCurrencyTotals(currencyTotals);
+
+  return {
+    currencyTotals,
+    primaryAmount,
+    primaryCurrency,
+    hasMultipleCurrencies: countActiveCurrencies(currencyTotals) > 1,
+  };
+};
+
+export const getOpportunityDisplayTitle = (
+  opportunity: CrmOpportunityFormValues,
+  modules: { id?: string; name?: string | null }[]
+): string => {
+  const customName = opportunity.name?.trim();
+  if (customName) return customName;
+
+  const names = opportunity.kalems
+    .flatMap((k) => k.solutionModuleIds)
+    .map((id) => resolveModuleNamesFromIds([id], modules))
+    .filter((n) => n !== "—");
+
+  if (names.length === 0) return "Yeni Fırsat Paketi";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} + ${names[1]}`;
+  return `${names[0]} +${names.length - 1} modül`;
+};
+
+export const readSubItemOpportunityName = (item: CrmSubItemDto): string => {
+  const fromCamel = item.opportunityName?.trim();
+  if (fromCamel) return fromCamel;
+  const fromPascal = (item as { OpportunityName?: string | null }).OpportunityName?.trim();
+  return fromPascal ?? "";
+};
+
+/** Liste/tree satırları — önce fırsat adı, yoksa modül adları */
+export const resolveSubItemDisplayTitle = (item: CrmSubItemDto): string => {
+  const customName = readSubItemOpportunityName(item);
+  if (customName) return customName;
+  const moduleNames = formatSolutionModuleNames(item.solutionModuleNames);
+  if (moduleNames !== "—") return moduleNames;
+  return "Fırsat";
+};
+
+export const resolveOpportunityCreatedDate = (
+  opportunity: CrmOpportunityFormValues
+): string | undefined => {
+  if (opportunity.createdDate) return opportunity.createdDate;
+  const dates = opportunity.kalems
+    .map((k) => k.createdDate)
+    .filter((d): d is string => Boolean(d));
+  if (dates.length === 0) return undefined;
+  return dates.sort((a, b) => new Date(a).getTime() - new Date(b).getTime())[0];
+};
+
+export const formatOpportunityCreatedLabel = (
+  opportunity: CrmOpportunityFormValues
+): string | null => {
+  const raw = resolveOpportunityCreatedDate(opportunity);
+  if (!raw) return null;
+  const formatted = formatDateTr(raw);
+  return formatted === "—" ? null : formatted;
+};
+
+export const getOpportunityTitle = (
+  item: CrmSubItemFormValues,
+  modules: { id?: string; name?: string | null }[]
+): string => {
+  const names = resolveModuleNamesFromIds(item.solutionModuleIds, modules);
+  if (names !== "—") return names;
+  return "Yeni Fırsat";
 };
 
 export const formatMoney = (amount: number, symbol: string): string => {
@@ -162,24 +486,32 @@ export const getCompanyInitials = (name: string): string => {
   return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
 };
 
-export const getOpportunityTitle = (
-  item: CrmSubItemFormValues,
-  modules: { id?: string; name?: string | null }[]
-): string => {
-  const names = resolveModuleNamesFromIds(item.solutionModuleIds, modules);
-  if (names !== "—") return names;
-  return "Yeni Fırsat";
-};
-
 export const formatInlineList = (items: string[]): string => {
   if (!items.length) return "—";
   return items.join(", ");
 };
 
-export const formatDateTr = (value?: string | null): string => {  if (!value) return "—";
+export const formatDateTr = (value?: string | null): string => {
+  if (!value) return "—";
   const date = parseISO(value);
   if (!isValid(date)) return "—";
   return format(date, "dd.MM.yyyy", { locale: tr });
+};
+
+export const formatDateTimeTr = (value?: string | null): string => {
+  if (!value) return "—";
+  const date = parseISO(value);
+  if (!isValid(date)) return "—";
+  return format(date, "dd MMM yyyy, HH:mm", { locale: tr });
+};
+
+export const formatCrmUpdatedBy = (value?: string | null): string => {
+  const trimmed = value?.trim();
+  if (!trimmed) return "—";
+  if (trimmed.includes("@")) {
+    return trimmed.split("@")[0]?.replace(/[._]/g, " ") ?? trimmed;
+  }
+  return trimmed;
 };
 
 export const toIsoDateString = (date?: Date): string | null => {
@@ -218,17 +550,17 @@ export type CrmModulFilterOption<T extends string | number = string> = {
 
 export type CrmModulFilterOptions = {
   companies: CrmModulFilterOption[];
-  leadSources: CrmModulFilterOption<LeadSource>[];
+  partnerCompanies: CrmModulFilterOption[];
   opportunityStages: CrmModulFilterOption<OpportunityStage>[];
-  contactPersons: CrmModulFilterOption[];
+  typeCodes: CrmModulFilterOption<TypeCodes>[];
   accountManagers: CrmModulFilterOption[];
 };
 
 export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterOptions => {
   const companySet = new Set<string>();
-  const leadSourceMap = new Map<LeadSource, string>();
+  const partnerCompanySet = new Set<string>();
   const stageMap = new Map<OpportunityStage, string>();
-  const contactSet = new Set<string>();
+  const typeMap = new Map<TypeCodes, string>();
   const managerSet = new Set<string>();
 
   rows.forEach((row) => {
@@ -237,8 +569,9 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
       companySet.add(companyName);
     }
 
-    if (row.leadSource != null && row.leadSource !== LeadSource.NUMBER_0) {
-      leadSourceMap.set(row.leadSource, getLeadSourceLabel(row.leadSource));
+    const partnerCompanyName = row.partnerCompanyName?.trim();
+    if (partnerCompanyName) {
+      partnerCompanySet.add(partnerCompanyName);
     }
 
     (row.crmSubItems ?? []).forEach((item) => {
@@ -246,12 +579,12 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
         return;
       }
       stageMap.set(item.opportunityStage, getOpportunityStageLabel(item.opportunityStage));
-    });
 
-    const contactPerson = row.contactPerson?.trim();
-    if (contactPerson) {
-      contactSet.add(contactPerson);
-    }
+      if (item.typeCode == null || item.typeCode === TypeCodes.NUMBER_0) {
+        return;
+      }
+      typeMap.set(item.typeCode, getTypeCodeLabel(item.typeCode));
+    });
 
     const sapAccountManager = row.sapAccountManager?.trim();
     if (sapAccountManager) {
@@ -266,14 +599,14 @@ export const buildCrmModulFilterOptions = (rows: CrmModulDto[]): CrmModulFilterO
 
   return {
     companies: sortByLabel(Array.from(companySet).map((value) => ({ value, label: value }))),
-    leadSources: sortByLabel(
-      Array.from(leadSourceMap.entries()).map(([value, label]) => ({ value, label }))
+    partnerCompanies: sortByLabel(
+      Array.from(partnerCompanySet).map((value) => ({ value, label: value }))
     ),
     opportunityStages: sortByLabel(
       Array.from(stageMap.entries()).map(([value, label]) => ({ value, label }))
     ),
-    contactPersons: sortByLabel(
-      Array.from(contactSet).map((value) => ({ value, label: value }))
+    typeCodes: sortByLabel(
+      Array.from(typeMap.entries()).map(([value, label]) => ({ value, label }))
     ),
     accountManagers: sortByLabel(
       Array.from(managerSet).map((value) => ({ value, label: value }))
@@ -341,6 +674,106 @@ export const flattenCrmSubItems = (rows: CrmModulDto[]): CrmModulSubItemEntry[] 
   return result;
 };
 
+export type CrmKanbanOpportunity = {
+  id: string;
+  crmModulId: string;
+  companyName: string;
+  title: string;
+  stage: OpportunityStage;
+  kalemCount: number;
+  currencyTotals: CurrencyTotals;
+  primaryAmount: number;
+  primaryCurrency: CurrencyType;
+  hasMultipleCurrencies: boolean;
+  expectedCloseDate?: string;
+};
+
+const resolveOpportunityTitleFromRow = (
+  row: CrmModulDto,
+  opportunity: CrmOpportunityFormValues
+): string => {
+  const customName = opportunity.name?.trim();
+  if (customName) return customName;
+
+  const kalemIds = new Set(
+    opportunity.kalems.map((k) => k.id).filter((id): id is string => Boolean(id))
+  );
+  const names = new Set<string>();
+
+  (row.crmSubItems ?? []).forEach((item) => {
+    const inGroup =
+      kalemIds.has(item.id ?? "") ||
+      (item.opportunityGroupId && item.opportunityGroupId === opportunity.clientKey);
+    if (!inGroup) return;
+    (item.solutionModuleNames ?? []).forEach((name) => {
+      const trimmed = name?.trim();
+      if (trimmed) names.add(trimmed);
+    });
+  });
+
+  const list = Array.from(names);
+  if (list.length === 0) return "Fırsat Paketi";
+  if (list.length === 1) return list[0];
+  if (list.length === 2) return `${list[0]} + ${list[1]}`;
+  return `${list[0]} +${list.length - 1} modül`;
+};
+
+const resolvePrimaryCloseDate = (opportunity: CrmOpportunityFormValues): string | undefined => {
+  const dates = opportunity.kalems
+    .map((k) => k.expectedCloseDate)
+    .filter((d): d is Date => Boolean(d))
+    .sort((a, b) => a.getTime() - b.getTime());
+  if (dates.length === 0) return undefined;
+  return format(dates[0], "yyyy-MM-dd");
+};
+
+/** Detay sayfası kanban kartları — müşterinin tüm fırsat paketleri */
+export const buildKanbanCardsFromOpportunities = (
+  opportunities: CrmOpportunityFormValues[],
+  modules: { id?: string; name?: string | null }[]
+): CrmKanbanOpportunity[] =>
+  opportunities.map((opportunity) => {
+    const totals = calculateOpportunityTotals(opportunity);
+    return {
+      id: opportunity.clientKey,
+      crmModulId: "",
+      companyName: "",
+      title: getOpportunityDisplayTitle(opportunity, modules),
+      stage: opportunity.opportunityStage ?? OpportunityStage.NUMBER_0,
+      kalemCount: opportunity.kalems.length,
+      currencyTotals: totals.currencyTotals,
+      primaryAmount: totals.primaryAmount,
+      primaryCurrency: totals.primaryCurrency,
+      hasMultipleCurrencies: totals.hasMultipleCurrencies,
+      expectedCloseDate: resolvePrimaryCloseDate(opportunity),
+    };
+  });
+
+/** Liste sayfası kanban kartları — fırsat paketi bazında */
+export const buildKanbanOpportunities = (rows: CrmModulDto[]): CrmKanbanOpportunity[] =>
+  rows.flatMap((row) => {
+    if (!row.id) return [];
+    const companyName = resolveCompanyName(row);
+    const opportunities = resolveOpportunitiesFromCrmModulDto(row);
+
+    return opportunities.map((opportunity) => {
+      const totals = calculateOpportunityTotals(opportunity);
+      return {
+        id: `${row.id}:${opportunity.clientKey}`,
+        crmModulId: row.id,
+        companyName,
+        title: resolveOpportunityTitleFromRow(row, opportunity),
+        stage: opportunity.opportunityStage ?? OpportunityStage.NUMBER_0,
+        kalemCount: opportunity.kalems.length,
+        currencyTotals: totals.currencyTotals,
+        primaryAmount: totals.primaryAmount,
+        primaryCurrency: totals.primaryCurrency,
+        hasMultipleCurrencies: totals.hasMultipleCurrencies,
+        expectedCloseDate: resolvePrimaryCloseDate(opportunity),
+      };
+    });
+  });
+
 export const isDateInRange = (  value?: string | null,
   from?: Date,
   to?: Date
@@ -387,4 +820,23 @@ export const formatPhoneNumberTr = (value: string): string => {
 
   formatted += `-${d.slice(9, 11)}`;
   return formatted;
+};
+
+/**
+ * Telefon input değişimini işler.
+ * Format karakteri (parantez, tire) silindiğinde ilgili rakamı da kaldırır.
+ */
+export const resolvePhoneNumberInput = (previousValue: string, nextRawValue: string): string => {
+  const nextDigits = stripPhoneDigits(nextRawValue);
+  const previousDigits = stripPhoneDigits(previousValue);
+
+  const isDeleting = nextRawValue.length < previousValue.length;
+  const deletedFormatCharOnly =
+    isDeleting && nextDigits.length === previousDigits.length && previousDigits.length > 0;
+
+  if (deletedFormatCharOnly) {
+    return formatPhoneNumberTr(previousDigits.slice(0, -1));
+  }
+
+  return formatPhoneNumberTr(nextRawValue);
 };

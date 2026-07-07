@@ -2,6 +2,7 @@ import { LeadSource } from "api/generated";
 import { type ReactNode } from "react";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
+import { Textarea } from "components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
 import { cn } from "lib/utils";
 import { LEAD_SOURCE_OPTIONS } from "../constants";
 import { type CrmModulFormValues } from "../formMappers";
-import { formatPhoneNumberTr } from "../utils";
+import { resolvePhoneNumberInput } from "../utils";
 
 type CrmModulFormFieldsProps = {
   values: CrmModulFormValues;
@@ -34,7 +35,7 @@ const SectionCard = ({
   <section
     className={cn(
       variant === "detail"
-        ? "rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4"
+        ? "rounded-xl border border-slate-200/60 bg-white shadow-sm p-4 space-y-3"
         : "rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-4",
       className
     )}
@@ -81,12 +82,17 @@ export const CrmModulFormFields = ({
   };
 
   const handlePhoneChange = (raw: string) => {
-    handleFieldChange("phoneNumber", formatPhoneNumberTr(raw));
+    handleFieldChange("phoneNumber", resolvePhoneNumberInput(values.phoneNumber, raw));
   };
 
-  const inputClass = "h-10 bg-white border-slate-200";
+  const inputClass = variant === "detail" ? "h-9 bg-white border-slate-200" : "h-10 bg-white border-slate-200";
+  const textareaClass = cn(
+    "min-h-[88px] resize-y bg-white border-slate-200 text-sm",
+    variant === "detail" ? "min-h-[72px]" : undefined
+  );
 
   return (
+    <div className="space-y-4">
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <SectionCard title="Şirket Bilgileri" variant={variant}>
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
@@ -134,12 +140,12 @@ export const CrmModulFormFields = ({
               className={inputClass}
             />
           </Field>
-          <Field label="Hesap Yöneticisi" htmlFor="crm-account-manager" className="sm:col-span-6">
+          <Field label="Vesa Hesap yöneticisi" htmlFor="crm-account-manager" className="sm:col-span-6">
             <Input
               id="crm-account-manager"
               value={values.accountManager}
               onChange={(e) => handleFieldChange("accountManager", e.target.value)}
-              placeholder="Hesap yöneticisi"
+              placeholder="Vesa hesap yöneticisi"
               className={inputClass}
             />
           </Field>
@@ -187,10 +193,40 @@ export const CrmModulFormFields = ({
               onChange={(e) => handleFieldChange("email", e.target.value)}
               placeholder="email@ornek.com"
               className={inputClass}
+              aria-invalid={values.email.trim() !== "" && !values.email.includes("@")}
             />
           </Field>
         </div>
+
+        <div className="border-t border-slate-200/80 pt-4 space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Ürün & Rekabet Bilgisi
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Field label="Müşteri Kullandığı SAP veya Non SAP Ürünler" htmlFor="crm-used-products">
+              <Textarea
+                id="crm-used-products"
+                value={values.usedSapNonSapProducts}
+                onChange={(e) => handleFieldChange("usedSapNonSapProducts", e.target.value)}
+                placeholder="Örn. SAP ECC, SuccessFactors, Oracle HCM..."
+                rows={4}
+                className={textareaClass}
+              />
+            </Field>
+            <Field label="Rakip Ürünleri ve/veya Firmaları" htmlFor="crm-competitors">
+              <Textarea
+                id="crm-competitors"
+                value={values.competitorProductsAndCompanies}
+                onChange={(e) => handleFieldChange("competitorProductsAndCompanies", e.target.value)}
+                placeholder="Örn. XYZ Danışmanlık, Workday..."
+                rows={4}
+                className={textareaClass}
+              />
+            </Field>
+          </div>
+        </div>
       </SectionCard>
+    </div>
     </div>
   );
 };

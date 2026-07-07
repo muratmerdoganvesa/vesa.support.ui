@@ -50,7 +50,8 @@ export const PipelineStageBadge = ({ stage }: { stage?: OpportunityStage | null 
 };
 
 export const OPPORTUNITY_TABLE_COLUMN_COUNT = 7;
-export const LIST_TABLE_COLUMN_COUNT = 8;
+export const LIST_TABLE_COLUMN_COUNT = 10;
+export const CUSTOMER_LIST_TABLE_COLUMN_COUNT = 10;
 
 export const CrmOpportunityTableHeader = () => (
   <TableRow className="border-b border-slate-200 bg-slate-50/70 hover:bg-slate-50/70">
@@ -90,7 +91,7 @@ export const CrmListTableHeader = () => (
       Partner Adı
     </TableHead>
     <TableHead className="min-w-[130px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
-      Hesap Yöneticisi
+      Vesa Hesap yöneticisi
     </TableHead>
     <TableHead className="min-w-[100px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
       Modül
@@ -103,6 +104,47 @@ export const CrmListTableHeader = () => (
     </TableHead>
     <TableHead className="min-w-[140px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-800">
       Pipeline Durumu
+    </TableHead>
+    <TableHead className="min-w-[150px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Son Güncelleme
+    </TableHead>
+    <TableHead className="min-w-[120px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Güncelleyen
+    </TableHead>
+  </TableRow>
+);
+
+export const CrmCustomerListTableHeader = () => (
+  <TableRow className="border-b border-slate-200 bg-slate-50/70 hover:bg-slate-50/70">
+    <TableHead className="w-[52px] px-2 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Düzenle
+    </TableHead>
+    <TableHead className="min-w-[140px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Müşteri Adı
+    </TableHead>
+    <TableHead className="min-w-[120px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Partner
+    </TableHead>
+    <TableHead className="min-w-[120px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      İlgili Kişi
+    </TableHead>
+    <TableHead className="min-w-[110px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Telefon
+    </TableHead>
+    <TableHead className="min-w-[100px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Lead Kaynağı
+    </TableHead>
+    <TableHead className="min-w-[72px] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Fırsat
+    </TableHead>
+    <TableHead className="min-w-[130px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Vesa Hesap yöneticisi
+    </TableHead>
+    <TableHead className="min-w-[150px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Son Güncelleme
+    </TableHead>
+    <TableHead className="min-w-[120px] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+      Güncelleyen
     </TableHead>
   </TableRow>
 );

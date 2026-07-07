@@ -1,32 +1,37 @@
-import { CrmModulNotesApi, ListModuleDto, ModuleApi } from "api/generated";
+import { CrmModulNotesApi, CrmModulDto, ListModuleDto, ModuleApi } from "api/generated";
 import { CrmModulsApi } from "api/generated/crmModulsApi";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import { useAlert } from "layouts/pages/hooks/useAlert";
+import { useAlert, AppAlertType } from "layouts/pages/hooks/useAlert";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { buildCrmAiRaporPayload } from "../aiRaporPayload";
 import type { CrmAiRaporData } from "../aiRaporTypes";
 import { CrmAiRaporModal } from "../components/CrmAiRaporModal";
 import { normalizeAiRaporResponse } from "../normalizeAiRapor";
+import { CrmDetailActionBar } from "../components/CrmDetailActionBar";
+import { CrmDetailPipelineKanban } from "../components/CrmDetailPipelineKanban";
 import { CrmDetailSummary } from "../components/CrmDetailSummary";
 import { CrmModulFormFields } from "../components/CrmModulForm";
 import { CrmModulNotePanel } from "../components/CrmModulNotePanel";
 import {
-  createNewOpportunityItem,
+  createNewOpportunity,
   CrmOpportunityList,
 } from "../components/CrmOpportunityList";
 import {
   crmModulDtoToFormValues,
-  crmSubItemDtosToFormValues,
+  resolveOpportunitiesFromCrmModulDto,
   emptyCrmModulFormValues,
+  mergeOpportunitiesWithServer,
   toCreateDto,
   toUpdateDto,
+  validateCrmModulEmail,
+  validateOpportunities,
   type CrmModulFormValues,
-  type CrmSubItemFormValues,
+  type CrmOpportunityFormValues,
 } from "../formMappers";
 import { mergeActiveModulesWithSelected } from "../utils";
 import { useTcmbExchangeRates } from "../hooks/useTcmbExchangeRates";
@@ -39,16 +44,143 @@ const CrmModulDetailPage = () => {
 
   const isEditMode = Boolean(id);
   const [modulValues, setModulValues] = useState<CrmModulFormValues>(emptyCrmModulFormValues());
-  const [subItems, setSubItems] = useState<CrmSubItemFormValues[]>([]);
+  const [opportunities, setOpportunities] = useState<CrmOpportunityFormValues[]>([]);
   const [modules, setModules] = useState<ListModuleDto[]>([]);
   const [uniqNumber, setUniqNumber] = useState<number | undefined>();
+  const [updatedDate, setUpdatedDate] = useState<string | null>(null);
+  const [updatedBy, setUpdatedBy] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [isAiRaporLoading, setIsAiRaporLoading] = useState(false);
   const [aiRaporOpen, setAiRaporOpen] = useState(false);
   const [aiRaporData, setAiRaporData] = useState<CrmAiRaporData | null>(null);
-  const { rates: exchangeRates, loading: exchangeRatesLoading, error: exchangeRatesError } =
-    useTcmbExchangeRates();
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const autoSaveLockRef = useRef(false);
+  const pendingExpandedKeyRef = useRef<string | null>(null);
+  const opportunitiesRef = useRef(opportunities);
+  opportunitiesRef.current = opportunities;
+  const { rates: exchangeRates, loading: exchangeRatesLoading } = useTcmbExchangeRates();
+
+  const resolveExpandedKey = useCallback(
+    (loadedOpportunities: CrmOpportunityFormValues[], currentKey: string | null) => {
+      const pending = pendingExpandedKeyRef.current;
+      if (pending && loadedOpportunities.some((o) => o.clientKey === pending)) {
+        pendingExpandedKeyRef.current = null;
+        return pending;
+      }
+      if (currentKey && loadedOpportunities.some((o) => o.clientKey === currentKey)) {
+        return currentKey;
+      }
+      return loadedOpportunities[0]?.clientKey ?? null;
+    },
+    []
+  );
+
+  const applyServerData = useCallback(
+    (
+      data: CrmModulDto,
+      activeModules: ListModuleDto[],
+      previousOpportunities?: CrmOpportunityFormValues[]
+    ) => {
+      setModules(mergeActiveModulesWithSelected(activeModules, data));
+      const loadedOpportunities = resolveOpportunitiesFromCrmModulDto(data);
+      const mergedOpportunities =
+        previousOpportunities && previousOpportunities.length > 0
+          ? mergeOpportunitiesWithServer(previousOpportunities, loadedOpportunities)
+          : loadedOpportunities;
+      setModulValues(crmModulDtoToFormValues(data));
+      setOpportunities(mergedOpportunities);
+      setUniqNumber(data.uniqNumber);
+      setUpdatedDate(data.updatedDate ?? null);
+      setUpdatedBy(data.updatedBy ?? null);
+      return mergedOpportunities;
+    },
+    []
+  );
+
+  const syncFromServer = useCallback(
+    async (
+      crmModulId: string,
+      preserveKey?: string | null,
+      previousOpportunities?: CrmOpportunityFormValues[]
+    ) => {
+      const conf = getConfiguration();
+      const crmApi = new CrmModulsApi(conf);
+      const response = await crmApi.apiCrmModulsIdGet(crmModulId);
+      const data = response.data;
+      const loadedOpportunities = applyServerData(
+        data,
+        modules,
+        previousOpportunities
+      );
+      setExpandedKey((current) => resolveExpandedKey(loadedOpportunities, preserveKey ?? current));
+    },
+    [applyServerData, modules, resolveExpandedKey]
+  );
+
+  const autoPersist = useCallback(
+    async (nextModul: CrmModulFormValues, nextOpportunities: CrmOpportunityFormValues[]) => {
+      if (autoSaveLockRef.current) return;
+
+      if (!nextModul.companyName.trim()) {
+        dispatchAlert({
+          message: "Otomatik kayıt için önce müşteri adını girin.",
+          type: "error",
+        });
+        return;
+      }
+
+      const emailError = validateCrmModulEmail(nextModul.email);
+      if (emailError) {
+        dispatchAlert({ message: emailError, type: "error" });
+        return;
+      }
+
+      const oppError = validateOpportunities(nextOpportunities);
+      if (oppError) {
+        dispatchAlert({ message: oppError, type: "error" });
+        return;
+      }
+
+      autoSaveLockRef.current = true;
+      setIsAutoSaving(true);
+
+      try {
+        const api = new CrmModulsApi(getConfiguration());
+
+        if (id) {
+          await api.apiCrmModulsIdPut(id, toUpdateDto(nextModul, nextOpportunities));
+          await syncFromServer(id, undefined, nextOpportunities);
+          dispatchAlert({
+            type: AppAlertType.Success,
+            title: "Kaydedildi",
+            message: "Değişiklikler otomatik olarak kaydedildi.",
+          });
+          return;
+        }
+
+        const response = await api.apiCrmModulsPost(toCreateDto(nextModul, nextOpportunities));
+        const newId = response.data?.id;
+        if (!newId) {
+          throw new Error("CRM kaydı oluşturulamadı.");
+        }
+
+        navigate(`/crmModul/${newId}`, { replace: true });
+        dispatchAlert({
+          type: AppAlertType.Success,
+          title: "Kayıt oluşturuldu",
+          message: "Yeni müşteri kaydı başarıyla oluşturuldu.",
+        });
+      } catch {
+        dispatchAlert({ message: "Otomatik kayıt sırasında hata oluştu.", type: "error" });
+      } finally {
+        autoSaveLockRef.current = false;
+        setIsAutoSaving(false);
+      }
+    },
+    [dispatchAlert, id, navigate, syncFromServer]
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -64,15 +196,15 @@ const CrmModulDetailPage = () => {
           const crmApi = new CrmModulsApi(conf);
           const response = await crmApi.apiCrmModulsIdGet(id);
           const data = response.data;
-          setModules(mergeActiveModulesWithSelected(activeModules, data));
-          setModulValues(crmModulDtoToFormValues(data));
-          setSubItems(crmSubItemDtosToFormValues(data.crmSubItems ?? []));
-          setUniqNumber(data.uniqNumber);
+          const loadedOpportunities = applyServerData(data, activeModules);
+          setExpandedKey((current) => resolveExpandedKey(loadedOpportunities, current));
         } else {
           setModules(activeModules);
           setModulValues(emptyCrmModulFormValues());
-          setSubItems([]);
+          setOpportunities([]);
           setUniqNumber(undefined);
+          setUpdatedDate(null);
+          setUpdatedBy(null);
         }
       } catch {
         dispatchAlert({
@@ -91,24 +223,38 @@ const CrmModulDetailPage = () => {
     };
 
     loadData();
-  }, [id]);
+  }, [id, applyServerData, resolveExpandedKey]);
 
-  const handleAddItem = () => {
-    const newItem = createNewOpportunityItem();
-    setSubItems((prev) => [...prev, newItem]);
-    setExpandedKey(newItem.clientKey);
+  const handleAddOpportunity = () => {
+    const newOpp = createNewOpportunity();
+    const nextOpportunities = [...opportunities, newOpp];
+    pendingExpandedKeyRef.current = newOpp.clientKey;
+    setOpportunities(nextOpportunities);
+    setExpandedKey(newOpp.clientKey);
+    void autoPersist(modulValues, nextOpportunities);
   };
 
-  const handleChangeItem = (values: CrmSubItemFormValues) => {
-    setSubItems((prev) =>
-      prev.map((item) => (item.clientKey === values.clientKey ? values : item))
+  const handleChangeOpportunity = (
+    values: CrmOpportunityFormValues,
+    options?: { autoSave?: boolean }
+  ) => {
+    const nextOpportunities = opportunities.map((opp) =>
+      opp.clientKey === values.clientKey ? values : opp
     );
+    setOpportunities(nextOpportunities);
+    if (options?.autoSave) {
+      void autoPersist(modulValues, nextOpportunities);
+    }
   };
 
-  const handleDeleteItem = (clientKey: string) => {
-    setSubItems((prev) => prev.filter((i) => i.clientKey !== clientKey));
+  const handleDeleteOpportunity = (clientKey: string) => {
+    const nextOpportunities = opportunities.filter((o) => o.clientKey !== clientKey);
+    setOpportunities(nextOpportunities);
     if (expandedKey === clientKey) {
       setExpandedKey(null);
+    }
+    if (id) {
+      void autoPersist(modulValues, nextOpportunities);
     }
   };
 
@@ -118,23 +264,57 @@ const CrmModulDetailPage = () => {
       return;
     }
 
+    const emailError = validateCrmModulEmail(modulValues.email);
+    if (emailError) {
+      dispatchAlert({ message: emailError, type: "error" });
+      return;
+    }
+
+    const oppError = validateOpportunities(opportunitiesRef.current);
+    if (oppError) {
+      dispatchAlert({ message: oppError, type: "error" });
+      const invalidOpp = opportunitiesRef.current.find((opp) =>
+        opp.kalems.some((k) => validateOpportunities([{ ...opp, kalems: [k] }]))
+      );
+      if (invalidOpp) {
+        setExpandedKey(invalidOpp.clientKey);
+      }
+      return;
+    }
+
     try {
-      dispatchBusy({ isBusy: true });
+      setIsSaving(true);
       const api = new CrmModulsApi(getConfiguration());
 
       if (id) {
-        await api.apiCrmModulsIdPut(id, toUpdateDto(modulValues, subItems));
-        dispatchAlert({ message: "CRM kaydı başarıyla güncellendi.", type: "success" });
-      } else {
-        await api.apiCrmModulsPost(toCreateDto(modulValues, subItems));
-        dispatchAlert({ message: "CRM kaydı başarıyla oluşturuldu.", type: "success" });
+        await api.apiCrmModulsIdPut(id, toUpdateDto(modulValues, opportunitiesRef.current));
+        await syncFromServer(id, expandedKey, opportunitiesRef.current);
+        const companyLabel = modulValues.companyName.trim() || "Müşteri kaydı";
+        dispatchAlert({
+          type: AppAlertType.Success,
+          title: "Kaydedildi",
+          message: `${companyLabel} güncellendi.`,
+        });
+        return;
       }
 
-      navigate("/crmModul");
+      const response = await api.apiCrmModulsPost(toCreateDto(modulValues, opportunitiesRef.current));
+      const newId = response.data?.id;
+      if (!newId) {
+        throw new Error("CRM kaydı oluşturulamadı.");
+      }
+
+      pendingExpandedKeyRef.current = expandedKey;
+      navigate(`/crmModul/${newId}`, { replace: true });
+      dispatchAlert({
+        type: AppAlertType.Success,
+        title: "Kayıt oluşturuldu",
+        message: `${modulValues.companyName.trim() || "Müşteri"} kaydı oluşturuldu.`,
+      });
     } catch {
       dispatchAlert({ message: "İşlem sırasında hata oluştu.", type: "error" });
     } finally {
-      dispatchBusy({ isBusy: false });
+      setIsSaving(false);
     }
   };
 
@@ -160,7 +340,7 @@ const CrmModulDetailPage = () => {
       const notesResponse = await notesApi.apiCrmModulNotesByCrmModulCrmModulIdGet(id);
       const notes = notesResponse.data ?? [];
 
-      const payload = buildCrmAiRaporPayload(modulValues, subItems, modules, notes);
+      const payload = buildCrmAiRaporPayload(modulValues, opportunities, modules, notes);
       const crmApi = new CrmModulsApi(getConfiguration());
       const response = await crmApi.apiCrmModulsIdAiRaporPost(id, payload, { timeout: 300000 });
 
@@ -204,51 +384,78 @@ const CrmModulDetailPage = () => {
 
   const canSave = !loading && Boolean(modulValues.companyName.trim());
   const canAiRapor = isEditMode && !loading && Boolean(modulValues.companyName.trim());
+  const companyNameMissing = !loading && !modulValues.companyName.trim();
 
   return (
     <DashboardLayout>
       <DashboardNavbar />
 
-      <div className="-m-6 min-h-full bg-slate-100/80 p-4">
+      <div className="-m-6 min-h-full bg-[#f8f9fb] p-3 sm:p-4 pb-20">
         {loading ? (
-          <p className="text-sm text-slate-500 text-center py-24">Yükleniyor...</p>
-        ) : (
-          <div className="space-y-4 pb-6">
-            <CrmDetailSummary
-              modulValues={modulValues}
-              subItems={subItems}
-              uniqNumber={uniqNumber}
-              isEditMode={isEditMode}
-              canSave={canSave}
-              canAiRapor={canAiRapor}
-              isAiRaporLoading={isAiRaporLoading}
-              exchangeRates={exchangeRates}
-              exchangeRatesLoading={exchangeRatesLoading}
-              exchangeRatesError={exchangeRatesError}
-              onBack={() => navigate("/crmModul")}
-              onSave={handleSave}
-              onAiRapor={handleAiRapor}
-            />
-
-            <CrmModulFormFields
-              values={modulValues}
-              onChange={setModulValues}
-              variant="detail"
-            />
-
-            <CrmOpportunityList
-              items={subItems}
-              modules={modules}
-              expandedKey={expandedKey}
-              exchangeRates={exchangeRates}
-              onExpandedKeyChange={setExpandedKey}
-              onChange={handleChangeItem}
-              onDelete={handleDeleteItem}
-              onAdd={handleAddItem}
-            />
-
-            <CrmModulNotePanel crmModulId={id} />
+          <div className="flex items-center justify-center py-32">
+            <div className="flex flex-col items-center gap-3">
+              <div className="size-8 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
+              <p className="text-sm text-slate-400">Yükleniyor...</p>
+            </div>
           </div>
+        ) : (
+          <div className="max-w-[90rem] mx-auto pb-6">
+            <div className="space-y-3 mb-3">
+              <CrmDetailSummary
+                modulValues={modulValues}
+                uniqNumber={uniqNumber}
+                isEditMode={isEditMode}
+                canSave={canSave}
+                canAiRapor={canAiRapor}
+                isAiRaporLoading={isAiRaporLoading}
+                isSaving={isSaving}
+                updatedDate={updatedDate}
+                updatedBy={updatedBy}
+                onBack={() => navigate("/crmModul")}
+                onSave={handleSave}
+                onAiRapor={handleAiRapor}
+              />
+
+              <CrmDetailPipelineKanban
+                opportunities={opportunities}
+                modules={modules}
+                expandedKey={expandedKey}
+                onExpandedKeyChange={setExpandedKey}
+              />
+            </div>
+
+            <div className="space-y-3">
+              <CrmModulFormFields
+                values={modulValues}
+                onChange={setModulValues}
+                variant="detail"
+              />
+
+              <CrmOpportunityList
+                opportunities={opportunities}
+                modules={modules}
+                expandedKey={expandedKey}
+                exchangeRates={exchangeRates}
+                onExpandedKeyChange={setExpandedKey}
+                onChange={handleChangeOpportunity}
+                onDelete={handleDeleteOpportunity}
+                onAdd={handleAddOpportunity}
+              />
+
+              <CrmModulNotePanel crmModulId={id} />
+            </div>
+          </div>
+        )}
+
+        {!loading && (
+          <CrmDetailActionBar
+            canSave={canSave}
+            companyNameMissing={companyNameMissing}
+            opportunityCount={opportunities.length}
+            isAutoSaving={isAutoSaving || isSaving}
+            onBack={() => navigate("/crmModul")}
+            onSave={handleSave}
+          />
         )}
       </div>
 

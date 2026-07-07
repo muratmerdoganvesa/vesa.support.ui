@@ -32,7 +32,7 @@ import {
   OPPORTUNITY_STAGE_OPTIONS,
   TYPE_CODE_OPTIONS,
 } from "../constants";
-import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, type CrmSubItemFormValues } from "../formMappers";
+import { calculateEstimatedDiscountedValueString, calculateEstimatedValueString, isPricingGroupTouched, type CrmSubItemFormValues } from "../formMappers";
 import { ModuleMultiSelect } from "./ModuleMultiSelect";
 
 type CrmSubItemFormFieldsProps = {
@@ -45,17 +45,20 @@ type CrmSubItemFormFieldsProps = {
 const Field = ({
   label,
   htmlFor,
+  required,
   children,
   className,
 }: {
   label: string;
   htmlFor?: string;
+  required?: boolean;
   children: React.ReactNode;
   className?: string;
 }) => (
   <div className={cn("flex flex-col gap-1.5", className)}>
     <Label htmlFor={htmlFor} className="text-xs font-medium text-slate-600">
       {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
     </Label>
     {children}
   </div>
@@ -108,15 +111,16 @@ export const CrmSubItemFormFields = ({
     values.personCount,
     values.discount
   );
+  const pricingRequired = isPricingGroupTouched(values);
 
   return (
     <div className={cn("grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4", className)}>
-      <Field label="SuccessFactors Modülü" className="sm:col-span-2 lg:col-span-3">
-        <ModuleMultiSelect
-          options={modules}
-          value={values.solutionModuleIds}
-          onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
-          placeholder="SuccessFactors modülü seçin..."
+      <Field label="Çözüm Modülü" className="sm:col-span-2 lg:col-span-3">
+          <ModuleMultiSelect
+            options={modules}
+            value={values.solutionModuleIds}
+            onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
+            placeholder="Modül seçin..."
         />
       </Field>
 
@@ -158,7 +162,7 @@ export const CrmSubItemFormFields = ({
         </Select>
       </Field>
 
-      <Field label="Para Birimi">
+      <Field label="Para Birimi" required={pricingRequired}>
         <Select
           value={String(values.currencyType)}
           onValueChange={(v) => handleFieldChange("currencyType", Number(v) as CurrencyType)}
@@ -176,7 +180,7 @@ export const CrmSubItemFormFields = ({
         </Select>
       </Field>
 
-      <Field label="Birim Fiyat" htmlFor={`sub-unit-price-${values.clientKey}`}>
+      <Field label="Birim Fiyat" htmlFor={`sub-unit-price-${values.clientKey}`} required={pricingRequired}>
         <InputGroup className="h-10 bg-white">
           <InputGroupAddon>
             <InputGroupText>{getCurrencySymbol(values.currencyType)}</InputGroupText>
@@ -194,7 +198,7 @@ export const CrmSubItemFormFields = ({
         </InputGroup>
       </Field>
 
-      <Field label="Kişi Sayısı" htmlFor={`sub-person-count-${values.clientKey}`}>
+      <Field label="Kişi Sayısı" htmlFor={`sub-person-count-${values.clientKey}`} required={pricingRequired}>
         <Input
           id={`sub-person-count-${values.clientKey}`}
           type="number"
@@ -304,6 +308,7 @@ export const CrmSubItemFormFields = ({
             <Calendar
               mode="single"
               selected={values.lastContactDate}
+              defaultMonth={values.lastContactDate}
               onSelect={(date) => handleFieldChange("lastContactDate", date)}
               locale={tr}
             />

@@ -73,10 +73,31 @@ export const getTypeCodeLabel = (typeCode?: TypeCodes | null): string => {
 export const ROWS_PER_PAGE = 15;
 export const GRID_ITEMS_PER_PAGE = 12;
 
-export type CrmModulListViewMode = "table" | "tree" | "grid";
+export type CrmModulListViewMode = "table" | "chart" | "tree" | "grid" | "kanban";
 
 export const DEFAULT_CRM_MODUL_VIEW_MODE: CrmModulListViewMode = "table";
 export const CRM_MODUL_VIEW_MODE_STORAGE_KEY = "crm-modul-list-view-mode-v2";
+export const CRM_MODUL_KANBAN_SCOPE_STORAGE_KEY = "crm-modul-kanban-scope-v1";
+
+export type CrmKanbanScope = "all" | "customer";
+
+/** Kanban'da her zaman görünen kolonlar (Seçilmedi → Kazanıldı) */
+export const KANBAN_PRIMARY_COLUMNS: OpportunityStage[] = [
+  OpportunityStage.NUMBER_0,
+  OpportunityStage.NUMBER_1,
+  OpportunityStage.NUMBER_2,
+  OpportunityStage.NUMBER_3,
+  OpportunityStage.NUMBER_4,
+  OpportunityStage.NUMBER_5,
+  OpportunityStage.NUMBER_6,
+];
+
+/** Kanban kolonları — açık pipeline + kapalı durumlar */
+export const KANBAN_PIPELINE_COLUMNS: OpportunityStage[] = [
+  ...KANBAN_PRIMARY_COLUMNS,
+  OpportunityStage.NUMBER_7,
+  OpportunityStage.NUMBER_8,
+];
 
 /** Pipeline görselleştirmesinde gösterilen aktif aşamalar */
 export const PIPELINE_STAGE_FLOW: OpportunityStage[] = [

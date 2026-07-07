@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Pencil, Trash2, Building2, Search,
-  ChevronLeft, ChevronRight, ChevronDown, X,
+  ChevronLeft, ChevronRight, ChevronDown, X, Download,
 } from "lucide-react";
 
 import { TicketProjectsApi, TicketProjectsListDto, WorkCompanyApi, WorkCompanyDto } from "api/generated";
@@ -34,6 +34,7 @@ import {
   CommandList,
 } from "components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
+import { downloadTicketProjectsExcel } from "layouts/pages/ticketProjects/api/fetchTicketProjectsExcel";
 
 const ROWS_PER_PAGE = 10;
 
@@ -150,6 +151,17 @@ const TicketProjectsListTab = () => {
     fetchProjectsData(company?.id);
   };
 
+  const handleExcelExport = async () => {
+    try {
+      dispatchBusy({ isBusy: true });
+      await downloadTicketProjectsExcel(selectedWorkCompanyId || undefined);
+    } catch {
+      dispatchAlert({ message: "Excel dışa aktarılırken hata oluştu.", type: "Error" });
+    } finally {
+      dispatchBusy({ isBusy: false });
+    }
+  };
+
   return (
     <>
       <div className="flex flex-wrap items-end gap-4">
@@ -235,6 +247,23 @@ const TicketProjectsListTab = () => {
               className="w-64 pl-8"
             />
           </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <span className="block text-sm font-semibold text-transparent select-none" aria-hidden>
+            Excel
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExcelExport}
+            className="gap-1.5"
+            aria-label="Excel olarak dışa aktar"
+          >
+            <Download className="size-4" />
+            Excel Dışa Aktar
+          </Button>
         </div>
 
         <div className="flex h-8 items-center gap-2">

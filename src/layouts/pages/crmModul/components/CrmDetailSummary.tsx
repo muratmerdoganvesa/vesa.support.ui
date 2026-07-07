@@ -1,128 +1,88 @@
-import { LeadSource } from "api/generated";
-import { ArrowLeft, Save, Sparkles, Target, TrendingUp, Wallet } from "lucide-react";
+import { ArrowLeft, Save, Sparkles } from "lucide-react";
 import { Button } from "components/ui/button";
+import { Badge } from "components/ui/badge";
 import { getLeadSourceLabel } from "../constants";
 import { type CrmModulFormValues } from "../formMappers";
-import {
-  convertCurrencyTotalsToEur,
-  formatEurRounded,
-  type TcmbExchangeRates,
-} from "../tcmbExchangeRates";
-import {
-  calculateCrmDetailStats,
-  getCompanyInitials,
-  type CrmSubItemFormValues,
-} from "../utils";
-import { CrmExchangeRatesCard } from "./CrmExchangeRatesCard";
+import { getCompanyInitials } from "../utils";
+import { CrmRecordAuditMeta } from "./CrmRecordAuditMeta";
 
 type CrmDetailSummaryProps = {
   modulValues: CrmModulFormValues;
-  subItems: CrmSubItemFormValues[];
   uniqNumber?: number;
   isEditMode: boolean;
   canSave: boolean;
   canAiRapor?: boolean;
   isAiRaporLoading?: boolean;
-  exchangeRates: TcmbExchangeRates | null;
-  exchangeRatesLoading: boolean;
-  exchangeRatesError: string | null;
+  isSaving?: boolean;
+  updatedDate?: string | null;
+  updatedBy?: string | null;
   onBack: () => void;
   onSave: () => void;
   onAiRapor?: () => void;
 };
 
-const StatCard = ({
-  label,
-  icon,
-  children,
-  subtext,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  subtext?: string;
-}) => (
-  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm min-w-0">
-    <div className="flex items-center gap-2 text-slate-500 mb-2">
-      {icon}
-      <span className="text-[11px] font-semibold uppercase tracking-wide">{label}</span>
-    </div>
-    <div className="space-y-0.5">{children}</div>
-    {subtext && <p className="text-[10px] text-slate-400 mt-1.5">{subtext}</p>}
-  </div>
-);
-
-const EurTotalValue = ({
-  totals,
-  exchangeRates,
-  exchangeRatesLoading,
-}: {
-  totals: { try: number; usd: number; eur: number };
-  exchangeRates: TcmbExchangeRates | null;
-  exchangeRatesLoading: boolean;
-}) => {
-  if (exchangeRatesLoading) {
-    return <p className="text-sm text-slate-400">Hesaplanıyor...</p>;
-  }
-
-  if (!exchangeRates) {
-    return <p className="text-sm text-amber-700">Kur bilgisi gerekli</p>;
-  }
-
-  const totalEur = convertCurrencyTotalsToEur(totals, exchangeRates);
-
-  return (
-    <p className="text-2xl font-bold text-slate-900 tabular-nums leading-snug">
-      {formatEurRounded(totalEur)}
-    </p>
-  );
-};
-
 export const CrmDetailSummary = ({
   modulValues,
-  subItems,
   uniqNumber,
   isEditMode,
   canSave,
   canAiRapor = false,
   isAiRaporLoading = false,
-  exchangeRates,
-  exchangeRatesLoading,
-  exchangeRatesError,
+  isSaving = false,
+  updatedDate,
+  updatedBy,
   onBack,
   onSave,
   onAiRapor,
 }: CrmDetailSummaryProps) => {
-  const stats = calculateCrmDetailStats(subItems);
   const companyName = modulValues.companyName.trim() || "Yeni Müşteri";
   const initials = getCompanyInitials(companyName);
   const leadLabel = getLeadSourceLabel(modulValues.leadSource);
   const recordId = uniqNumber ? `#${uniqNumber}` : isEditMode ? "" : "Yeni kayıt";
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm px-5 py-5">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-md overflow-hidden">
+      <div className="h-1.5 bg-gradient-to-r from-indigo-600 via-violet-500 to-amber-500" />
+
+      <div className="px-5 py-4 bg-gradient-to-br from-slate-50/80 via-white to-indigo-50/30">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className="size-14 rounded-xl bg-teal-800 flex items-center justify-center shrink-0 shadow-sm">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="size-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
               <span className="text-lg font-bold text-white tracking-wide">{initials}</span>
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-slate-900 truncate">{companyName}</h1>
-              <p className="text-sm text-slate-500 mt-1">
-                Müşteri Kaydı
-                {recordId && ` · ${recordId}`}
-                {leadLabel !== "—" && ` · Lead kaynağı: ${leadLabel}`}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl font-bold text-slate-900 truncate">{companyName}</h1>
+                {recordId && (
+                  <Badge className="bg-indigo-100 text-indigo-800 border-0 font-semibold text-xs px-2">
+                    {recordId}
+                  </Badge>
+                )}
+                {leadLabel !== "—" && (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-300 bg-amber-50 text-amber-800 font-medium text-xs"
+                  >
+                    {leadLabel}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-slate-500 mt-1">Müşteri Kaydı · CRM Detay</p>
+              <CrmRecordAuditMeta
+                updatedDate={updatedDate}
+                updatedBy={updatedBy}
+                variant="compact"
+                className="mt-1 text-[11px] text-slate-400"
+              />
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
             <Button
               type="button"
               variant="outline"
               onClick={onBack}
-              className="gap-1.5 border-slate-300"
+              className="gap-2 border-slate-300 bg-white h-10 text-sm px-4 font-medium hover:bg-slate-50"
             >
               <ArrowLeft className="size-4" />
               Geri
@@ -130,77 +90,25 @@ export const CrmDetailSummary = ({
             <Button
               type="button"
               onClick={onSave}
-              disabled={!canSave}
-              className="gap-1.5 bg-teal-800 hover:bg-teal-900 text-white"
+              disabled={!canSave || isSaving}
+              className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white h-10 text-sm font-bold px-6 shadow-md shadow-indigo-200"
             >
               <Save className="size-4" />
-              Kaydet
+              {isSaving ? "Kaydediliyor..." : "Kaydet"}
             </Button>
             {onAiRapor && (
               <Button
                 type="button"
-                variant="outline"
                 onClick={onAiRapor}
                 disabled={!canAiRapor || isAiRaporLoading}
-                className="gap-1.5 border-violet-300 text-violet-800 hover:bg-violet-50"
+                className="gap-2 bg-violet-600 hover:bg-violet-700 text-white h-10 text-sm font-semibold px-4 shadow-md shadow-violet-200"
                 aria-label="AI raporu al"
               >
                 <Sparkles className="size-4" />
-                {isAiRaporLoading ? "Rapor hazırlanıyor..." : "AI Raporu Al"}
+                {isAiRaporLoading ? "Hazırlanıyor..." : "AI Rapor"}
               </Button>
             )}
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 mt-5">
-          <StatCard
-            label="Açık Fırsat"
-            icon={<Target className="size-3.5 text-emerald-600" />}
-          >
-            <p className="text-2xl font-bold text-slate-900 tabular-nums">
-              {stats.openOpportunityCount}
-            </p>
-          </StatCard>
-
-          <CrmExchangeRatesCard
-            rates={exchangeRates}
-            loading={exchangeRatesLoading}
-            error={exchangeRatesError}
-          />
-
-          <StatCard
-            label="Toplam Pipeline"
-            icon={<Wallet className="size-3.5 text-teal-700" />}
-          >
-            <EurTotalValue
-              totals={stats.pipeline}
-              exchangeRates={exchangeRates}
-              exchangeRatesLoading={exchangeRatesLoading}
-            />
-          </StatCard>
-
-          <StatCard
-            label="Ağırlıklı Tahmin"
-            icon={<TrendingUp className="size-3.5 text-amber-600" />}
-            subtext="Aşama olasılığına göre"
-          >
-            <EurTotalValue
-              totals={stats.weightedForecast}
-              exchangeRates={exchangeRates}
-              exchangeRatesLoading={exchangeRatesLoading}
-            />
-          </StatCard>
-
-          <StatCard
-            label="Kazanılan"
-            icon={<TrendingUp className="size-3.5 text-emerald-600" />}
-          >
-            <EurTotalValue
-              totals={stats.won}
-              exchangeRates={exchangeRates}
-              exchangeRatesLoading={exchangeRatesLoading}
-            />
-          </StatCard>
         </div>
       </div>
     </div>

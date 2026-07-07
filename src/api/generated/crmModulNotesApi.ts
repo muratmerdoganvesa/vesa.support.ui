@@ -22,6 +22,7 @@ export interface CrmModulNoteDto {
   id?: string;
   crmModulId?: string;
   notes?: string | null;
+  createdBy?: string | null;
   createdDate?: string;
   updatedDate?: string | null;
   uniqNumber?: number;

@@ -1,15 +1,15 @@
 import { CrmModulNoteDto, ListModuleDto } from "api/generated";
 import {
   calculateEstimatedDiscountedValueString,
-  calculateEstimatedValueString,
+  type CrmKalemFormValues,
   type CrmModulFormValues,
-  type CrmSubItemFormValues,
+  type CrmOpportunityFormValues,
 } from "./formMappers";
 import {
   getCurrencySymbol,
   getOpportunityStageLabel,
 } from "./constants";
-import { getOpportunityTitle } from "./utils";
+import { getOpportunityDisplayTitle } from "./utils";
 
 export type CrmAiRaporPayload = {
   musteri_adi: string;
@@ -25,18 +25,18 @@ export type CrmAiRaporPayload = {
   }[];
 };
 
-const formatBudget = (item: CrmSubItemFormValues): string | undefined => {
+const formatKalemBudget = (kalem: CrmKalemFormValues): string | undefined => {
   const estimated = calculateEstimatedDiscountedValueString(
-    item.unitPrice,
-    item.personCount,
-    item.discount
+    kalem.unitPrice,
+    kalem.personCount,
+    kalem.discount
   );
   if (!estimated) return undefined;
 
   const amount = Number(estimated);
   if (!Number.isFinite(amount) || amount <= 0) return undefined;
 
-  const symbol = getCurrencySymbol(item.currencyType);
+  const symbol = getCurrencySymbol(kalem.currencyType);
   const currencyLabel =
     symbol === "€" ? "EUR" : symbol === "$" ? "USD" : symbol === "₺" ? "TRY" : symbol;
 
@@ -55,6 +55,15 @@ const formatBudget = (item: CrmSubItemFormValues): string | undefined => {
   return `~${amount.toLocaleString("tr-TR")} ${currencyLabel}`;
 };
 
+const formatOpportunityBudget = (opp: CrmOpportunityFormValues): string | undefined => {
+  const budgets = opp.kalems
+    .map(formatKalemBudget)
+    .filter((b): b is string => Boolean(b));
+  if (budgets.length === 0) return undefined;
+  if (budgets.length === 1) return budgets[0];
+  return budgets.join(" + ");
+};
+
 const formatNoteDate = (value?: string | null): string | undefined => {
   if (!value) return undefined;
   return value.slice(0, 10);
@@ -62,15 +71,15 @@ const formatNoteDate = (value?: string | null): string | undefined => {
 
 export const buildCrmAiRaporPayload = (
   modulValues: CrmModulFormValues,
-  subItems: CrmSubItemFormValues[],
+  opportunities: CrmOpportunityFormValues[],
   modules: ListModuleDto[],
   notes: CrmModulNoteDto[]
 ): CrmAiRaporPayload => {
-  const firsatlar = subItems.map((item) => {
-    const ad = getOpportunityTitle(item, modules);
-    const asamaLabel = getOpportunityStageLabel(item.opportunityStage);
+  const firsatlar = opportunities.map((opp) => {
+    const ad = getOpportunityDisplayTitle(opp, modules);
+    const asamaLabel = getOpportunityStageLabel(opp.opportunityStage);
     const asama = asamaLabel !== "—" && asamaLabel !== "Seçilmedi" ? asamaLabel : undefined;
-    const butce = formatBudget(item);
+    const butce = formatOpportunityBudget(opp);
 
     return {
       ad,
