@@ -134,13 +134,12 @@ export const CrmKalemFormFields = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Field label="SuccessFactors Modülü" className="sm:col-span-2 lg:col-span-4">
+        <Field label="Çözüm Modülü" className="sm:col-span-2 lg:col-span-4">
           <ModuleMultiSelect
             options={modules}
             value={values.solutionModuleIds}
             onChange={(ids) => handleFieldChange("solutionModuleIds", ids)}
-            placeholder="Modül seçin..."
-            single
+            placeholder="Modül seçin (birden fazla seçilebilir)..."
           />
         </Field>
 

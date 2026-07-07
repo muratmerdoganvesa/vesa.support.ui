@@ -37,6 +37,7 @@ import {
   formatEstimatedValueDisplay,
   type CrmKalemFormValues,
 } from "../formMappers";
+import { ModuleMultiSelect } from "./ModuleMultiSelect";
 
 type CrmKalemGridProps = {
   kalems: CrmKalemFormValues[];
@@ -98,7 +99,6 @@ const KalemGridRow = ({
   onDelete: () => void;
   canDelete: boolean;
 }) => {
-  const moduleId = kalem.solutionModuleIds[0] ?? "";
   const symbol = getCurrencySymbol(kalem.currencyType);
   const total = calculateEstimatedDiscountedValueString(
     kalem.unitPrice,
@@ -128,28 +128,13 @@ const KalemGridRow = ({
         {index + 1}
       </TableCell>
 
-      <TableCell className="px-2 py-1.5 min-w-[160px]">
-        <Select
-          value={moduleId || "__none__"}
-          onValueChange={(v) =>
-            onChange({
-              ...kalem,
-              solutionModuleIds: v === "__none__" ? [] : [v],
-            })
-          }
-        >
-          <SelectTrigger className={cellSelectClass}>
-            <SelectValue placeholder="Modül" />
-          </SelectTrigger>
-          <SelectContent position="popper" className="z-[1300] max-h-60">
-            <SelectItem value="__none__">Seçilmedi</SelectItem>
-            {modules.filter((m) => m.id).map((m) => (
-              <SelectItem key={m.id} value={m.id as string}>
-                <span className="truncate">{m.name}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <TableCell className="px-2 py-1.5 min-w-[200px]">
+        <ModuleMultiSelect
+          options={modules}
+          value={kalem.solutionModuleIds}
+          onChange={(ids) => onChange({ ...kalem, solutionModuleIds: ids })}
+          placeholder="Modül seç..."
+        />
       </TableCell>
 
       <TableCell className="px-2 py-1.5 min-w-[100px]">

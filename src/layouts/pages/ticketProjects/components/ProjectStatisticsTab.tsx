@@ -3,6 +3,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchUserDepartmentMap } from "layouts/pages/ticketProjects/api/fetchUsersForStats";
+import { fetchProjectCompanyMap } from "layouts/pages/ticketProjects/api/fetchProjectCompanyMap";
 import {
   getProjectTypeColumns,
   getProjectTypeColumnColors,
@@ -189,11 +190,17 @@ const ProjectStatisticsTab = ({ isActive }: { isActive: boolean }) => {
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [data, departmentMap] = await Promise.all([
+      const [data, departmentMap, companyMap] = await Promise.all([
         fetchProjectStatistics(),
         fetchUserDepartmentMap().catch(() => new Map<string, string>()),
+        fetchProjectCompanyMap().catch(() => new Map<string, string>()),
       ]);
-      setBoardItems(data);
+      setBoardItems(
+        data.map((item) => ({
+          ...item,
+          workCompanyId: companyMap.get(item.projectId) ?? null,
+        })),
+      );
       setUserDepartmentById(departmentMap);
       setHasLoaded(true);
     } catch {

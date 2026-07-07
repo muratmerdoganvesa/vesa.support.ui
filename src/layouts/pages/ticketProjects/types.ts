@@ -12,6 +12,7 @@ export type StatsBoardItem = {
   kind: StatsBoardItemKind;
   id: string;
   projectId: string;
+  workCompanyId?: string | null;
   customerName: string;
   projectDescription: string;
   projectSubDescription?: string | null;

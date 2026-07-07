@@ -8,7 +8,7 @@ import {
   getOpportunityStageLabel,
   getTypeCodeLabel,
 } from "../constants";
-import { formatDateTr, formatInlineList, formatMoney, formatSolutionModuleNames } from "../utils";
+import { formatDateTr, formatInlineList, formatMoney, formatSolutionModuleNames, resolveSubItemDisplayTitle } from "../utils";
 
 type CrmModulSubItemRowProps = {
   item: CrmSubItemDto;
@@ -23,7 +23,7 @@ const formatSubItemValue = (item: CrmSubItemDto): string => {
 
 export const CrmModulSubItemRow = ({ item, isLast }: CrmModulSubItemRowProps) => {
   const moduleNames = formatSolutionModuleNames(item.solutionModuleNames);
-  const title = moduleNames !== "—" ? moduleNames : "Fırsat";
+  const title = resolveSubItemDisplayTitle(item);
   const typeLabel = getTypeCodeLabel(item.typeCode);
   const stageLabel = getOpportunityStageLabel(item.opportunityStage);
 

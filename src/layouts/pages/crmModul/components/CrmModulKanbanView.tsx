@@ -98,11 +98,12 @@ export const CrmModulKanbanView = ({
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 p-3 overflow-hidden">
+        <div className="flex-1 min-h-0 p-4 overflow-hidden">
           <CrmOpportunityKanbanBoard
             opportunities={visibleOpportunities}
             showCompany={scope === "all"}
             layout="fill"
+            stageScale="large"
             onOpenCard={(card) => onOpenOpportunity(card.crmModulId)}
           />
         </div>

@@ -82,6 +82,7 @@ export interface CrmSubItemInputDto {
   typeCode?: TypeCodes | null;
   opportunityStage?: OpportunityStage;
   opportunityGroupId?: string | null;
+  opportunityName?: string | null;
 }
 
 export interface CrmSubItemDto {
@@ -100,6 +101,7 @@ export interface CrmSubItemDto {
   typeCode?: TypeCodes | null;
   opportunityStage?: OpportunityStage;
   opportunityGroupId?: string | null;
+  opportunityName?: string | null;
   createdDate?: string;
   updatedDate?: string | null;
   uniqNumber?: number;
@@ -115,6 +117,8 @@ export interface CreateCrmModulDto {
   leadSource?: LeadSource | null;
   accountManager?: string | null;
   sapAccountManager?: string | null;
+  usedSapNonSapProducts?: string | null;
+  competitorProductsAndCompanies?: string | null;
   crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
@@ -128,6 +132,8 @@ export interface UpdateCrmModulDto {
   leadSource?: LeadSource | null;
   accountManager?: string | null;
   sapAccountManager?: string | null;
+  usedSapNonSapProducts?: string | null;
+  competitorProductsAndCompanies?: string | null;
   crmSubItems?: CrmSubItemInputDto[] | null;
 }
 
@@ -142,6 +148,8 @@ export interface CrmModulDto {
   leadSource?: LeadSource | null;
   accountManager?: string | null;
   sapAccountManager?: string | null;
+  usedSapNonSapProducts?: string | null;
+  competitorProductsAndCompanies?: string | null;
   crmSubItems?: CrmSubItemDto[] | null;
   solutionModuleIds?: string[] | null;
   solutionModuleNames?: string[] | null;
