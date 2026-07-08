@@ -540,6 +540,16 @@ function appendModuleMultiSelect(
   return ms;
 }
 
+/**
+ * Syncfusion DropDownList, native <select> gibi davranır: bir kez değer seçilince
+ * temizleme ("x") butonu ya da yazarak silme yolu yoktur. Bu yüzden listeye açıkça
+ * "Seçilmedi" (null) seçeneği eklenir; aksi halde durum bir daha boşa alınamaz.
+ */
+const GANTT_STATUS_DROPDOWN_OPTIONS: { label: string; value: ProjectTypes | null }[] = [
+  { label: "Seçilmedi", value: null },
+  ...projectTypeOptions,
+];
+
 function appendStatusDropDown(host: HTMLElement, rowData: any) {
   const label = document.createElement("label");
   label.className = "gantt-module-status-row__status-label";
@@ -548,11 +558,11 @@ function appendStatusDropDown(host: HTMLElement, rowData: any) {
 
   const value = normalizeProjectStatusFromRow(rowData);
   const ddl = new DropDownList({
-    dataSource: projectTypeOptions,
+    dataSource: GANTT_STATUS_DROPDOWN_OPTIONS,
     fields: { text: "label", value: "value" },
     placeholder: "Durum seçin",
     width: "100%",
-    value: value ?? undefined,
+    value: (value ?? null) as unknown as number,
     change: (e: { value?: number | null }) => {
       const next = e.value == null ? null : (Number(e.value) as ProjectTypes);
       applyProjectStatusToRow(rowData, next);
