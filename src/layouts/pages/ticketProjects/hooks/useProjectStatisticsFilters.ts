@@ -120,7 +120,7 @@ export const useProjectStatisticsFilters = (
   const [selectedModule, setSelectedModule] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState<ProjectTypeColumnKey | "All">("All");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [personSearch, setPersonSearch] = useState("");
 
   const filterParams = useMemo(
@@ -325,8 +325,8 @@ export const useProjectStatisticsFilters = (
     selectedDepartment,
     personSearch,
     setPersonSearch,
-    sidebarOpen,
-    setSidebarOpen,
+    isMobileFilterOpen,
+    setIsMobileFilterOpen,
     handleSearchChange,
     handlePersonSelect,
     handleCustomerSelect,
