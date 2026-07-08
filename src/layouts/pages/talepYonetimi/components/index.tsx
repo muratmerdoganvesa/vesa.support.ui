@@ -970,16 +970,16 @@ function FilterTableMethod({
   };
 
   const onSearchButton = async () => {
-    if (!searchTalepNo) {
-      dispatchAlert({ message: "Lütfen talep numarası girin..!", type: "Warning" });
+    if (!searchTalepNo.trim()) {
+      dispatchAlert({ message: t("ns1:TicketPage.TicketTablePage.AramaMetniGirin"), type: "Warning" });
       return;
     }
     setLoading(true);
     const conf = getConfiguration();
     const api = new TicketApi(conf);
-    const data = await api.apiTicketSearchTicketGet(pageDesc, searchTalepNo, skip, 10);
+    const data = await api.apiTicketSearchTicketGet(pageDesc, searchTalepNo.trim(), skip, 10);
     setSearchedData(data.data.ticketList);
-    setSearchMsj(data.data.ticketList.length === 0 ? "Girilen talep numarasına ait kayıt bulunamadı." : "");
+    setSearchMsj(data.data.ticketList.length === 0 ? t("ns1:TicketPage.TicketTablePage.AramaSonucBulunamadi") : "");
     setLoading(false);
   };
 
@@ -1362,15 +1362,15 @@ function FilterTableMethod({
               {t("ns1:TicketPage.TicketTablePage.AramaYapin")}
             </DialogTitle>
             <p className="text-sm text-slate-500 font-normal leading-relaxed pt-1">
-              Talep numarası girerek arama yapabilirsiniz.
+              {t("ns1:TicketPage.TicketTablePage.AramaAciklama")}
             </p>
           </DialogHeader>
 
           <div className="flex flex-col gap-5 px-6 py-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-4 max-w-md">
-              <FilterField label={t("ns1:TicketPage.TicketTablePage.TalepNumarasi")}>
+              <FilterField label={t("ns1:TicketPage.TicketTablePage.AramaMetni")}>
                 <Input
-                  placeholder={t("ns1:TicketPage.TicketTablePage.TalepNumarasi")}
+                  placeholder={t("ns1:TicketPage.TicketTablePage.AramaMetniPlaceholder")}
                   value={searchTalepNo}
                   onChange={(e) => {
                     setSearchTalepNo(e.target.value);
@@ -1385,7 +1385,7 @@ function FilterTableMethod({
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/40 px-6 py-12 text-center">
                 <p className="text-sm font-medium text-slate-600">{searchMsj}</p>
                 <p className="mt-1 text-xs text-slate-400">
-                  Farklı bir talep numarası ile tekrar deneyebilirsiniz.
+                  {t("ns1:TicketPage.TicketTablePage.AramaTekrarDeneyin")}
                 </p>
               </div>
             )}
