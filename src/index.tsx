@@ -20,12 +20,15 @@ import App from "App";
 import "i18n";
 import './index.css';
 
-
+import { registerChunkPreloadErrorHandler } from "utils/chunkReload";
+import ChunkErrorBoundary from "components/ChunkErrorBoundary";
 import { BusyProvider } from "layouts/pages/hooks/useBusy";
 import { AlertProvider } from "layouts/pages/hooks/useAlert";
 import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { UserProvider } from "layouts/pages/hooks/userName";
+
+registerChunkPreloadErrorHandler();
 
 const root = createRoot(document.getElementById("root"));
 
@@ -71,22 +74,24 @@ const msalInstance = new PublicClientApplication(msalConfig);
 console.log("msalInstance");
 console.log(msalInstance);
 root.render(
-  <BrowserRouter>
-      <BusyProvider>
-        <AlertProvider>
-          <UserProvider>
-            <TooltipProvider>
-            <MsalProvider instance={msalInstance}>
-              <QueryClientProvider client={queryClient}>
-                <App />
-              </QueryClientProvider>
-              <Suspense fallback={null}>
-                
-              </Suspense>
-            </MsalProvider>
-            </TooltipProvider>
-          </UserProvider>
-        </AlertProvider>
-      </BusyProvider>
-  </BrowserRouter>
+  <ChunkErrorBoundary>
+    <BrowserRouter>
+        <BusyProvider>
+          <AlertProvider>
+            <UserProvider>
+              <TooltipProvider>
+              <MsalProvider instance={msalInstance}>
+                <QueryClientProvider client={queryClient}>
+                  <App />
+                </QueryClientProvider>
+                <Suspense fallback={null}>
+                  
+                </Suspense>
+              </MsalProvider>
+              </TooltipProvider>
+            </UserProvider>
+          </AlertProvider>
+        </BusyProvider>
+    </BrowserRouter>
+  </ChunkErrorBoundary>
 );
