@@ -1,6 +1,8 @@
 // src/utils/axiosInstance.ts
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import globalAxios from 'axios';
+import { apiUrl, resolveApiBaseUrl } from 'config/apiBase';
+import { isPlatformModuleMode } from 'platform/platformMode';
 
 // localStorage'dan oku veya default değer kullan
 const getLastValidationTime = (): number => {
@@ -15,6 +17,32 @@ const setLastValidationTime = (time: number): void => {
 let isTokenValid = true;
 let validationPromise: Promise<boolean> | null = null;
 const VALIDATION_INTERVAL = 5 * 60 * 1000; // 5 dakika
+
+const redirectToLogin = (): void => {
+    const currentPath = window.location.pathname;
+    const currentHash = window.location.hash;
+    const isLoginPage =
+        currentPath.includes('/authentication/') ||
+        currentPath.includes('/sign-in') ||
+        currentHash.includes('/authentication/');
+
+    if (isLoginPage) return;
+
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("lastTokenValidation");
+    isTokenValid = false;
+
+    if (isPlatformModuleMode()) {
+        try {
+            window.top!.location.href = '/login.html';
+        } catch {
+            window.location.href = "/authentication/sign-in/cover";
+        }
+        return;
+    }
+
+    window.location.href = "/authentication/sign-in/cover";
+};
 
 const validateTokenIfNeeded = async (token: string): Promise<boolean> => {
     const now = Date.now();
@@ -38,15 +66,12 @@ const validateTokenIfNeeded = async (token: string): Promise<boolean> => {
     
     validationPromise = (async () => {
         try {
-            const response = await fetch(
-                `${import.meta.env.VITE_BASE_PATH}/api/User/validatetokenAndUser`,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+            const response = await fetch(apiUrl('/api/User/validatetokenAndUser'), {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
 
             isTokenValid = response.ok;
             setLastValidationTime(Date.now()); // ← localStorage'a yaz
@@ -55,8 +80,8 @@ const validateTokenIfNeeded = async (token: string): Promise<boolean> => {
 
             if (!isTokenValid) {
                 localStorage.removeItem("accessToken");
-                localStorage.removeItem("lastTokenValidation"); // ← Temizle
-                window.location.href = "/authentication/sign-in/cover";
+                localStorage.removeItem("lastTokenValidation");
+                redirectToLogin();
             }
 
             return isTokenValid;
@@ -71,7 +96,7 @@ const validateTokenIfNeeded = async (token: string): Promise<boolean> => {
                 isTokenValid = false;
                 localStorage.removeItem("accessToken");
                 localStorage.removeItem("lastTokenValidation");
-                window.location.href = "/authentication/sign-in/cover";
+                redirectToLogin();
             }
             
             return isTokenValid; // network hatasında true (devam), auth hatasında false (block)
@@ -114,11 +139,8 @@ globalAxios.interceptors.request.use(
                                    currentPath.includes('/reset-password');
                 
                 if (!isLoginPage) {
-                    // console.log('🔄 Login sayfasına yönlendiriliyor...');
                     localStorage.removeItem("lastTokenValidation");
-                    window.location.href = "/authentication/sign-in/cover";
-                } else {
-                    // console.log('⚠️ Zaten login sayfasındasınız, request iptal ediliyor');
+                    redirectToLogin();
                 }
                 
                 // Her durumda request'i reject et
@@ -138,17 +160,7 @@ globalAxios.interceptors.request.use(
             const isValid = await validateTokenIfNeeded(token);
             
             if (!isValid) {
-                // console.log('❌ Request iptal edildi (token geçersiz)');
-                
-                // Zaten login sayfasındaysa redirect yapma
-                const currentPath = window.location.pathname;
-                const isLoginPage = currentPath.includes('/authentication/') || 
-                                   currentPath.includes('/sign-in');
-                
-                if (!isLoginPage) {
-                    window.location.href = "/authentication/sign-in/cover";
-                }
-                
+                redirectToLogin();
                 return Promise.reject({
                     message: 'Token geçersiz, lütfen tekrar giriş yapın',
                     config,
@@ -163,21 +175,10 @@ globalAxios.interceptors.request.use(
     }
 );
 
-const redirectToLogin = (): void => {
-    const currentPath = window.location.pathname;
-    const isLoginPage = currentPath.includes('/authentication/') || currentPath.includes('/sign-in');
-    if (!isLoginPage) {
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("lastTokenValidation");
-        isTokenValid = false;
-        window.location.href = "/authentication/sign-in/cover";
-    }
-};
-
 // Custom instance'ı da export et
 const createAxiosInstance = (): AxiosInstance => {
     const instance = axios.create({
-        baseURL: import.meta.env.VITE_BASE_PATH || '',
+        baseURL: resolveApiBaseUrl(),
         timeout: 30000,
     });
 

@@ -19,14 +19,20 @@ import { lazy, Suspense } from "react";
 import App from "App";
 import "i18n";
 import './index.css';
+import {
+  isPlatformModuleMode,
+  PlatformHashRouter,
+  PlatformProvider,
+} from "platform";
+import { loadApiConfig } from "config/apiConfig";
 
-import { registerChunkPreloadErrorHandler } from "utils/chunkReload";
-import ChunkErrorBoundary from "components/ChunkErrorBoundary";
+
 import { BusyProvider } from "layouts/pages/hooks/useBusy";
 import { AlertProvider } from "layouts/pages/hooks/useAlert";
 import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { UserProvider } from "layouts/pages/hooks/userName";
+import { registerChunkPreloadErrorHandler } from "utils/chunkReload";
 
 registerChunkPreloadErrorHandler();
 
@@ -71,27 +77,28 @@ const msalConfig = isLocalhost
 
 
 const msalInstance = new PublicClientApplication(msalConfig);
-console.log("msalInstance");
-console.log(msalInstance);
-root.render(
-  <ChunkErrorBoundary>
-    <BrowserRouter>
+const isPlatformModule = isPlatformModuleMode();
+const RouterComponent = isPlatformModule ? PlatformHashRouter : BrowserRouter;
+
+void loadApiConfig().then(() => {
+  root.render(
+    <RouterComponent>
+      <PlatformProvider>
         <BusyProvider>
           <AlertProvider>
             <UserProvider>
               <TooltipProvider>
-              <MsalProvider instance={msalInstance}>
-                <QueryClientProvider client={queryClient}>
-                  <App />
-                </QueryClientProvider>
-                <Suspense fallback={null}>
-                  
-                </Suspense>
-              </MsalProvider>
+                <MsalProvider instance={msalInstance}>
+                  <QueryClientProvider client={queryClient}>
+                    <App />
+                  </QueryClientProvider>
+                  <Suspense fallback={null} />
+                </MsalProvider>
               </TooltipProvider>
             </UserProvider>
           </AlertProvider>
         </BusyProvider>
-    </BrowserRouter>
-  </ChunkErrorBoundary>
-);
+      </PlatformProvider>
+    </RouterComponent>
+  );
+});

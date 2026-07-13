@@ -78,6 +78,7 @@ import {
 
 import type { MenuLike } from "./menuLucideResolver";
 import { resolveMenuLucideIcon } from "./menuLucideResolver";
+import { usePlatform } from "platform";
 
 interface Props {
   absolute?: boolean;
@@ -176,6 +177,7 @@ const DashboardNavbar = ({
   const [loginMail, setloginMail] = useState<string>("");
   const dispatchBusy = useBusy();
   const [navAlert, setNavAlert] = useState<NavAlertState>({ open: false });
+  const { isModule: isPlatformModule } = usePlatform();
 
   const { data: userDataQuery } = useQuery(
     "dashboardUserData",
@@ -480,7 +482,10 @@ const DashboardNavbar = ({
           </nav>
         ) : (
           <div
-            className="relative min-h-0 min-w-0 flex-1 pr-44 sm:pr-48"
+            className={cn(
+              "relative min-h-0 min-w-0 flex-1",
+              isPlatformModule ? "pr-2" : "pr-44 sm:pr-48",
+            )}
             aria-hidden
           />
         )}
@@ -501,7 +506,7 @@ const DashboardNavbar = ({
             </Button>
           ) : null}
 
-          {waitingCount > 0 ? (
+          {!isPlatformModule && waitingCount > 0 ? (
             <button
               type="button"
               className={cn(
@@ -518,7 +523,7 @@ const DashboardNavbar = ({
                 {waitingCount > 99 ? "99+" : waitingCount}
               </Badge>
             </button>
-          ) : (
+          ) : !isPlatformModule ? (
             <Popover open={showNoNotification} onOpenChange={setShowNoNotification}>
               <PopoverTrigger asChild>
                 <button
@@ -550,8 +555,9 @@ const DashboardNavbar = ({
                 </p>
               </PopoverContent>
             </Popover>
-          )}
+          ) : null}
 
+          {!isPlatformModule ? (
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button
@@ -648,6 +654,7 @@ const DashboardNavbar = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          ) : null}
         </div>
       </header>
 

@@ -1,7 +1,7 @@
 // src/utils/configuration.ts
 import { axiosInstance } from "utils/axiosInstance";
 import { Configuration } from "./api/generated";
-import { useNavigate } from "react-router-dom";
+import { apiUrl, resolveApiBaseUrl } from "config/apiBase";
 
 export const getAccessToken = (): string | null => {
     return localStorage.getItem("accessToken");
@@ -17,7 +17,7 @@ const handleUnauthorizedOrBlocked = () => {
     }
 
     // Token doğrulama işlemi veya kullanıcı blok kontrolü
-    fetch(`${import.meta.env.VITE_BASE_PATH}/api/User/validatetokenAndUser`, {
+    fetch(apiUrl('/api/User/validatetokenAndUser'), {
         method: 'GET',
         headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -42,7 +42,7 @@ const getConfiguration = () => {
 
     const accessToken = getAccessToken();
     return new Configuration({
-        basePath: import.meta.env.VITE_BASE_PATH || '',
+        basePath: resolveApiBaseUrl(),
         accessToken: accessToken || "",
         baseOptions: {
             axios: axiosInstance
@@ -55,7 +55,7 @@ export const getConfigurationLogin = () => {
 
     const accessToken = getAccessToken();
     return new Configuration({
-        basePath: import.meta.env.VITE_BASE_PATH || '',
+        basePath: resolveApiBaseUrl(),
         accessToken: ""
     });
 };
@@ -63,7 +63,7 @@ export const getConfigurationAccessTokenLogin = () => {
 
     const accessToken = getAccessToken();
     return new Configuration({
-        basePath: import.meta.env.VITE_BASE_PATH || '',
+        basePath: resolveApiBaseUrl(),
         accessToken: accessToken,
         baseOptions: {
             axios: axiosInstance

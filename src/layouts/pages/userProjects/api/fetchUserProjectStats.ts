@@ -19,9 +19,8 @@ export const fetchUserProjectStats = async ({
   departmentId,
   userId,
 }: FetchUserProjectStatsParams): Promise<UserProjectStatsDto[]> => {
-  const basePath = import.meta.env.VITE_BASE_PATH || "";
   const response = await axiosInstance.get<Record<string, unknown>[]>(
-    `${basePath}/api/TicketProjects/GetUserProjectStats`,
+    '/api/TicketProjects/GetUserProjectStats',
     {
       params: {
         departmentId: departmentId || undefined,
