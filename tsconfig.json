@@ -38,7 +38,11 @@
       "page.routes": ["./src/page.routes"],
       "confiuration": ["./src/confiuration"],
       "App": ["./src/App"],
-      "i18n": ["./src/i18n"]
+      "i18n": ["./src/i18n"],
+      "platform": ["./src/platform/index"],
+      "platform/*": ["./src/platform/*"],
+      "luigi": ["./src/luigi"],
+      "config/*": ["./src/config/*"]
     }
   },
   "include": [

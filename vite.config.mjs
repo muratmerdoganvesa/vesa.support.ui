@@ -30,13 +30,25 @@ export default defineConfig(() => ({
       "lib": path.resolve(__dirname, "src/lib"),
       "confiuration": path.resolve(__dirname, "src/confiuration"),
       "utils": path.resolve(__dirname, "src/utils"),
+      "platform": path.resolve(__dirname, "src/platform"),
+      "luigi": path.resolve(__dirname, "src/luigi.ts"),
+      "config": path.resolve(__dirname, "src/config"),
       "locales": path.resolve(__dirname, "src/locales"),
       "page.routes": path.resolve(__dirname, "src/page.routes"),
     },
   },
   server: {
     port: 3000,
+    headers: {
+      'Content-Security-Policy':
+        "frame-ancestors 'self' http://localhost:8080 http://localhost:5173 https://*.vercel.app",
+    },
     proxy: {
+      "/api": {
+        target: "https://api.vesa-tech.com",
+        changeOrigin: true,
+        secure: true,
+      },
       "/tcmb-kurlar": {
         target: "https://www.tcmb.gov.tr",
         changeOrigin: true,

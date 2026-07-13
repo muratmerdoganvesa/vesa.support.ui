@@ -1,4 +1,5 @@
 import { CurrencyType } from "api/generated";
+import { apiUrl } from "config/apiBase";
 
 export type TcmbExchangeRates = {
   eurTry: number;
@@ -61,12 +62,7 @@ const fetchTcmbExchangeRatesFromXml = async (url: string): Promise<TcmbExchangeR
 };
 
 const fetchTcmbExchangeRatesFromApi = async (): Promise<TcmbExchangeRates> => {
-  const apiBase = import.meta.env.VITE_BASE_PATH;
-  if (!apiBase) {
-    throw new Error("API adresi tanımlı değil");
-  }
-
-  const response = await fetch(`${apiBase}${TCMB_API_PATH}`, {
+  const response = await fetch(apiUrl(TCMB_API_PATH), {
     cache: "no-store",
     headers: getAuthHeaders(),
     credentials: "include",
