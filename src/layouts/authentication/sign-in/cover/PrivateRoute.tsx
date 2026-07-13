@@ -64,7 +64,20 @@ const PrivateRoute: React.FC = () => {
 
   if (!accessToken) {
     if (isModule) {
-      return <div />;
+      return (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '40vh',
+            color: '#64748b',
+            fontSize: '14px',
+          }}
+        >
+          Oturum hazırlanıyor…
+        </div>
+      );
     }
 
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
@@ -87,7 +100,10 @@ const PrivateRoute: React.FC = () => {
   }
 
   if (!hasAccess) {
-    if (normalizedPath === "/tickets") {
+    if (normalizedPath === "/tickets" || normalizedPath === "/solveAllTicket") {
+      return <Outlet />
+    }
+    if (isModule) {
       return <Outlet />
     }
     if (normalizedPath === "/documentation") {

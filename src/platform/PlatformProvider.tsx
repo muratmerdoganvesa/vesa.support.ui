@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import i18n from 'i18n';
-import { onLuigiInit, type SupportTheme } from 'luigi';
+import { applyPlatformContext, onLuigiInit, type SupportTheme } from 'luigi';
 import { isPlatformModuleMode } from './platformMode';
 
 interface PlatformContextValue {
@@ -50,10 +50,7 @@ export function PlatformProvider({ children }: PlatformProviderProps) {
     onLuigiInit((context) => {
       window.clearTimeout(fallbackTimer);
 
-      if (context.accessToken) {
-        localStorage.setItem('accessToken', context.accessToken);
-        localStorage.setItem('lastTokenValidation', Date.now().toString());
-      }
+      applyPlatformContext(context);
 
       if (context.language) {
         void i18n.changeLanguage(context.language);
@@ -84,7 +81,20 @@ export function PlatformProvider({ children }: PlatformProviderProps) {
   const value = useMemo(() => ({ isModule }), [isModule]);
 
   if (!ready) {
-    return null;
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '40vh',
+          color: '#64748b',
+          fontSize: '14px',
+        }}
+      >
+        Yükleniyor…
+      </div>
+    );
   }
 
   return <PlatformContext.Provider value={value}>{children}</PlatformContext.Provider>;
