@@ -35,10 +35,21 @@ function toSupportContext(raw: Record<string, unknown>): SupportContext {
   };
 }
 
+export function applyPlatformContext(context: SupportContext): void {
+  if (context.accessToken) {
+    localStorage.setItem('accessToken', context.accessToken);
+    localStorage.setItem('lastTokenValidation', Date.now().toString());
+  }
+}
+
+/** Cross-origin iframe (workzone ↔ support) için third-party cookie kontrolünü kapat */
 export function onLuigiInit(callback: InitCallback): void {
-  addInitListener(() => {
-    callback(toSupportContext(getLuigiContext() as Record<string, unknown>));
-  });
+  addInitListener(
+    () => {
+      callback(toSupportContext(getLuigiContext() as Record<string, unknown>));
+    },
+    true,
+  );
 }
 
 export function getContext(): SupportContext {
