@@ -32,6 +32,7 @@ import { AlertProvider } from "layouts/pages/hooks/useAlert";
 import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { UserProvider } from "layouts/pages/hooks/userName";
+import { registerChunkPreloadErrorHandler } from "utils/chunkReload";
 
 registerChunkPreloadErrorHandler();
 
