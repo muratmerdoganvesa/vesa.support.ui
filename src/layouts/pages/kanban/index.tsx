@@ -51,6 +51,12 @@ import {
   BarChart2,
 } from "lucide-react";
 import { Button } from "components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "components/ui/tooltip";
 import { cn } from "lib/utils";
 import KanbanTaskDialog from "./components/KanbanTaskDialog";
 
@@ -186,6 +192,7 @@ const ListView = ({
     }, []);
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="flex flex-col gap-3">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
@@ -227,8 +234,17 @@ const ListView = ({
                       onRowClick && "hover:bg-slate-50 cursor-pointer focus-visible:outline-none focus-visible:bg-indigo-50/60",
                     )}
                   >
-                    <td className="px-4 py-3 text-slate-700 font-medium max-w-xs truncate">
-                      {row.Summary}
+                    <td className="px-4 py-3 text-slate-700 font-medium max-w-xs">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="block truncate cursor-default">
+                            {row.Summary}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-sm">
+                          <p className="text-xs leading-relaxed">{row.Summary}</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                     {showProjectName && (
                       <td className="px-4 py-3">
@@ -390,6 +406,7 @@ const ListView = ({
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 };
 

@@ -33,6 +33,8 @@ import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { UserProvider } from "layouts/pages/hooks/userName";
 
+registerChunkPreloadErrorHandler();
+
 const root = createRoot(document.getElementById("root"));
 
 import { QueryClient, QueryClientProvider } from 'react-query';

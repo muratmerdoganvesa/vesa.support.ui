@@ -140,6 +140,8 @@ const ActivityCenterPage = lazy(() => import("layouts/pages/activity-center"));
 const ActivityPeriodManagement = lazy(() => import("layouts/pages/activityPeriodManagement"));
 const ActivityRuleManagement = lazy(() => import("layouts/pages/activityRuleManagement"));
 const ChatHome = lazy(() => import("layouts/pages/ai-page/chat-home"));
+const TicketProjectStatistics = lazy(() => import("layouts/pages/ticketProjects/components/ProjectStatisticsTab"));
+
 
 // import GeneralSidenav from "./examples/Sidenav/components/GeneralSidenav/GeneralSidenav";
 
@@ -395,6 +397,7 @@ export default function App() {
             <Route path="/projectmanagement/chart" element={<ProjectChart />} />
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
             <Route path="/chat-home" element={<ChatHome />} />
+            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
           </Route> 
 
           {/* <Route path="/mmessages" element={<ChatPage />} /> */}

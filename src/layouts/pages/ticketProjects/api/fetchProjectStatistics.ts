@@ -24,9 +24,13 @@ const normalizeCommonFields = (item: Record<string, unknown>) => {
 
   const projectId = String(item.projectId ?? item.ProjectId ?? item.id ?? item.Id ?? "");
 
+  const rawIsActive = item.isActive ?? item.IsActive;
+  const isActive = rawIsActive == null ? true : Boolean(rawIsActive);
+
   return {
     id: String(item.id ?? item.Id ?? projectId),
     projectId,
+    isActive,
     customerName: String(item.customerName ?? item.CustomerName ?? ""),
     projectDescription: String(item.projectDescription ?? item.ProjectDescription ?? ""),
     projectSubDescription: (item.projectSubDescription ?? item.ProjectSubDescription) as

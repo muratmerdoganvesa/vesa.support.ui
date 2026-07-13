@@ -119,6 +119,39 @@ const GANTT_ADD_MENU_LABEL = "Add\u200B";
 const GANTT_CHILD_POPUP_MENU_KEY = "ChildPopup";
 const GANTT_INSTANCE_ID = "projectGanttChart";
 
+/** Yeni görevlerde varsayılan başlangıç tarihi olarak bugünün tarihi (saat 00:00). */
+const getTodayForGantt = (): Date => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+};
+
+const formatLocalDateForApi = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+/** Syncfusion add dialog ve batch child oluşturma için StartDate/EndDate varsayılanlarını bugüne ayarlar. */
+const applyTodayAsDefaultTaskDates = (rowData: any) => {
+  if (!rowData) return;
+  const today = getTodayForGantt();
+  const end = new Date(today);
+  end.setDate(end.getDate() + 1);
+
+  rowData.StartDate = today;
+  rowData.EndDate = end;
+  if (rowData.ganttProperties) {
+    rowData.ganttProperties.startDate = new Date(today);
+    rowData.ganttProperties.endDate = new Date(end);
+  }
+  if (rowData.taskData) {
+    rowData.taskData.StartDate = today;
+    rowData.taskData.EndDate = end;
+  }
+};
+
 function buildAddMenuWithChildPopup(ganttId: string) {
   const target = ".e-content";
   return {
@@ -540,6 +573,16 @@ function appendModuleMultiSelect(
   return ms;
 }
 
+/**
+ * Syncfusion DropDownList, native <select> gibi davranır: bir kez değer seçilince
+ * temizleme ("x") butonu ya da yazarak silme yolu yoktur. Bu yüzden listeye açıkça
+ * "Seçilmedi" (null) seçeneği eklenir; aksi halde durum bir daha boşa alınamaz.
+ */
+const GANTT_STATUS_DROPDOWN_OPTIONS: { label: string; value: ProjectTypes | null }[] = [
+  { label: "Seçilmedi", value: null },
+  ...projectTypeOptions,
+];
+
 function appendStatusDropDown(host: HTMLElement, rowData: any) {
   const label = document.createElement("label");
   label.className = "gantt-module-status-row__status-label";
@@ -548,11 +591,11 @@ function appendStatusDropDown(host: HTMLElement, rowData: any) {
 
   const value = normalizeProjectStatusFromRow(rowData);
   const ddl = new DropDownList({
-    dataSource: projectTypeOptions,
+    dataSource: GANTT_STATUS_DROPDOWN_OPTIONS,
     fields: { text: "label", value: "value" },
     placeholder: "Durum seçin",
     width: "100%",
-    value: value ?? undefined,
+    value: (value ?? null) as unknown as number,
     change: (e: { value?: number | null }) => {
       const next = e.value == null ? null : (Number(e.value) as ProjectTypes);
       applyProjectStatusToRow(rowData, next);
@@ -656,12 +699,15 @@ function ProjectChart() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // Kritik ID'ler URL'de, display bilgileri state'te (F5 sonrası da çalışır)
+  // Kritik ID'ler URL'de, display bilgileri state'te (F5 sonrası da çalışır);
+  // yeni sekmede açılan linkler state taşımadığından wcn/pn/psn query param'ları fallback olarak kullanılır.
   const workCompanyId = searchParams.get("cid");
   const projectId = searchParams.get("pid");
-  const workCompanyName: string = location.state?.workCompanyName ?? "";
-  const projectName: string = location.state?.projectName ?? "";
-  const projectSubName: string | undefined = location.state?.projectSubName;
+  const workCompanyName: string =
+    location.state?.workCompanyName ?? searchParams.get("wcn") ?? "";
+  const projectName: string = location.state?.projectName ?? searchParams.get("pn") ?? "";
+  const projectSubName: string | undefined =
+    location.state?.projectSubName ?? searchParams.get("psn") ?? undefined;
   const [pdfSettings, setPdfSettings] = useState({
     fileName: ``,
     pageSize: "A0",
@@ -1350,19 +1396,9 @@ function ProjectChart() {
     }
     const count = Math.max(1, Math.min(30, Math.floor(Number(childBatchCount)) || 1));
 
-    const start = new Date(parentTd.StartDate);
-    let end = parentTd.EndDate ? new Date(parentTd.EndDate) : new Date(start);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      dispatchAlert({
-        message: "Geçerli başlangıç/bitiş tarihi bulunamadı.",
-        type: "error",
-      });
-      return;
-    }
-    if (end.getTime() <= start.getTime()) {
-      end = new Date(start);
-      end.setDate(end.getDate() + 1);
-    }
+    const start = getTodayForGantt();
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
 
     let maxId = projectData.reduce(
       (max: number, t: any) => Math.max(max, Number(t.TaskID) || 0),
@@ -1376,8 +1412,8 @@ function ProjectChart() {
         const taskData: any = {
           TaskID: maxId,
           TaskName: turkishToLatin(`New Task`),
-          StartDate: parentTd.StartDate,
-          EndDate: end.toISOString(),
+          StartDate: formatLocalDateForApi(start),
+          EndDate: formatLocalDateForApi(end),
           ParentID: parentTd.TaskID,
           Progress: 0,
           Predecessor: undefined,
@@ -1632,6 +1668,8 @@ function ProjectChart() {
       }
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
       
+    } else if (args.requestType === "beforeOpenAddDialog") {
+      applyTodayAsDefaultTaskDates(args.rowData);
     } else if (args.requestType === "beforeOpenEditDialog") {
       const row = args.rowData;
       const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
