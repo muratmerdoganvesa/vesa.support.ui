@@ -24,6 +24,7 @@ import {
   PlatformHashRouter,
   PlatformProvider,
 } from "platform";
+import { bootstrapPlatformModule } from "platform/bootstrapPlatformModule";
 import { loadApiConfig } from "config/apiConfig";
 
 
@@ -35,6 +36,9 @@ import { UserProvider } from "layouts/pages/hooks/userName";
 import { registerChunkPreloadErrorHandler } from "utils/chunkReload";
 
 registerChunkPreloadErrorHandler();
+
+const isPlatformModule = isPlatformModuleMode();
+bootstrapPlatformModule();
 
 const root = createRoot(document.getElementById("root"));
 
@@ -77,7 +81,6 @@ const msalConfig = isLocalhost
 
 
 const msalInstance = new PublicClientApplication(msalConfig);
-const isPlatformModule = isPlatformModuleMode();
 const RouterComponent = isPlatformModule ? PlatformHashRouter : BrowserRouter;
 
 void loadApiConfig().then(() => {
