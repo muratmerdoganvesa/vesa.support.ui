@@ -1,4 +1,5 @@
 import { getAccessToken } from "confiuration";
+import { resolveApiBaseUrl } from "config/apiBase";
 import { axiosInstance } from "utils/axiosInstance";
 
 type UploadImageResponse = {
@@ -6,9 +7,7 @@ type UploadImageResponse = {
   data?: { url?: string | null } | string | null;
 };
 
-const getApiBasePath = () =>
-  (((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.VITE_BASE_PATH ||
-    "") as string).replace(/\/+$/, "");
+const getApiBasePath = () => resolveApiBaseUrl();
 
 export const normalizeWebEventImagePath = (value?: string | null) => {
   const imageValue = value?.trim();

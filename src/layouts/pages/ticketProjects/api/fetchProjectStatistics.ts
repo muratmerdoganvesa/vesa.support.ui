@@ -78,9 +78,8 @@ const normalizeStatsItem = (item: Record<string, unknown>): StatsBoardItem | nul
 };
 
 export const fetchProjectStatistics = async (): Promise<StatsBoardItem[]> => {
-  const basePath = import.meta.env.VITE_BASE_PATH || "";
   const response = await axiosInstance.get<Record<string, unknown>[]>(
-    `${basePath}/api/TicketProjects/GetProjectStatistics`,
+    '/api/TicketProjects/GetProjectStatistics',
     {
       timeout: 90_000,
     },

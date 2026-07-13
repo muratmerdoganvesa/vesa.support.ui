@@ -19,6 +19,12 @@ import { lazy, Suspense } from "react";
 import App from "App";
 import "i18n";
 import './index.css';
+import {
+  isPlatformModuleMode,
+  PlatformHashRouter,
+  PlatformProvider,
+} from "platform";
+import { loadApiConfig } from "config/apiConfig";
 
 
 import { BusyProvider } from "layouts/pages/hooks/useBusy";
@@ -68,25 +74,28 @@ const msalConfig = isLocalhost
 
 
 const msalInstance = new PublicClientApplication(msalConfig);
-console.log("msalInstance");
-console.log(msalInstance);
-root.render(
-  <BrowserRouter>
-      <BusyProvider>
-        <AlertProvider>
-          <UserProvider>
-            <TooltipProvider>
-            <MsalProvider instance={msalInstance}>
-              <QueryClientProvider client={queryClient}>
-                <App />
-              </QueryClientProvider>
-              <Suspense fallback={null}>
-                
-              </Suspense>
-            </MsalProvider>
-            </TooltipProvider>
-          </UserProvider>
-        </AlertProvider>
-      </BusyProvider>
-  </BrowserRouter>
-);
+const isPlatformModule = isPlatformModuleMode();
+const RouterComponent = isPlatformModule ? PlatformHashRouter : BrowserRouter;
+
+void loadApiConfig().then(() => {
+  root.render(
+    <RouterComponent>
+      <PlatformProvider>
+        <BusyProvider>
+          <AlertProvider>
+            <UserProvider>
+              <TooltipProvider>
+                <MsalProvider instance={msalInstance}>
+                  <QueryClientProvider client={queryClient}>
+                    <App />
+                  </QueryClientProvider>
+                  <Suspense fallback={null} />
+                </MsalProvider>
+              </TooltipProvider>
+            </UserProvider>
+          </AlertProvider>
+        </BusyProvider>
+      </PlatformProvider>
+    </RouterComponent>
+  );
+});

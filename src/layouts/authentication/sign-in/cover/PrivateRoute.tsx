@@ -3,9 +3,11 @@ import getConfiguration from "confiuration";
 import { useQuery } from "react-query";
 import React, { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { usePlatform } from "platform";
 
 const PrivateRoute: React.FC = () => {
   const location = useLocation();
+  const { isModule } = usePlatform();
   const currentPath = location.pathname;
   const LOGIN_ROUTE = "/authentication/sign-in/cover";
   
@@ -61,6 +63,10 @@ const PrivateRoute: React.FC = () => {
   );
 
   if (!accessToken) {
+    if (isModule) {
+      return <div />;
+    }
+
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
     const params = new URLSearchParams({ returnTo });
 

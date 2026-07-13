@@ -19,6 +19,9 @@
 .env.production.local
 .env
 
+# local API override (dev only)
+public/api-config.local.json
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
