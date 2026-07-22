@@ -3988,6 +3988,31 @@ export interface ClientLoginDto {
 /**
  * 
  * @export
+ * @interface CloseCrmV2OpportunityDto
+ */
+export interface CloseCrmV2OpportunityDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof CloseCrmV2OpportunityDto
+     */
+    'outcome'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CloseCrmV2OpportunityDto
+     */
+    'reasonCode'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CloseCrmV2OpportunityDto
+     */
+    'otherNote'?: string | null;
+}
+/**
+ * 
+ * @export
  * @interface Company
  */
 export interface Company {
@@ -4569,6 +4594,12 @@ export interface CreateCrmV2ActivityDto {
      * @memberof CreateCrmV2ActivityDto
      */
     'status'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmV2ActivityDto
+     */
+    'owner'?: string | null;
 }
 /**
  * 
@@ -4667,6 +4698,12 @@ export interface CreateCrmV2OpportunityDto {
      * @memberof CreateCrmV2OpportunityDto
      */
     'partnerCompanyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CreateCrmV2OpportunityDto
+     */
+    'recordType'?: string | null;
 }
 /**
  * 
@@ -5819,6 +5856,36 @@ export interface CrmV2ActivityDto {
      * @memberof CrmV2ActivityDto
      */
     'status'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2ActivityDto
+     */
+    'owner'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2ActivityDto
+     */
+    'createdBy'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2ActivityDto
+     */
+    'createdDate'?: string;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2ActivityDto
+     */
+    'updatedBy'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2ActivityDto
+     */
+    'updatedDate'?: string | null;
 }
 /**
  * 
@@ -5905,6 +5972,19 @@ export interface CrmV2ExchangeRates {
      * @memberof CrmV2ExchangeRates
      */
     'isFallback'?: boolean;
+}
+/**
+ * 
+ * @export
+ * @interface CrmV2ExportPermissionDto
+ */
+export interface CrmV2ExportPermissionDto {
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CrmV2ExportPermissionDto
+     */
+    'canExportPipelineExcel'?: boolean;
 }
 /**
  * 
@@ -6016,6 +6096,42 @@ export interface CrmV2OpportunityDto {
      * @memberof CrmV2OpportunityDto
      */
     'partnerCompanyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2OpportunityDto
+     */
+    'recordType'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2OpportunityDto
+     */
+    'actualCloseDate'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2OpportunityDto
+     */
+    'closeReasonCode'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2OpportunityDto
+     */
+    'closeOtherNote'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2OpportunityDto
+     */
+    'createdBy'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof CrmV2OpportunityDto
+     */
+    'createdDate'?: string;
     /**
      * 
      * @type {Array<CrmV2OpportunityLineItemDto>}
@@ -13782,7 +13898,8 @@ export const ProjectTypes = {
     NUMBER_2: 2,
     NUMBER_3: 3,
     NUMBER_4: 4,
-    NUMBER_5: 5
+    NUMBER_5: 5,
+    NUMBER_6: 6
 } as const;
 
 export type ProjectTypes = typeof ProjectTypes[keyof typeof ProjectTypes];
@@ -19471,6 +19588,12 @@ export interface UpdateCrmV2ActivityDto {
      * @memberof UpdateCrmV2ActivityDto
      */
     'status'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmV2ActivityDto
+     */
+    'owner'?: string | null;
 }
 /**
  * 
@@ -19569,6 +19692,12 @@ export interface UpdateCrmV2OpportunityDto {
      * @memberof UpdateCrmV2OpportunityDto
      */
     'partnerCompanyName'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UpdateCrmV2OpportunityDto
+     */
+    'recordType'?: string | null;
 }
 /**
  * 
@@ -32498,6 +32627,47 @@ export const CrmV2OpportunitiesApiAxiosParamCreator = function (configuration?: 
         /**
          * 
          * @param {string} id 
+         * @param {CloseCrmV2OpportunityDto} [closeCrmV2OpportunityDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiV2CrmOpportunitiesIdClosePost: async (id: string, closeCrmV2OpportunityDto?: CloseCrmV2OpportunityDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiV2CrmOpportunitiesIdClosePost', 'id', id)
+            const localVarPath = `/api/v2/crm/opportunities/{id}/close`
+                .replace(`{${"id"}}`, encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(closeCrmV2OpportunityDto, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {string} id 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -32827,6 +32997,19 @@ export const CrmV2OpportunitiesApiFp = function(configuration?: Configuration) {
         /**
          * 
          * @param {string} id 
+         * @param {CloseCrmV2OpportunityDto} [closeCrmV2OpportunityDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiV2CrmOpportunitiesIdClosePost(id: string, closeCrmV2OpportunityDto?: CloseCrmV2OpportunityDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmV2OpportunityDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiV2CrmOpportunitiesIdClosePost(id, closeCrmV2OpportunityDto, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmV2OpportunitiesApi.apiV2CrmOpportunitiesIdClosePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {string} id 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -32944,6 +33127,16 @@ export const CrmV2OpportunitiesApiFactory = function (configuration?: Configurat
         /**
          * 
          * @param {string} id 
+         * @param {CloseCrmV2OpportunityDto} [closeCrmV2OpportunityDto] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiV2CrmOpportunitiesIdClosePost(id: string, closeCrmV2OpportunityDto?: CloseCrmV2OpportunityDto, options?: RawAxiosRequestConfig): AxiosPromise<CrmV2OpportunityDto> {
+            return localVarFp.apiV2CrmOpportunitiesIdClosePost(id, closeCrmV2OpportunityDto, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {string} id 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -33039,6 +33232,18 @@ export class CrmV2OpportunitiesApi extends BaseAPI {
     /**
      * 
      * @param {string} id 
+     * @param {CloseCrmV2OpportunityDto} [closeCrmV2OpportunityDto] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmV2OpportunitiesApi
+     */
+    public apiV2CrmOpportunitiesIdClosePost(id: string, closeCrmV2OpportunityDto?: CloseCrmV2OpportunityDto, options?: RawAxiosRequestConfig) {
+        return CrmV2OpportunitiesApiFp(this.configuration).apiV2CrmOpportunitiesIdClosePost(id, closeCrmV2OpportunityDto, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {string} id 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof CrmV2OpportunitiesApi
@@ -33125,6 +33330,169 @@ export class CrmV2OpportunitiesApi extends BaseAPI {
      */
     public apiV2CrmOpportunitiesPost(createCrmV2OpportunityDto?: CreateCrmV2OpportunityDto, options?: RawAxiosRequestConfig) {
         return CrmV2OpportunitiesApiFp(this.configuration).apiV2CrmOpportunitiesPost(createCrmV2OpportunityDto, options).then((request) => request(this.axios, this.basePath));
+    }
+}
+
+
+
+/**
+ * CrmV2ReportsApi - axios parameter creator
+ * @export
+ */
+export const CrmV2ReportsApiAxiosParamCreator = function (configuration?: Configuration) {
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiV2CrmReportsPipelineExcelGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v2/crm/reports/pipeline/excel`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiV2CrmReportsPipelineExportPermissionGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/v2/crm/reports/pipeline/export-permission`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication Bearer required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+    
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+    }
+};
+
+/**
+ * CrmV2ReportsApi - functional programming interface
+ * @export
+ */
+export const CrmV2ReportsApiFp = function(configuration?: Configuration) {
+    const localVarAxiosParamCreator = CrmV2ReportsApiAxiosParamCreator(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiV2CrmReportsPipelineExcelGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiV2CrmReportsPipelineExcelGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmV2ReportsApi.apiV2CrmReportsPipelineExcelGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiV2CrmReportsPipelineExportPermissionGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<CrmV2ExportPermissionDto>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiV2CrmReportsPipelineExportPermissionGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['CrmV2ReportsApi.apiV2CrmReportsPipelineExportPermissionGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+    }
+};
+
+/**
+ * CrmV2ReportsApi - factory interface
+ * @export
+ */
+export const CrmV2ReportsApiFactory = function (configuration?: Configuration, basePath?: string, axios?: AxiosInstance) {
+    const localVarFp = CrmV2ReportsApiFp(configuration)
+    return {
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiV2CrmReportsPipelineExcelGet(options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiV2CrmReportsPipelineExcelGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiV2CrmReportsPipelineExportPermissionGet(options?: RawAxiosRequestConfig): AxiosPromise<CrmV2ExportPermissionDto> {
+            return localVarFp.apiV2CrmReportsPipelineExportPermissionGet(options).then((request) => request(axios, basePath));
+        },
+    };
+};
+
+/**
+ * CrmV2ReportsApi - object-oriented interface
+ * @export
+ * @class CrmV2ReportsApi
+ * @extends {BaseAPI}
+ */
+export class CrmV2ReportsApi extends BaseAPI {
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmV2ReportsApi
+     */
+    public apiV2CrmReportsPipelineExcelGet(options?: RawAxiosRequestConfig) {
+        return CrmV2ReportsApiFp(this.configuration).apiV2CrmReportsPipelineExcelGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     * @memberof CrmV2ReportsApi
+     */
+    public apiV2CrmReportsPipelineExportPermissionGet(options?: RawAxiosRequestConfig) {
+        return CrmV2ReportsApiFp(this.configuration).apiV2CrmReportsPipelineExportPermissionGet(options).then((request) => request(this.axios, this.basePath));
     }
 }
 
@@ -54991,12 +55359,13 @@ export const TicketApiAxiosParamCreator = function (configuration?: Configuratio
          * 
          * @param {string} [pageDesc] 
          * @param {string} [talepNo] 
+         * @param {string} [searchText] 
          * @param {number} [skip] 
          * @param {number} [top] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketSearchTicketGet: async (pageDesc?: string, talepNo?: string, skip?: number, top?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiTicketSearchTicketGet: async (pageDesc?: string, talepNo?: string, searchText?: string, skip?: number, top?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/Ticket/SearchTicket`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -55019,6 +55388,10 @@ export const TicketApiAxiosParamCreator = function (configuration?: Configuratio
 
             if (talepNo !== undefined) {
                 localVarQueryParameter['talepNo'] = talepNo;
+            }
+
+            if (searchText !== undefined) {
+                localVarQueryParameter['searchText'] = searchText;
             }
 
             if (skip !== undefined) {
@@ -55597,13 +55970,14 @@ export const TicketApiFp = function(configuration?: Configuration) {
          * 
          * @param {string} [pageDesc] 
          * @param {string} [talepNo] 
+         * @param {string} [searchText] 
          * @param {number} [skip] 
          * @param {number} [top] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiTicketSearchTicketGet(pageDesc?: string, talepNo?: string, skip?: number, top?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TicketDtoResult>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketSearchTicketGet(pageDesc, talepNo, skip, top, options);
+        async apiTicketSearchTicketGet(pageDesc?: string, talepNo?: string, searchText?: string, skip?: number, top?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<TicketDtoResult>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiTicketSearchTicketGet(pageDesc, talepNo, searchText, skip, top, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['TicketApi.apiTicketSearchTicketGet']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -55956,13 +56330,14 @@ export const TicketApiFactory = function (configuration?: Configuration, basePat
          * 
          * @param {string} [pageDesc] 
          * @param {string} [talepNo] 
+         * @param {string} [searchText] 
          * @param {number} [skip] 
          * @param {number} [top] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiTicketSearchTicketGet(pageDesc?: string, talepNo?: string, skip?: number, top?: number, options?: RawAxiosRequestConfig): AxiosPromise<TicketDtoResult> {
-            return localVarFp.apiTicketSearchTicketGet(pageDesc, talepNo, skip, top, options).then((request) => request(axios, basePath));
+        apiTicketSearchTicketGet(pageDesc?: string, talepNo?: string, searchText?: string, skip?: number, top?: number, options?: RawAxiosRequestConfig): AxiosPromise<TicketDtoResult> {
+            return localVarFp.apiTicketSearchTicketGet(pageDesc, talepNo, searchText, skip, top, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -56338,14 +56713,15 @@ export class TicketApi extends BaseAPI {
      * 
      * @param {string} [pageDesc] 
      * @param {string} [talepNo] 
+     * @param {string} [searchText] 
      * @param {number} [skip] 
      * @param {number} [top] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof TicketApi
      */
-    public apiTicketSearchTicketGet(pageDesc?: string, talepNo?: string, skip?: number, top?: number, options?: RawAxiosRequestConfig) {
-        return TicketApiFp(this.configuration).apiTicketSearchTicketGet(pageDesc, talepNo, skip, top, options).then((request) => request(this.axios, this.basePath));
+    public apiTicketSearchTicketGet(pageDesc?: string, talepNo?: string, searchText?: string, skip?: number, top?: number, options?: RawAxiosRequestConfig) {
+        return TicketApiFp(this.configuration).apiTicketSearchTicketGet(pageDesc, talepNo, searchText, skip, top, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
