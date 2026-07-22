@@ -11,9 +11,11 @@ const PROJECT_TYPE_LABEL_BY_VALUE: Record<ProjectTypes, string> = {
   [ProjectTypes.NUMBER_3]: "UAT",
   [ProjectTypes.NUMBER_4]: "Preparation",
   [ProjectTypes.NUMBER_5]: "DONE",
+  [ProjectTypes.NUMBER_6]: "Beklemede",
 };
 
 const PROJECT_TYPE_ORDER: ProjectTypes[] = [
+  ProjectTypes.NUMBER_6,
   ProjectTypes.NUMBER_1,
   ProjectTypes.NUMBER_2,
   ProjectTypes.NUMBER_3,
@@ -105,6 +107,13 @@ export const PROJECT_TYPE_COLUMN_COLORS: Record<
     dot: "bg-emerald-500",
     cardBorder: "border-l-emerald-500",
     tab: "text-emerald-600 border-emerald-500",
+  },
+  Beklemede: {
+    header: "border-t-orange-500",
+    badge: "bg-orange-50 text-orange-700",
+    dot: "bg-orange-500",
+    cardBorder: "border-l-orange-500",
+    tab: "text-orange-600 border-orange-500",
   },
 };
 

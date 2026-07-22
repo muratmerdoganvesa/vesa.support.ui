@@ -1333,7 +1333,7 @@ function ProjectChart() {
         taskId: args.taskData.TaskID,
         users: usersForInsert(args.taskData.resources),
         moduleIds: moduleIdsPayload,
-        projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? undefined,
+        projectStatus: normalizeProjectStatusFromRow(args.taskData),
       };
 
       const api = new ProjectTasksApi(config);
@@ -1506,7 +1506,7 @@ function ProjectChart() {
         taskId: taskData.TaskID,
         users: taskData.resources,
         moduleIds: moduleIdsPayload,
-        projectStatus: normalizeProjectStatusFromRow(taskData) ?? undefined,
+        projectStatus: normalizeProjectStatusFromRow(taskData),
       };
 
       const api = new ProjectTasksApi(config);
