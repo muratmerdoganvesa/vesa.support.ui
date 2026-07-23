@@ -58,8 +58,16 @@ export const getProjectColumnKey = (
 
 export const getStatsBoardColumnKey = (item: StatsBoardItem): ProjectTypeColumnKey => {
   if (item.kind === "project") return UNASSIGNED_PROJECT_TYPE_KEY;
+  // simulated: projectStatus null → Seçilmeyenler; aksi halde ilgili kolon
   return getProjectColumnKey(item.projectStatus);
 };
+
+/** Simülasyon plan kartlarının rose renkleri (kolon renginden bağımsız) */
+export const SIMULATED_PLAN_CARD_COLORS = {
+  cardBorder: "border-l-rose-500",
+  cardBg: "bg-rose-50/80 dark:bg-rose-950/30",
+  badge: "border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300",
+} as const;
 
 /** Kanban kolon renkleri ile uyumlu */
 export const PROJECT_TYPE_COLUMN_COLORS: Record<
