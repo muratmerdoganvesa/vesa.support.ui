@@ -17,6 +17,7 @@ type FilterParams = {
   selectedModule: string;
   selectedStatus: ProjectTypeColumnKey | "All";
   selectedDepartment: string;
+  selectedLevel: string;
 };
 
 const getItemPersonIds = (item: StatsBoardItem): string[] => {
@@ -28,13 +29,13 @@ const getItemPersonIds = (item: StatsBoardItem): string[] => {
   return ids;
 };
 
-const itemMatchesDepartment = (
+const itemMatchesLookup = (
   item: StatsBoardItem,
-  department: string,
-  userDepartmentById: Map<string, string>,
+  value: string,
+  lookupById: Map<string, string>,
 ): boolean => {
   const personIds = getItemPersonIds(item);
-  return personIds.some((id) => userDepartmentById.get(id) === department);
+  return personIds.some((id) => lookupById.get(id) === value);
 };
 
 const itemMatchesStatus = (
@@ -51,6 +52,7 @@ const applyClientFilters = (
   items: StatsBoardItem[],
   params: FilterParams,
   userDepartmentById: Map<string, string>,
+  userLevelById: Map<string, string>,
 ): StatsBoardItem[] => {
   let filtered = items;
   const {
@@ -60,6 +62,7 @@ const applyClientFilters = (
     selectedModule,
     selectedStatus,
     selectedDepartment,
+    selectedLevel,
   } = params;
 
   if (searchTerm.trim()) {
@@ -103,8 +106,12 @@ const applyClientFilters = (
 
   if (selectedDepartment !== "All") {
     filtered = filtered.filter((item) =>
-      itemMatchesDepartment(item, selectedDepartment, userDepartmentById),
+      itemMatchesLookup(item, selectedDepartment, userDepartmentById),
     );
+  }
+
+  if (selectedLevel !== "All") {
+    filtered = filtered.filter((item) => itemMatchesLookup(item, selectedLevel, userLevelById));
   }
 
   return filtered;
@@ -113,6 +120,7 @@ const applyClientFilters = (
 export const useProjectStatisticsFilters = (
   items: StatsBoardItem[],
   userDepartmentById: Map<string, string>,
+  userLevelById: Map<string, string>,
 ) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState("All");
@@ -120,6 +128,7 @@ export const useProjectStatisticsFilters = (
   const [selectedModule, setSelectedModule] = useState("All");
   const [selectedStatus, setSelectedStatus] = useState<ProjectTypeColumnKey | "All">("All");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [selectedLevel, setSelectedLevel] = useState("All");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [personSearch, setPersonSearch] = useState("");
 
@@ -131,6 +140,7 @@ export const useProjectStatisticsFilters = (
       selectedModule,
       selectedStatus,
       selectedDepartment,
+      selectedLevel,
     }),
     [
       searchTerm,
@@ -139,12 +149,13 @@ export const useProjectStatisticsFilters = (
       selectedModule,
       selectedStatus,
       selectedDepartment,
+      selectedLevel,
     ],
   );
 
   const filteredItems = useMemo(
-    () => applyClientFilters(items, filterParams, userDepartmentById),
-    [items, filterParams, userDepartmentById],
+    () => applyClientFilters(items, filterParams, userDepartmentById, userLevelById),
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   const baseForPerson = useMemo(
@@ -153,8 +164,9 @@ export const useProjectStatisticsFilters = (
         items,
         { ...filterParams, selectedPersonId: "All" },
         userDepartmentById,
+        userLevelById,
       ),
-    [items, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   const baseForCustomer = useMemo(
@@ -163,8 +175,9 @@ export const useProjectStatisticsFilters = (
         items,
         { ...filterParams, selectedCustomer: "All" },
         userDepartmentById,
+        userLevelById,
       ),
-    [items, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   const baseForModule = useMemo(
@@ -173,8 +186,9 @@ export const useProjectStatisticsFilters = (
         items,
         { ...filterParams, selectedModule: "All" },
         userDepartmentById,
+        userLevelById,
       ),
-    [items, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   const baseForStatus = useMemo(
@@ -183,8 +197,9 @@ export const useProjectStatisticsFilters = (
         items,
         { ...filterParams, selectedStatus: "All" },
         userDepartmentById,
+        userLevelById,
       ),
-    [items, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   const baseForDepartment = useMemo(
@@ -193,16 +208,33 @@ export const useProjectStatisticsFilters = (
         items,
         { ...filterParams, selectedDepartment: "All" },
         userDepartmentById,
+        userLevelById,
       ),
-    [items, filterParams, userDepartmentById],
+    [items, filterParams, userDepartmentById, userLevelById],
+  );
+
+  const baseForLevel = useMemo(
+    () =>
+      applyClientFilters(
+        items,
+        { ...filterParams, selectedLevel: "All" },
+        userDepartmentById,
+        userLevelById,
+      ),
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   /** Diğer tüm filtreler uygulanmış ama arama terimi hariç bırakılmış öğeler.
    * Kişi görünümünde arama, kartları değil kişileri süzmek için kullanılır. */
   const filteredItemsIgnoringSearch = useMemo(
     () =>
-      applyClientFilters(items, { ...filterParams, searchTerm: "" }, userDepartmentById),
-    [items, filterParams, userDepartmentById],
+      applyClientFilters(
+        items,
+        { ...filterParams, searchTerm: "" },
+        userDepartmentById,
+        userLevelById,
+      ),
+    [items, filterParams, userDepartmentById, userLevelById],
   );
 
   const allPersons = useMemo((): { id: string; name: string }[] => {
@@ -274,10 +306,26 @@ export const useProjectStatisticsFilters = (
       .map((name) => ({
         name,
         count: baseForDepartment.filter((item) =>
-          itemMatchesDepartment(item, name, userDepartmentById),
+          itemMatchesLookup(item, name, userDepartmentById),
         ).length,
       }));
   }, [baseForDepartment, userDepartmentById]);
+
+  const uniqueLevels = useMemo((): LabelCountItem[] => {
+    const levelSet = new Set<string>();
+    for (const item of baseForLevel) {
+      for (const id of getItemPersonIds(item)) {
+        const level = userLevelById.get(id)?.trim();
+        if (level) levelSet.add(level);
+      }
+    }
+    return Array.from(levelSet)
+      .sort((a, b) => a.localeCompare(b, "tr"))
+      .map((name) => ({
+        name,
+        count: baseForLevel.filter((item) => itemMatchesLookup(item, name, userLevelById)).length,
+      }));
+  }, [baseForLevel, userLevelById]);
 
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
@@ -304,6 +352,10 @@ export const useProjectStatisticsFilters = (
     setSelectedDepartment(department);
   }, []);
 
+  const handleLevelSelect = useCallback((level: string) => {
+    setSelectedLevel(level);
+  }, []);
+
   const activeFilterCount = useMemo(
     () =>
       [
@@ -313,6 +365,7 @@ export const useProjectStatisticsFilters = (
         selectedModule !== "All" ? 1 : 0,
         selectedStatus !== "All" ? 1 : 0,
         selectedDepartment !== "All" ? 1 : 0,
+        selectedLevel !== "All" ? 1 : 0,
       ].reduce((a, b) => a + b, 0),
     [
       searchTerm,
@@ -321,6 +374,7 @@ export const useProjectStatisticsFilters = (
       selectedModule,
       selectedStatus,
       selectedDepartment,
+      selectedLevel,
     ],
   );
 
@@ -331,6 +385,7 @@ export const useProjectStatisticsFilters = (
     selectedModule,
     selectedStatus,
     selectedDepartment,
+    selectedLevel,
     personSearch,
     setPersonSearch,
     isMobileFilterOpen,
@@ -341,6 +396,7 @@ export const useProjectStatisticsFilters = (
     handleModuleSelect,
     handleStatusSelect,
     handleDepartmentSelect,
+    handleLevelSelect,
     filteredItems,
     filteredItemsIgnoringSearch,
     uniquePersons,
@@ -348,6 +404,7 @@ export const useProjectStatisticsFilters = (
     uniqueModules,
     uniqueStatuses,
     uniqueDepartments,
+    uniqueLevels,
     departmentAllCount: baseForDepartment.length,
     activeFilterCount,
     totalCount: items.length,

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  Award,
   Building2,
   CircleDot,
   Landmark,
@@ -54,6 +55,9 @@ type Props = {
   uniqueModules: LabelCountItem[];
   selectedModule: string;
   onModuleSelect: (name: string) => void;
+  uniqueLevels: LabelCountItem[];
+  selectedLevel: string;
+  onLevelSelect: (level: string) => void;
   totalCount: number;
   filteredCount: number;
   isMobileFilterOpen: boolean;
@@ -304,6 +308,9 @@ const ProjectStatisticsFilterBar = ({
   uniqueModules,
   selectedModule,
   onModuleSelect,
+  uniqueLevels,
+  selectedLevel,
+  onLevelSelect,
   totalCount,
   filteredCount,
   isMobileFilterOpen,
@@ -532,11 +539,47 @@ const ProjectStatisticsFilterBar = ({
     };
   }, [uniqueModules, selectedModule, onModuleSelect]);
 
+  const levelGroup: FilterGroupConfig | null = useMemo(() => {
+    if (uniqueLevels.length === 0) return null;
+    const totalLevelCount = uniqueLevels.reduce((s, l) => s + l.count, 0);
+    const options: FilterOption[] = [
+      {
+        key: "All",
+        label: "Tümü",
+        count: totalLevelCount,
+        indicator: <NeutralDot isSelected={selectedLevel === "All"} />,
+        isSelected: selectedLevel === "All",
+        onSelect: () => onLevelSelect("All"),
+      },
+      ...uniqueLevels.map(({ name, count }) => ({
+        key: name,
+        label: name,
+        count,
+        indicator: <NeutralDot isSelected={selectedLevel === name} />,
+        isSelected: selectedLevel === name,
+        onSelect: () => onLevelSelect(name),
+      })),
+    ];
+    return {
+      key: "level",
+      label: "Seviye",
+      icon: <Award className="size-3.5" />,
+      activeLabel: selectedLevel !== "All" ? selectedLevel : undefined,
+      activeCount:
+        selectedLevel !== "All"
+          ? uniqueLevels.find((l) => l.name === selectedLevel)?.count
+          : undefined,
+      options,
+      emptyMessage: "Seviye bulunamadı",
+    };
+  }, [uniqueLevels, selectedLevel, onLevelSelect]);
+
   const filterGroups = useMemo(
-    () => [statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup].filter(
-      (g): g is FilterGroupConfig => g !== null,
-    ),
-    [statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup],
+    () =>
+      [statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup, levelGroup].filter(
+        (g): g is FilterGroupConfig => g !== null,
+      ),
+    [statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup, levelGroup],
   );
 
   const activeChips: ActiveFilterChip[] = useMemo(() => {
@@ -585,6 +628,13 @@ const ProjectStatisticsFilterBar = ({
         onClear: () => onModuleSelect("All"),
       });
     }
+    if (selectedLevel !== "All") {
+      chips.push({
+        key: "level",
+        label: `Seviye: ${selectedLevel}`,
+        onClear: () => onLevelSelect("All"),
+      });
+    }
     return chips;
   }, [
     searchTerm,
@@ -593,6 +643,7 @@ const ProjectStatisticsFilterBar = ({
     selectedPersonId,
     selectedCustomer,
     selectedModule,
+    selectedLevel,
     uniqueStatuses,
     uniquePersons,
     onSearchChange,
@@ -601,6 +652,7 @@ const ProjectStatisticsFilterBar = ({
     onPersonSelect,
     onCustomerSelect,
     onModuleSelect,
+    onLevelSelect,
   ]);
 
   const handleResetAll = () => {
@@ -610,6 +662,7 @@ const ProjectStatisticsFilterBar = ({
     onPersonSelect("All");
     onCustomerSelect("All");
     onModuleSelect("All");
+    onLevelSelect("All");
   };
 
   const activeFilterCount = activeChips.length;
