@@ -1,4 +1,4 @@
-import { BarChart3, CheckCircle2, ListTodo, Users } from "lucide-react";
+import { BarChart3, Building2, CheckCircle2, Folder, ListTodo, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import {
   getProjectTypeColumns,
@@ -97,6 +97,38 @@ const PersonCard = ({ person, getPhoto, onPersonClick }: PersonCardProps) => {
           </div>
         </div>
       </div>
+
+      {/* Proje & müşteri sayıları */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
+          <Folder className="size-2.5" aria-hidden />
+          {person.projectCount} proje
+        </span>
+        <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-600 dark:bg-sky-950/40 dark:text-sky-300">
+          <Building2 className="size-2.5" aria-hidden />
+          {person.customerCount} müşteri
+        </span>
+      </div>
+
+      {/* Müşteri isimleri (küçük etiketler) */}
+      {person.customers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1">
+          {person.customers.slice(0, 4).map((customer) => (
+            <span
+              key={customer}
+              title={customer}
+              className="max-w-28 truncate rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
+            >
+              {customer}
+            </span>
+          ))}
+          {person.customers.length > 4 && (
+            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:bg-muted dark:text-muted-foreground">
+              +{person.customers.length - 4}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Segmented progress bar */}
       <div className="flex h-2 w-full gap-px overflow-hidden rounded-full bg-slate-100 dark:bg-muted">
