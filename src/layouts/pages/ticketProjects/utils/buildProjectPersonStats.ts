@@ -9,6 +9,18 @@ export type ProjectPersonStats = {
   byColumn: Partial<Record<ProjectTypeColumnKey, number>>;
   donePercent: number;
   activeCount: number;
+  customers: string[];
+  customerCount: number;
+  projectCount: number;
+};
+
+type PersonStatsAccumulator = {
+  personId: string;
+  name: string;
+  total: number;
+  byColumn: Partial<Record<ProjectTypeColumnKey, number>>;
+  customerSet: Set<string>;
+  projectIdSet: Set<string>;
 };
 
 const DONE_COLUMN_KEY: ProjectTypeColumnKey = ProjectTypes.NUMBER_5;
@@ -24,7 +36,7 @@ const getItemPersons = (item: StatsBoardItem): TicketProjectStatsPersonDto[] => 
 
 /** Kişi bazlı proje istatistikleri; her kalem/proje kartı bir kişiyi bir kez sayar. */
 export const buildProjectPersonStats = (items: StatsBoardItem[]): ProjectPersonStats[] => {
-  const map = new Map<string, ProjectPersonStats>();
+  const map = new Map<string, PersonStatsAccumulator>();
 
   for (const item of items) {
     const columnKey = getStatsBoardColumnKey(item);
@@ -40,24 +52,33 @@ export const buildProjectPersonStats = (items: StatsBoardItem[]): ProjectPersonS
           name: person.fullName,
           total: 0,
           byColumn: {},
-          donePercent: 0,
-          activeCount: 0,
+          customerSet: new Set(),
+          projectIdSet: new Set(),
         });
       }
 
-      const stats = map.get(person.id)!;
-      stats.total += 1;
-      stats.byColumn[columnKey] = (stats.byColumn[columnKey] ?? 0) + 1;
+      const acc = map.get(person.id)!;
+      acc.total += 1;
+      acc.byColumn[columnKey] = (acc.byColumn[columnKey] ?? 0) + 1;
+      if (item.customerName) acc.customerSet.add(item.customerName);
+      if (item.projectId) acc.projectIdSet.add(item.projectId);
     }
   }
 
-  const result = Array.from(map.values());
-
-  for (const stats of result) {
-    const doneCount = stats.byColumn[DONE_COLUMN_KEY] ?? 0;
-    stats.donePercent = stats.total > 0 ? Math.round((doneCount / stats.total) * 100) : 0;
-    stats.activeCount = stats.total - doneCount;
-  }
+  const result: ProjectPersonStats[] = Array.from(map.values()).map((acc) => {
+    const doneCount = acc.byColumn[DONE_COLUMN_KEY] ?? 0;
+    return {
+      personId: acc.personId,
+      name: acc.name,
+      total: acc.total,
+      byColumn: acc.byColumn,
+      donePercent: acc.total > 0 ? Math.round((doneCount / acc.total) * 100) : 0,
+      activeCount: acc.total - doneCount,
+      customers: Array.from(acc.customerSet).sort((a, b) => a.localeCompare(b, "tr")),
+      customerCount: acc.customerSet.size,
+      projectCount: acc.projectIdSet.size,
+    };
+  });
 
   result.sort((a, b) => b.donePercent - a.donePercent || b.total - a.total);
 
