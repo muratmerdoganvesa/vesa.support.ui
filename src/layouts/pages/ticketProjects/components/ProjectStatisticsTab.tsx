@@ -325,11 +325,42 @@ const ProjectStatisticsTab = () => {
     [filters.filteredItemsIgnoringSearch],
   );
 
+  /** `personStats` kalem/proje bazlı süzülür; ama bir kalem birden çok kişiyi içerebildiği için
+   * kişiye özel nitelikler (departman, seviye, seçili kişi) burada ayrıca uygulanır. Böylece
+   * örn. seviye filtresinde sadece o seviyedeki kişiler listelenir, aynı kaleme dahil diğer
+   * kişiler kartlarda görünmez. */
   const visiblePersonStats = useMemo(() => {
+    let list = personStats;
+
+    if (filters.selectedPersonId !== "All") {
+      list = list.filter((person) => person.personId === filters.selectedPersonId);
+    }
+
+    if (filters.selectedDepartment !== "All") {
+      list = list.filter(
+        (person) => userDepartmentById.get(person.personId) === filters.selectedDepartment,
+      );
+    }
+
+    if (filters.selectedLevel !== "All") {
+      list = list.filter((person) => userLevelById.get(person.personId) === filters.selectedLevel);
+    }
+
     const query = filters.searchTerm.trim().toLowerCase();
-    if (!query) return personStats;
-    return personStats.filter((person) => person.name.toLowerCase().includes(query));
-  }, [personStats, filters.searchTerm]);
+    if (query) {
+      list = list.filter((person) => person.name.toLowerCase().includes(query));
+    }
+
+    return list;
+  }, [
+    personStats,
+    filters.selectedPersonId,
+    filters.selectedDepartment,
+    filters.selectedLevel,
+    filters.searchTerm,
+    userDepartmentById,
+    userLevelById,
+  ]);
 
   const handlePersonCardClick = useCallback(
     (personId: string) => {
