@@ -197,6 +197,14 @@ export const useProjectStatisticsFilters = (
     [items, filterParams, userDepartmentById],
   );
 
+  /** Diğer tüm filtreler uygulanmış ama arama terimi hariç bırakılmış öğeler.
+   * Kişi görünümünde arama, kartları değil kişileri süzmek için kullanılır. */
+  const filteredItemsIgnoringSearch = useMemo(
+    () =>
+      applyClientFilters(items, { ...filterParams, searchTerm: "" }, userDepartmentById),
+    [items, filterParams, userDepartmentById],
+  );
+
   const allPersons = useMemo((): { id: string; name: string }[] => {
     const map = new Map<string, string>();
     for (const item of items) {
@@ -334,6 +342,7 @@ export const useProjectStatisticsFilters = (
     handleStatusSelect,
     handleDepartmentSelect,
     filteredItems,
+    filteredItemsIgnoringSearch,
     uniquePersons,
     uniqueCustomers,
     uniqueModules,
