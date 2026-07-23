@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutGrid, Users } from "lucide-react";
+import { LayoutGrid, Plus, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchUserDepartmentMap } from "layouts/pages/ticketProjects/api/fetchUsersForStats";
@@ -8,6 +8,13 @@ import {
   fetchPersonDetailMap,
   type PersonDetailInfo,
 } from "layouts/pages/ticketProjects/api/fetchPersonDetailMap";
+import {
+  createSimulatedProjectPlan,
+  deleteSimulatedProjectPlan,
+  fetchSimulatedProjectPlans,
+  updateSimulatedProjectPlan,
+  type SimulatedProjectPlanPayload,
+} from "layouts/pages/ticketProjects/api/simulatedProjectPlanApi";
 import {
   getProjectTypeColumns,
   getProjectTypeColumnColors,
@@ -19,10 +26,12 @@ import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { buildProjectPersonStats } from "layouts/pages/ticketProjects/utils/buildProjectPersonStats";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
+import { Button } from "components/ui/button";
 import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 import ProjectStatisticsFilterBar from "./ProjectStatisticsFilterBar";
 import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
+import SimulatedProjectPlanDialog from "./SimulatedProjectPlanDialog";
 import { useProjectStatisticsFilters } from "../hooks/useProjectStatisticsFilters";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -101,9 +110,17 @@ type MobileBoardProps = {
   columns: ProjectTypeColumnDef[];
   groupedItems: Record<ProjectTypeColumnKey, StatsBoardItem[]>;
   highlightPersonIds?: Set<string> | null;
+  onEditSimulated?: (item: StatsBoardItem) => void;
+  onDeleteSimulated?: (item: StatsBoardItem) => void;
 };
 
-const MobileBoard = ({ columns, groupedItems, highlightPersonIds }: MobileBoardProps) => {
+const MobileBoard = ({
+  columns,
+  groupedItems,
+  highlightPersonIds,
+  onEditSimulated,
+  onDeleteSimulated,
+}: MobileBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
   const activeColumn = columns.find((col) => col.key === activeCol) ?? columns[0];
@@ -150,6 +167,8 @@ const MobileBoard = ({ columns, groupedItems, highlightPersonIds }: MobileBoardP
               item={item}
               cardBorderClass={activeColors?.cardBorder ?? "border-l-slate-300"}
               highlightPersonIds={highlightPersonIds}
+              onEditSimulated={onEditSimulated}
+              onDeleteSimulated={onDeleteSimulated}
             />
           ))
         )}
@@ -198,6 +217,10 @@ const ViewTabSwitcher = ({
 );
 
 const sortBoardItems = (a: StatsBoardItem, b: StatsBoardItem): number => {
+  // Simülasyon kartları kolon içinde üstte dursun (planlama görünürlüğü)
+  if (a.kind === "simulated" && b.kind !== "simulated") return -1;
+  if (b.kind === "simulated" && a.kind !== "simulated") return 1;
+
   const projectCmp = (a.projectDescription ?? "").localeCompare(b.projectDescription ?? "", "tr");
   if (projectCmp !== 0) return projectCmp;
   if (a.kind === "project" && b.kind === "project") return 0;
@@ -217,6 +240,8 @@ const ProjectStatisticsTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<StatisticsViewTab>("kanban");
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [editingPlanItem, setEditingPlanItem] = useState<StatsBoardItem | null>(null);
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
 
@@ -265,20 +290,22 @@ const ProjectStatisticsTab = () => {
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [data, departmentMap, companyMap, personDetailMap] = await Promise.all([
-        fetchProjectStatistics(),
-        fetchUserDepartmentMap().catch(() => new Map<string, string>()),
-        fetchProjectCompanyMap().catch(() => new Map<string, string>()),
-        fetchPersonDetailMap().catch(() => new Map<string, PersonDetailInfo>()),
-      ]);
-      setBoardItems(
-        data
-          .filter((item) => item.isActive !== false)
-          .map((item) => ({
-            ...item,
-            workCompanyId: companyMap.get(item.projectId) ?? null,
-          })),
-      );
+      const [data, simulatedPlans, departmentMap, companyMap, personDetailMap] =
+        await Promise.all([
+          fetchProjectStatistics(),
+          fetchSimulatedProjectPlans().catch(() => [] as StatsBoardItem[]),
+          fetchUserDepartmentMap().catch(() => new Map<string, string>()),
+          fetchProjectCompanyMap().catch(() => new Map<string, string>()),
+          fetchPersonDetailMap().catch(() => new Map<string, PersonDetailInfo>()),
+        ]);
+      const realItems = data
+        .filter((item) => item.isActive !== false)
+        .map((item) => ({
+          ...item,
+          workCompanyId: companyMap.get(item.projectId) ?? null,
+        }));
+      const planItems = simulatedPlans.filter((item) => item.isActive !== false);
+      setBoardItems([...planItems, ...realItems]);
       setUserDepartmentById(departmentMap);
       setPersonDetailsById(personDetailMap);
       setHasLoaded(true);
@@ -370,6 +397,63 @@ const ProjectStatisticsTab = () => {
     [filters.handlePersonSelect],
   );
 
+  const handleOpenCreatePlan = useCallback(() => {
+    setEditingPlanItem(null);
+    setIsPlanDialogOpen(true);
+  }, []);
+
+  const handleEditSimulated = useCallback((item: StatsBoardItem) => {
+    setEditingPlanItem(item);
+    setIsPlanDialogOpen(true);
+  }, []);
+
+  const handleDeleteSimulated = useCallback(
+    async (item: StatsBoardItem) => {
+      if (!window.confirm(`"${item.customerName} — ${item.projectDescription}" plan kartı silinsin mi?`)) {
+        return;
+      }
+      try {
+        await deleteSimulatedProjectPlan(item.id);
+        setBoardItems((prev) => prev.filter((x) => x.id !== item.id));
+        dispatchAlert({ message: "Plan kartı silindi.", type: "Success" });
+      } catch {
+        dispatchAlert({ message: "Plan kartı silinirken hata oluştu.", type: "Error" });
+      }
+    },
+    [dispatchAlert],
+  );
+
+  const handlePlanSubmit = useCallback(
+    async (payload: SimulatedProjectPlanPayload) => {
+      try {
+        if (editingPlanItem) {
+          const updated = await updateSimulatedProjectPlan({
+            ...payload,
+            id: editingPlanItem.id,
+            isActive: true,
+          });
+          setBoardItems((prev) =>
+            prev.map((item) => (item.id === editingPlanItem.id ? updated : item)),
+          );
+          dispatchAlert({ message: "Plan kartı güncellendi.", type: "Success" });
+        } else {
+          const created = await createSimulatedProjectPlan(payload);
+          setBoardItems((prev) => [created, ...prev]);
+          dispatchAlert({ message: "Plan kartı eklendi.", type: "Success" });
+        }
+      } catch {
+        dispatchAlert({
+          message: editingPlanItem
+            ? "Plan kartı güncellenirken hata oluştu."
+            : "Plan kartı eklenirken hata oluştu.",
+          type: "Error",
+        });
+        throw new Error("plan-save-failed");
+      }
+    },
+    [dispatchAlert, editingPlanItem],
+  );
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -406,16 +490,29 @@ const ProjectStatisticsTab = () => {
         />
 
         <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="mb-3 flex items-center gap-3">
+          <div className="mb-3 flex flex-wrap items-center gap-3">
             {isLoading ? (
               <StatsSummarySkeleton columnCount={columns.length} />
             ) : (
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <StatsSummaryRow columns={columns} counts={columnCounts} />
               </div>
             )}
 
-            {!isLoading && <ViewTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />}
+            {!isLoading && (
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleOpenCreatePlan}
+                  className="bg-rose-600 text-white hover:bg-rose-700"
+                >
+                  <Plus className="size-3.5" aria-hidden />
+                  Plan Ekle
+                </Button>
+                <ViewTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+              </div>
+            )}
           </div>
 
           {isLoading ? (
@@ -431,6 +528,8 @@ const ProjectStatisticsTab = () => {
               columns={columns}
               groupedItems={groupedItems}
               highlightPersonIds={highlightPersonIds}
+              onEditSimulated={handleEditSimulated}
+              onDeleteSimulated={handleDeleteSimulated}
             />
           ) : (
             <div className="overflow-x-auto pb-1">
@@ -447,6 +546,8 @@ const ProjectStatisticsTab = () => {
                     column={column}
                     items={groupedItems[column.key] ?? []}
                     highlightPersonIds={highlightPersonIds}
+                    onEditSimulated={handleEditSimulated}
+                    onDeleteSimulated={handleDeleteSimulated}
                   />
                 ))}
               </div>
@@ -454,6 +555,13 @@ const ProjectStatisticsTab = () => {
           )}
         </div>
       </div>
+
+      <SimulatedProjectPlanDialog
+        open={isPlanDialogOpen}
+        onOpenChange={setIsPlanDialogOpen}
+        editingItem={editingPlanItem}
+        onSubmit={handlePlanSubmit}
+      />
     </DashboardLayout>
   );
 };

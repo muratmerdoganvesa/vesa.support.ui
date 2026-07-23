@@ -5,9 +5,9 @@ export type TicketProjectStatsPersonDto = {
   fullName: string;
 };
 
-export type StatsBoardItemKind = "kalem" | "project";
+export type StatsBoardItemKind = "kalem" | "project" | "simulated";
 
-/** İstatistik board kartı — statuslü kalem veya seçilmemiş proje */
+/** İstatistik board kartı — statuslü kalem, seçilmemiş proje veya simülasyon planı */
 export type StatsBoardItem = {
   kind: StatsBoardItemKind;
   id: string;

@@ -43,9 +43,15 @@ const itemMatchesStatus = (
   selectedStatus: ProjectTypeColumnKey,
 ): boolean => {
   if (selectedStatus === UNASSIGNED_PROJECT_TYPE_KEY) {
-    return item.kind === "project";
+    return (
+      item.kind === "project" ||
+      (item.kind === "simulated" && item.projectStatus == null)
+    );
   }
-  return item.kind === "kalem" && item.projectStatus === selectedStatus;
+  return (
+    (item.kind === "kalem" || item.kind === "simulated") &&
+    item.projectStatus === selectedStatus
+  );
 };
 
 const applyClientFilters = (
