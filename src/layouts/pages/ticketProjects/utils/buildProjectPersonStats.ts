@@ -12,6 +12,9 @@ export type ProjectPersonStats = {
   customers: string[];
   customerCount: number;
   projectCount: number;
+  /** Simülasyon / plan kartı sayısı */
+  planCount: number;
+  plans: string[];
 };
 
 type PersonStatsAccumulator = {
@@ -21,6 +24,8 @@ type PersonStatsAccumulator = {
   byColumn: Partial<Record<ProjectTypeColumnKey, number>>;
   customerSet: Set<string>;
   projectIdSet: Set<string>;
+  planCount: number;
+  planLabels: Set<string>;
 };
 
 const DONE_COLUMN_KEY: ProjectTypeColumnKey = ProjectTypes.NUMBER_5;
@@ -54,6 +59,8 @@ export const buildProjectPersonStats = (items: StatsBoardItem[]): ProjectPersonS
           byColumn: {},
           customerSet: new Set(),
           projectIdSet: new Set(),
+          planCount: 0,
+          planLabels: new Set(),
         });
       }
 
@@ -62,6 +69,14 @@ export const buildProjectPersonStats = (items: StatsBoardItem[]): ProjectPersonS
       acc.byColumn[columnKey] = (acc.byColumn[columnKey] ?? 0) + 1;
       if (item.customerName) acc.customerSet.add(item.customerName);
       if (item.projectId) acc.projectIdSet.add(item.projectId);
+
+      if (item.kind === "simulated") {
+        acc.planCount += 1;
+        const planLabel = item.customerName
+          ? `${item.customerName} — ${item.projectDescription}`
+          : item.projectDescription;
+        if (planLabel?.trim()) acc.planLabels.add(planLabel.trim());
+      }
     }
   }
 
@@ -77,6 +92,8 @@ export const buildProjectPersonStats = (items: StatsBoardItem[]): ProjectPersonS
       customers: Array.from(acc.customerSet).sort((a, b) => a.localeCompare(b, "tr")),
       customerCount: acc.customerSet.size,
       projectCount: acc.projectIdSet.size,
+      planCount: acc.planCount,
+      plans: Array.from(acc.planLabels).sort((a, b) => a.localeCompare(b, "tr")),
     };
   });
 
