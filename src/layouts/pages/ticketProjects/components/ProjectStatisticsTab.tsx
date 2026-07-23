@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { LayoutGrid, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchUserDepartmentMap } from "layouts/pages/ticketProjects/api/fetchUsersForStats";
@@ -11,14 +12,18 @@ import {
   type ProjectTypeColumnKey,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
+import { buildProjectPersonStats } from "layouts/pages/ticketProjects/utils/buildProjectPersonStats";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
 import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 import ProjectStatisticsFilterBar from "./ProjectStatisticsFilterBar";
+import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
 import { useProjectStatisticsFilters } from "../hooks/useProjectStatisticsFilters";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+
+type StatisticsViewTab = "kanban" | "people";
 
 const MOBILE_BREAKPOINT = 800;
 
@@ -42,7 +47,7 @@ const StatsSummaryRow = ({
   columns: ProjectTypeColumnDef[];
   counts: Record<ProjectTypeColumnKey, number>;
 }) => (
-  <div className="flex flex-wrap items-stretch gap-2 rounded-lg border border-slate-200/80 bg-white px-3 py-2 shadow-sm dark:border-border dark:bg-card">
+  <div className="flex flex-wrap items-stretch gap-2 rounded-lg  bg-white px-3 py-2 dark:border-border dark:bg-card">
     {columns.map((column) => {
       const colors = getProjectTypeColumnColors(column.label);
       const count = counts[column.key] ?? 0;
@@ -149,6 +154,45 @@ const MobileBoard = ({ columns, groupedItems, highlightPersonIds }: MobileBoardP
   );
 };
 
+const ViewTabSwitcher = ({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: StatisticsViewTab;
+  onTabChange: (tab: StatisticsViewTab) => void;
+}) => (
+  <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-slate-200 text-xs dark:border-border">
+    <button
+      type="button"
+      onClick={() => onTabChange("kanban")}
+      aria-pressed={activeTab === "kanban"}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1.5 font-medium transition-colors",
+        activeTab === "kanban"
+          ? "bg-slate-800 text-white dark:bg-primary dark:text-primary-foreground"
+          : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted",
+      )}
+    >
+      <LayoutGrid className="size-3.5" aria-hidden />
+      Kanban
+    </button>
+    <button
+      type="button"
+      onClick={() => onTabChange("people")}
+      aria-pressed={activeTab === "people"}
+      className={cn(
+        "flex items-center gap-1.5 border-l border-slate-200 px-3 py-1.5 font-medium transition-colors dark:border-border",
+        activeTab === "people"
+          ? "bg-slate-800 text-white dark:bg-primary dark:text-primary-foreground"
+          : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted",
+      )}
+    >
+      <Users className="size-3.5" aria-hidden />
+      Kişi
+    </button>
+  </div>
+);
+
 const sortBoardItems = (a: StatsBoardItem, b: StatsBoardItem): number => {
   const projectCmp = (a.projectDescription ?? "").localeCompare(b.projectDescription ?? "", "tr");
   if (projectCmp !== 0) return projectCmp;
@@ -165,6 +209,7 @@ const ProjectStatisticsTab = () => {
   const [userDepartmentById, setUserDepartmentById] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [activeTab, setActiveTab] = useState<StatisticsViewTab>("kanban");
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
 
@@ -244,6 +289,25 @@ const ProjectStatisticsTab = () => {
     [columns, groupedItems],
   );
 
+  const personStats = useMemo(
+    () => buildProjectPersonStats(filters.filteredItemsIgnoringSearch),
+    [filters.filteredItemsIgnoringSearch],
+  );
+
+  const visiblePersonStats = useMemo(() => {
+    const query = filters.searchTerm.trim().toLowerCase();
+    if (!query) return personStats;
+    return personStats.filter((person) => person.name.toLowerCase().includes(query));
+  }, [personStats, filters.searchTerm]);
+
+  const handlePersonCardClick = useCallback(
+    (personId: string) => {
+      filters.handlePersonSelect(personId);
+      setActiveTab("kanban");
+    },
+    [filters.handlePersonSelect],
+  );
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -285,10 +349,17 @@ const ProjectStatisticsTab = () => {
                 <StatsSummaryRow columns={columns} counts={columnCounts} />
               </div>
             )}
+
+            {!isLoading && <ViewTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />}
           </div>
 
           {isLoading ? (
             <BoardSkeleton columnCount={columns.length} />
+          ) : activeTab === "people" ? (
+            <ProjectStatsPeopleView
+              stats={visiblePersonStats}
+              onPersonClick={handlePersonCardClick}
+            />
           ) : isMobile ? (
             <MobileBoard
               columns={columns}
