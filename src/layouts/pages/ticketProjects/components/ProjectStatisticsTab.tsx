@@ -5,6 +5,10 @@ import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchPr
 import { fetchUserDepartmentMap } from "layouts/pages/ticketProjects/api/fetchUsersForStats";
 import { fetchProjectCompanyMap } from "layouts/pages/ticketProjects/api/fetchProjectCompanyMap";
 import {
+  fetchPersonDetailMap,
+  type PersonDetailInfo,
+} from "layouts/pages/ticketProjects/api/fetchPersonDetailMap";
+import {
   getProjectTypeColumns,
   getProjectTypeColumnColors,
   getStatsBoardColumnKey,
@@ -207,13 +211,24 @@ const ProjectStatisticsTab = () => {
   const isMobile = useIsMobile();
   const [boardItems, setBoardItems] = useState<StatsBoardItem[]>([]);
   const [userDepartmentById, setUserDepartmentById] = useState<Map<string, string>>(new Map());
+  const [personDetailsById, setPersonDetailsById] = useState<Map<string, PersonDetailInfo>>(
+    new Map(),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<StatisticsViewTab>("kanban");
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
 
-  const filters = useProjectStatisticsFilters(boardItems, userDepartmentById);
+  const userLevelById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [userId, detail] of personDetailsById) {
+      if (detail.levelLabel) map.set(userId, detail.levelLabel);
+    }
+    return map;
+  }, [personDetailsById]);
+
+  const filters = useProjectStatisticsFilters(boardItems, userDepartmentById, userLevelById);
 
   const highlightPersonIds = useMemo(() => {
     const ids = new Set<string>();
@@ -230,16 +245,31 @@ const ProjectStatisticsTab = () => {
       }
     }
 
+    if (filters.selectedLevel !== "All") {
+      for (const [userId, level] of userLevelById) {
+        if (level === filters.selectedLevel) {
+          ids.add(userId);
+        }
+      }
+    }
+
     return ids.size > 0 ? ids : null;
-  }, [filters.selectedPersonId, filters.selectedDepartment, userDepartmentById]);
+  }, [
+    filters.selectedPersonId,
+    filters.selectedDepartment,
+    filters.selectedLevel,
+    userDepartmentById,
+    userLevelById,
+  ]);
 
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [data, departmentMap, companyMap] = await Promise.all([
+      const [data, departmentMap, companyMap, personDetailMap] = await Promise.all([
         fetchProjectStatistics(),
         fetchUserDepartmentMap().catch(() => new Map<string, string>()),
         fetchProjectCompanyMap().catch(() => new Map<string, string>()),
+        fetchPersonDetailMap().catch(() => new Map<string, PersonDetailInfo>()),
       ]);
       setBoardItems(
         data
@@ -250,6 +280,7 @@ const ProjectStatisticsTab = () => {
           })),
       );
       setUserDepartmentById(departmentMap);
+      setPersonDetailsById(personDetailMap);
       setHasLoaded(true);
     } catch {
       dispatchAlert({ message: "Proje istatistikleri getirilirken hata oluştu.", type: "Error" });
@@ -334,6 +365,9 @@ const ProjectStatisticsTab = () => {
           uniqueModules={filters.uniqueModules}
           selectedModule={filters.selectedModule}
           onModuleSelect={filters.handleModuleSelect}
+          uniqueLevels={filters.uniqueLevels}
+          selectedLevel={filters.selectedLevel}
+          onLevelSelect={filters.handleLevelSelect}
           totalCount={filters.totalCount}
           filteredCount={filters.filteredCount}
           isMobileFilterOpen={filters.isMobileFilterOpen}
@@ -359,6 +393,7 @@ const ProjectStatisticsTab = () => {
             <ProjectStatsPeopleView
               stats={visiblePersonStats}
               onPersonClick={handlePersonCardClick}
+              personDetailsById={personDetailsById}
             />
           ) : isMobile ? (
             <MobileBoard

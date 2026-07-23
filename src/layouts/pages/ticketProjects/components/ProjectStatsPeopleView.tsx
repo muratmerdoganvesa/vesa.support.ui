@@ -1,12 +1,27 @@
-import { BarChart3, Building2, CheckCircle2, Folder, ListTodo, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  ArrowDownAZ,
+  ArrowUpZA,
+  BarChart3,
+  Building2,
+  CheckCircle2,
+  Folder,
+  ListTodo,
+  UserCog,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "lib/utils";
 import {
   getProjectTypeColumns,
   getProjectTypeColumnColors,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { ProjectPersonStats } from "layouts/pages/ticketProjects/utils/buildProjectPersonStats";
+import type { PersonDetailInfo } from "layouts/pages/ticketProjects/api/fetchPersonDetailMap";
 import { useUserPhotos } from "layouts/pages/kanban/hooks/useUserPhotos";
 import { ProjectPersonAvatar, ProjectPersonAvatarLoading } from "./ProjectPersonAvatar";
+
+type SortOrder = "az" | "za";
 
 type SummaryKpiProps = {
   icon: React.ReactNode;
@@ -37,15 +52,54 @@ const SummaryKpi = ({ icon, label, value, sub, accent }: SummaryKpiProps) => (
   </div>
 );
 
+const DetailRow = ({
+  icon: Icon,
+  label,
+  value,
+  prefix,
+  wrap = false,
+  className,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  prefix?: string;
+  wrap?: boolean;
+  className?: string;
+}) => (
+  <div
+    className={cn(
+      "flex min-w-0 gap-1.5 text-[11px] text-slate-500 dark:text-muted-foreground",
+      wrap ? "items-start" : "items-center truncate",
+      className,
+    )}
+    title={`${label}: ${value}`}
+  >
+    <Icon
+      className={cn("size-3 shrink-0 text-slate-400 dark:text-muted-foreground", wrap && "mt-0.5")}
+      aria-hidden
+    />
+    {prefix && (
+      <span className="shrink-0 font-semibold text-slate-400 dark:text-muted-foreground">
+        {prefix}
+      </span>
+    )}
+    <span className={wrap ? "break-words" : "truncate"}>{value}</span>
+  </div>
+);
+
 type PersonCardProps = {
   person: ProjectPersonStats;
+  detail: PersonDetailInfo | undefined;
   getPhoto: (id: string) => string | null | undefined;
   onPersonClick: (personId: string) => void;
 };
 
-const PersonCard = ({ person, getPhoto, onPersonClick }: PersonCardProps) => {
+const PersonCard = ({ person, detail, getPhoto, onPersonClick }: PersonCardProps) => {
   const columns = getProjectTypeColumns();
   const photo = getPhoto(person.personId);
+  const subtitle = [detail?.position, detail?.department].filter(Boolean).join(" · ");
+  const hasManagerDetails = Boolean(detail && (detail.manager1Name || detail.manager2Name));
 
   return (
     <button
@@ -78,11 +132,23 @@ const PersonCard = ({ person, getPhoto, onPersonClick }: PersonCardProps) => {
           <div className="flex items-start justify-between gap-2">
             <p className="truncate text-sm font-semibold leading-snug text-slate-800 transition-colors group-hover:text-indigo-700 dark:text-foreground">
               {person.name}
+              {detail?.levelLabel && (
+                <span className="font-medium text-slate-400 dark:text-muted-foreground">
+                  {" "}
+                  – {detail.levelLabel}
+                </span>
+              )}
             </p>
             <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
               {person.total}
             </span>
           </div>
+
+          {subtitle && (
+            <p className="truncate text-[11px] text-slate-400 dark:text-muted-foreground">
+              {subtitle}
+            </p>
+          )}
 
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-medium text-slate-400 dark:text-muted-foreground">
@@ -97,6 +163,30 @@ const PersonCard = ({ person, getPhoto, onPersonClick }: PersonCardProps) => {
           </div>
         </div>
       </div>
+
+      {/* Kişi detayları */}
+      {hasManagerDetails && (
+        <div className="flex flex-col gap-1 rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-muted/40">
+          {detail?.manager1Name && (
+            <DetailRow
+              icon={UserCog}
+              label="Yönetici 1"
+              value={detail.manager1Name}
+              prefix="1."
+              wrap
+            />
+          )}
+          {detail?.manager2Name && (
+            <DetailRow
+              icon={UserCog}
+              label="Yönetici 2"
+              value={detail.manager2Name}
+              prefix="2."
+              wrap
+            />
+          )}
+        </div>
+      )}
 
       {/* Proje & müşteri sayıları */}
       <div className="flex flex-wrap items-center gap-1.5">
@@ -113,20 +203,15 @@ const PersonCard = ({ person, getPhoto, onPersonClick }: PersonCardProps) => {
       {/* Müşteri isimleri (küçük etiketler) */}
       {person.customers.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
-          {person.customers.slice(0, 4).map((customer) => (
+          {person.customers.map((customer) => (
             <span
               key={customer}
               title={customer}
-              className="max-w-28 truncate rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
+              className="max-w-full truncate rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:border-border dark:bg-card dark:text-muted-foreground"
             >
               {customer}
             </span>
           ))}
-          {person.customers.length > 4 && (
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 dark:bg-muted dark:text-muted-foreground">
-              +{person.customers.length - 4}
-            </span>
-          )}
         </div>
       )}
 
@@ -192,17 +277,30 @@ const PersonCard = ({ person, getPhoto, onPersonClick }: PersonCardProps) => {
 type ProjectStatsPeopleViewProps = {
   stats: ProjectPersonStats[];
   onPersonClick: (personId: string) => void;
+  personDetailsById: Map<string, PersonDetailInfo>;
 };
 
-const ProjectStatsPeopleView = ({ stats, onPersonClick }: ProjectStatsPeopleViewProps) => {
+const ProjectStatsPeopleView = ({
+  stats,
+  onPersonClick,
+  personDetailsById,
+}: ProjectStatsPeopleViewProps) => {
   const { getPhoto } = useUserPhotos();
-  const columns = getProjectTypeColumns();
+  const [sortOrder, setSortOrder] = useState<SortOrder>("az");
 
   const totalItems = stats.reduce((sum, person) => sum + person.total, 0);
   const avgDone =
     stats.length > 0
       ? Math.round(stats.reduce((sum, person) => sum + person.donePercent, 0) / stats.length)
       : 0;
+
+  const sortedStats = useMemo(
+    () =>
+      [...stats].sort((a, b) =>
+        sortOrder === "az" ? a.name.localeCompare(b.name, "tr") : b.name.localeCompare(a.name, "tr"),
+      ),
+    [stats, sortOrder],
+  );
 
   if (stats.length === 0) {
     return (
@@ -243,14 +341,52 @@ const ProjectStatsPeopleView = ({ stats, onPersonClick }: ProjectStatsPeopleView
         />
       </div>
 
-      
+      {/* Sıralama */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-slate-400 dark:text-muted-foreground">
+          {stats.length} kişi listeleniyor
+        </p>
+        <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-slate-200 text-xs dark:border-border">
+          <button
+            type="button"
+            onClick={() => setSortOrder("az")}
+            aria-pressed={sortOrder === "az"}
+            aria-label="İsme göre A-Z sırala"
+            className={cn(
+              "flex items-center gap-1.5 px-2.5 py-1.5 font-medium transition-colors",
+              sortOrder === "az"
+                ? "bg-slate-800 text-white dark:bg-primary dark:text-primary-foreground"
+                : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted",
+            )}
+          >
+            <ArrowDownAZ className="size-3.5" aria-hidden />
+            A-Z
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortOrder("za")}
+            aria-pressed={sortOrder === "za"}
+            aria-label="İsme göre Z-A sırala"
+            className={cn(
+              "flex items-center gap-1.5 border-l border-slate-200 px-2.5 py-1.5 font-medium transition-colors dark:border-border",
+              sortOrder === "za"
+                ? "bg-slate-800 text-white dark:bg-primary dark:text-primary-foreground"
+                : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted",
+            )}
+          >
+            <ArrowUpZA className="size-3.5" aria-hidden />
+            Z-A
+          </button>
+        </div>
+      </div>
 
       {/* Person grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {stats.map((person) => (
+        {sortedStats.map((person) => (
           <PersonCard
             key={person.personId}
             person={person}
+            detail={personDetailsById.get(person.personId)}
             getPhoto={getPhoto}
             onPersonClick={onPersonClick}
           />
