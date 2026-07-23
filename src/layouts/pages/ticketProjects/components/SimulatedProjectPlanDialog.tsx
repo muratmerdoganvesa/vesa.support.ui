@@ -202,7 +202,10 @@ const SimulatedProjectPlanDialog = ({
               <SelectTrigger className="h-9 w-full min-w-0">
                 <SelectValue placeholder="Kolon seçin" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                className="z-[1200] w-(--radix-select-trigger-width)"
+              >
                 {statusColumns.map((column) => (
                   <SelectItem
                     key={String(column.key)}
@@ -231,7 +234,10 @@ const SimulatedProjectPlanDialog = ({
               <SelectTrigger className="h-9 w-full min-w-0">
                 <SelectValue placeholder="Seçiniz" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                position="popper"
+                className="z-[1200] max-h-60 w-(--radix-select-trigger-width)"
+              >
                 <SelectItem value="__none__">—</SelectItem>
                 {users.map((user) => (
                   <SelectItem key={user.id} value={user.id}>

@@ -188,7 +188,7 @@ const PersonCard = ({ person, detail, getPhoto, onPersonClick }: PersonCardProps
         </div>
       )}
 
-      {/* Proje & müşteri sayıları */}
+      {/* Proje & müşteri & plan sayıları */}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
           <Folder className="size-2.5" aria-hidden />
@@ -198,7 +198,32 @@ const PersonCard = ({ person, detail, getPhoto, onPersonClick }: PersonCardProps
           <Building2 className="size-2.5" aria-hidden />
           {person.customerCount} müşteri
         </span>
+        {person.planCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+            {person.planCount} plan
+          </span>
+        )}
       </div>
+
+      {/* Plan kartları */}
+      {person.plans.length > 0 && (
+        <div className="flex flex-col gap-1 rounded-lg border border-rose-100 bg-rose-50/70 px-2.5 py-2 dark:border-rose-900/50 dark:bg-rose-950/30">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-600 dark:text-rose-300">
+            Planlar
+          </p>
+          <div className="flex flex-wrap items-center gap-1">
+            {person.plans.map((plan) => (
+              <span
+                key={plan}
+                title={plan}
+                className="max-w-full truncate rounded-full border border-rose-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200"
+              >
+                {plan}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Müşteri isimleri (küçük etiketler) */}
       {person.customers.length > 0 && (

@@ -483,6 +483,9 @@ const ProjectStatisticsTab = () => {
           uniqueLevels={filters.uniqueLevels}
           selectedLevel={filters.selectedLevel}
           onLevelSelect={filters.handleLevelSelect}
+          planVisibility={filters.planVisibility}
+          onPlanVisibilitySelect={filters.handlePlanVisibilitySelect}
+          planVisibilityCounts={filters.planVisibilityCounts}
           totalCount={filters.totalCount}
           filteredCount={filters.filteredCount}
           isMobileFilterOpen={filters.isMobileFilterOpen}
