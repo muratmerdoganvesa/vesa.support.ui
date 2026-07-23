@@ -7,6 +7,7 @@ import {
   Package,
   Search,
   SlidersHorizontal,
+  Sparkles,
   User,
   X,
 } from "lucide-react";
@@ -31,7 +32,12 @@ import {
 } from "components/ui/accordion";
 import { getProjectTypeColumnColors } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { ProjectTypeColumnKey } from "layouts/pages/ticketProjects/projectTypeHelpers";
-import type { LabelCountItem, PersonItem, StatusItem } from "../hooks/useProjectStatisticsFilters";
+import type {
+  LabelCountItem,
+  PersonItem,
+  PlanVisibility,
+  StatusItem,
+} from "../hooks/useProjectStatisticsFilters";
 
 type Props = {
   isLoading: boolean;
@@ -58,10 +64,19 @@ type Props = {
   uniqueLevels: LabelCountItem[];
   selectedLevel: string;
   onLevelSelect: (level: string) => void;
+  planVisibility: PlanVisibility;
+  onPlanVisibilitySelect: (visibility: PlanVisibility) => void;
+  planVisibilityCounts: { all: number; plansOnly: number; hidePlans: number };
   totalCount: number;
   filteredCount: number;
   isMobileFilterOpen: boolean;
   setIsMobileFilterOpen: (open: boolean) => void;
+};
+
+const PLAN_VISIBILITY_LABELS: Record<PlanVisibility, string> = {
+  all: "Tümü",
+  plansOnly: "Sadece planlar",
+  hidePlans: "Planları gizle",
 };
 
 type FilterOption = {
@@ -311,6 +326,9 @@ const ProjectStatisticsFilterBar = ({
   uniqueLevels,
   selectedLevel,
   onLevelSelect,
+  planVisibility,
+  onPlanVisibilitySelect,
+  planVisibilityCounts,
   totalCount,
   filteredCount,
   isMobileFilterOpen,
@@ -574,12 +592,62 @@ const ProjectStatisticsFilterBar = ({
     };
   }, [uniqueLevels, selectedLevel, onLevelSelect]);
 
+  const planGroup: FilterGroupConfig = useMemo(() => {
+    const options: FilterOption[] = (
+      [
+        { key: "all", count: planVisibilityCounts.all },
+        { key: "plansOnly", count: planVisibilityCounts.plansOnly },
+        { key: "hidePlans", count: planVisibilityCounts.hidePlans },
+      ] as const
+    ).map(({ key, count }) => ({
+      key,
+      label: PLAN_VISIBILITY_LABELS[key],
+      count,
+      indicator: (
+        <span
+          className={cn(
+            "size-2 shrink-0 rounded-full",
+            key === "plansOnly"
+              ? "bg-rose-500"
+              : key === "hidePlans"
+                ? "bg-slate-400"
+                : "bg-slate-800",
+          )}
+          aria-hidden
+        />
+      ),
+      isSelected: planVisibility === key,
+      onSelect: () => onPlanVisibilitySelect(key),
+    }));
+
+    return {
+      key: "plan",
+      label: "Plan",
+      icon: <Sparkles className="size-3.5" />,
+      activeLabel:
+        planVisibility !== "all" ? PLAN_VISIBILITY_LABELS[planVisibility] : undefined,
+      activeCount:
+        planVisibility === "plansOnly"
+          ? planVisibilityCounts.plansOnly
+          : planVisibility === "hidePlans"
+            ? planVisibilityCounts.hidePlans
+            : undefined,
+      options,
+    };
+  }, [planVisibility, planVisibilityCounts, onPlanVisibilitySelect]);
+
   const filterGroups = useMemo(
     () =>
-      [statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup, levelGroup].filter(
-        (g): g is FilterGroupConfig => g !== null,
-      ),
-    [statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup, levelGroup],
+      [
+        planGroup,
+        statusGroup,
+        departmentGroup,
+        personGroup,
+        customerGroup,
+        moduleGroup,
+        levelGroup,
+      ].filter((g): g is FilterGroupConfig => g !== null),
+    [planGroup, statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup, levelGroup],
   );
 
   const activeChips: ActiveFilterChip[] = useMemo(() => {
@@ -635,6 +703,13 @@ const ProjectStatisticsFilterBar = ({
         onClear: () => onLevelSelect("All"),
       });
     }
+    if (planVisibility !== "all") {
+      chips.push({
+        key: "plan",
+        label: `Plan: ${PLAN_VISIBILITY_LABELS[planVisibility]}`,
+        onClear: () => onPlanVisibilitySelect("all"),
+      });
+    }
     return chips;
   }, [
     searchTerm,
@@ -644,6 +719,7 @@ const ProjectStatisticsFilterBar = ({
     selectedCustomer,
     selectedModule,
     selectedLevel,
+    planVisibility,
     uniqueStatuses,
     uniquePersons,
     onSearchChange,
@@ -653,6 +729,7 @@ const ProjectStatisticsFilterBar = ({
     onCustomerSelect,
     onModuleSelect,
     onLevelSelect,
+    onPlanVisibilitySelect,
   ]);
 
   const handleResetAll = () => {
@@ -663,6 +740,7 @@ const ProjectStatisticsFilterBar = ({
     onCustomerSelect("All");
     onModuleSelect("All");
     onLevelSelect("All");
+    onPlanVisibilitySelect("all");
   };
 
   const activeFilterCount = activeChips.length;

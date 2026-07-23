@@ -9,6 +9,8 @@ import type { StatsBoardItem } from "../types";
 export type PersonItem = { id: string; name: string; count: number };
 export type LabelCountItem = { name: string; count: number };
 export type StatusItem = { key: ProjectTypeColumnKey; label: string; count: number };
+/** all: hepsi · plansOnly: sadece simülasyon planları · hidePlans: planları gizle */
+export type PlanVisibility = "all" | "plansOnly" | "hidePlans";
 
 type FilterParams = {
   searchTerm: string;
@@ -18,6 +20,7 @@ type FilterParams = {
   selectedStatus: ProjectTypeColumnKey | "All";
   selectedDepartment: string;
   selectedLevel: string;
+  planVisibility: PlanVisibility;
 };
 
 const getItemPersonIds = (item: StatsBoardItem): string[] => {
@@ -69,7 +72,14 @@ const applyClientFilters = (
     selectedStatus,
     selectedDepartment,
     selectedLevel,
+    planVisibility,
   } = params;
+
+  if (planVisibility === "plansOnly") {
+    filtered = filtered.filter((item) => item.kind === "simulated");
+  } else if (planVisibility === "hidePlans") {
+    filtered = filtered.filter((item) => item.kind !== "simulated");
+  }
 
   if (searchTerm.trim()) {
     const q = searchTerm.toLowerCase();
@@ -135,6 +145,7 @@ export const useProjectStatisticsFilters = (
   const [selectedStatus, setSelectedStatus] = useState<ProjectTypeColumnKey | "All">("All");
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [selectedLevel, setSelectedLevel] = useState("All");
+  const [planVisibility, setPlanVisibility] = useState<PlanVisibility>("all");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [personSearch, setPersonSearch] = useState("");
 
@@ -147,6 +158,7 @@ export const useProjectStatisticsFilters = (
       selectedStatus,
       selectedDepartment,
       selectedLevel,
+      planVisibility,
     }),
     [
       searchTerm,
@@ -156,6 +168,7 @@ export const useProjectStatisticsFilters = (
       selectedStatus,
       selectedDepartment,
       selectedLevel,
+      planVisibility,
     ],
   );
 
@@ -362,6 +375,25 @@ export const useProjectStatisticsFilters = (
     setSelectedLevel(level);
   }, []);
 
+  const handlePlanVisibilitySelect = useCallback((visibility: PlanVisibility) => {
+    setPlanVisibility(visibility);
+  }, []);
+
+  const planVisibilityCounts = useMemo(() => {
+    const base = applyClientFilters(
+      items,
+      { ...filterParams, planVisibility: "all" },
+      userDepartmentById,
+      userLevelById,
+    );
+    const plans = base.filter((item) => item.kind === "simulated").length;
+    return {
+      all: base.length,
+      plansOnly: plans,
+      hidePlans: base.length - plans,
+    };
+  }, [items, filterParams, userDepartmentById, userLevelById]);
+
   const activeFilterCount = useMemo(
     () =>
       [
@@ -372,6 +404,7 @@ export const useProjectStatisticsFilters = (
         selectedStatus !== "All" ? 1 : 0,
         selectedDepartment !== "All" ? 1 : 0,
         selectedLevel !== "All" ? 1 : 0,
+        planVisibility !== "all" ? 1 : 0,
       ].reduce((a, b) => a + b, 0),
     [
       searchTerm,
@@ -381,6 +414,7 @@ export const useProjectStatisticsFilters = (
       selectedStatus,
       selectedDepartment,
       selectedLevel,
+      planVisibility,
     ],
   );
 
@@ -392,6 +426,7 @@ export const useProjectStatisticsFilters = (
     selectedStatus,
     selectedDepartment,
     selectedLevel,
+    planVisibility,
     personSearch,
     setPersonSearch,
     isMobileFilterOpen,
@@ -403,6 +438,7 @@ export const useProjectStatisticsFilters = (
     handleStatusSelect,
     handleDepartmentSelect,
     handleLevelSelect,
+    handlePlanVisibilitySelect,
     filteredItems,
     filteredItemsIgnoringSearch,
     uniquePersons,
@@ -411,6 +447,7 @@ export const useProjectStatisticsFilters = (
     uniqueStatuses,
     uniqueDepartments,
     uniqueLevels,
+    planVisibilityCounts,
     departmentAllCount: baseForDepartment.length,
     activeFilterCount,
     totalCount: items.length,
