@@ -141,7 +141,7 @@ export default function SessionExpiredModal(): JSX.Element {
     >
       <DialogContent
         showCloseButton={false}
-        className="sm:max-w-md gap-5 p-6"
+        className="sm:max-w-md gap-5 p-6 z-[10050]"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
