@@ -9,6 +9,7 @@ const DEFAULT_CONFIG: ApiConfig = {
 
 let cached: ApiConfig | null = null;
 
+
 function isLocalDev(): boolean {
   if (typeof window === 'undefined') return false;
   const host = window.location.hostname;
