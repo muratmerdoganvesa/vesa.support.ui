@@ -33,6 +33,7 @@ export default defineConfig(() => ({
       "platform": path.resolve(__dirname, "src/platform"),
       "luigi": path.resolve(__dirname, "src/luigi.ts"),
       "config": path.resolve(__dirname, "src/config"),
+      "auth": path.resolve(__dirname, "src/auth"),
       "locales": path.resolve(__dirname, "src/locales"),
       "page.routes": path.resolve(__dirname, "src/page.routes"),
     },
@@ -58,6 +59,11 @@ export default defineConfig(() => ({
   },
   define: {
     global: 'window',
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
   },
   build: {
     // Giris modulunun tum async vendor parcalarini <link rel="modulepreload"> ile onceden cekmeyi kapatir.

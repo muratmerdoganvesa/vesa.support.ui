@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import { Eye, EyeOff, LogIn, Building2 } from "lucide-react";
 
-import { AuthApi, LoginDto, SAPReportsApi, UserApi } from "api/generated";
+import { AuthApi, LoginDto, UserApi } from "api/generated";
 import { getConfigurationLogin } from "confiuration";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
@@ -12,6 +12,8 @@ import { useUser } from "layouts/pages/hooks/userName";
 import { useQueryClient } from "react-query";
 import { Button } from "components/ui/button";
 import { cn } from "lib/utils";
+import { getAzureApiScope } from "auth/msalApp";
+import { persistPasswordSession, persistSsoSession } from "utils/authSession";
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -133,14 +135,11 @@ function Cover(): JSX.Element {
   // -------------------------------------------------------------------------
 
   const handleLoginWithAzure = (): void => {
-    const isLocalhost = window.location.hostname === "localhost";
-    const scope = isLocalhost
-      ? "api://28116fc8-fd64-4ccb-ab4d-96d2f3653846/access_as_user"
-      : "api://1a4e7070-9c88-4097-9805-caf72e245e79/access_as_user";
+    const scope = getAzureApiScope();
 
     instance
       .loginPopup({ scopes: [scope] })
-      .then(async (response: { accessToken: string; account: any }) => {
+      .then(async (response) => {
         dispatchBusy({ isBusy: true });
         const conf = getConfigurationLogin();
         const api = new UserApi(conf);
@@ -148,10 +147,15 @@ function Cover(): JSX.Element {
         dispatchBusy({ isBusy: false });
 
         if (result.data.userName != undefined) {
+          if (response.account) {
+            instance.setActiveAccount(response.account);
+          }
           setuserUserAppDto(result.data);
-          localStorage.setItem("accessToken", response.accessToken);
+          persistSsoSession(
+            response.accessToken,
+            response.expiresOn?.getTime() ?? null
+          );
           queryClient.clear();
-          localStorage.removeItem("menuNameSurmane");
           localStorage.setItem(
             "menuNameSurmane",
             result.data.firstName + " " + result.data.lastName
@@ -161,7 +165,7 @@ function Cover(): JSX.Element {
           dispatchAlert({ message: "Giriş Başarılı Değil", type: "Error" });
         }
       })
-      .catch((error: any) => {
+      .catch((error: unknown) => {
         console.error("Login failed:", error);
       });
   };
@@ -188,9 +192,15 @@ function Cover(): JSX.Element {
 
     try {
       const result = await api.apiAuthCreateTokenPostCreateTokenPostPost(loginDto);
+      const token = result?.data;
 
-      if (result?.data?.accessToken) {
-        localStorage.setItem("accessToken", result.data.accessToken);
+      if (token?.accessToken) {
+        persistPasswordSession({
+          accessToken: token.accessToken,
+          refreshToken: token.refreshToken,
+          accessTokenExpiration: token.accessTokenExpiration,
+          refreshTokenExpiration: token.refreshTokenExpiration,
+        });
         queryClient.clear();
         navigateAfterLogin(
           email.includes("vesacons") ? "/tickets/statistic" : "/tickets/customer"

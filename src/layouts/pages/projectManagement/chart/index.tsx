@@ -36,6 +36,7 @@ import {
 } from "@syncfusion/ej2-react-gantt";
 import { PdfFontStyle, PdfTrueTypeFont } from "@syncfusion/ej2-pdf-export";
 import { MultiSelect, DropDownList } from "@syncfusion/ej2-dropdowns";
+import { L10n } from "@syncfusion/ej2-base";
 import "@syncfusion/ej2-base/styles/material.css";
 import "@syncfusion/ej2-buttons/styles/material.css";
 import "@syncfusion/ej2-calendars/styles/material.css";
@@ -102,6 +103,39 @@ import { useAlert } from "layouts/pages/hooks/useAlert";
 import { font, photoBase64 } from "./font";
 import { ExcelExportProperties } from "@syncfusion/ej2-grids";
 import "./styles.css";
+
+/** Syncfusion Gantt diyalog / buton metinleri (locale=en-US üzerine TR) */
+L10n.load({
+  "en-US": {
+    gantt: {
+      generalTab: "Genel",
+      customTab: "Özel",
+      writeNotes: "Not yazın",
+      addDialogTitle: "Yeni Görev",
+      editDialogTitle: "Görev Bilgisi",
+      saveButton: "Kaydet",
+      cancel: "İptal",
+      delete: "Sil",
+      add: "Ekle",
+      edit: "Düzenle",
+      update: "Güncelle",
+      resourceName: "Kaynaklar",
+      dependency: "Bağımlılık",
+      notes: "Notlar",
+      days: "gün",
+      day: "gün",
+    },
+  },
+});
+
+/** Genel sekmede gösterilecek alanlar — TaskID bilinçli olarak hariç */
+const GANTT_GENERAL_DIALOG_FIELDS = [
+  "TaskName",
+  "StartDate",
+  "Duration",
+  "EndDate",
+  "Progress",
+];
 
 // force css ile rich text editori gizleme
 const customStyles = `
@@ -186,19 +220,44 @@ function buildAddMenuWithChildPopup(ganttId: string) {
   };
 }
 
-/** Proje görev listesi API (ProjectTasksListDto): modules / moduleIds, PascalCase veya camelCase. */
-function extractModulesFromApiTask(task: any): string[] {
-  const raw =
-    task?.modules ??
-    task?.Modules ??
-    task?.moduleIds ??
-    task?.ModuleIds;
-  if (Array.isArray(raw)) {
-    return raw.map(String).filter(Boolean);
+/** Proje görev listesi: kayıt için Guid id. Modules (ad) yalnızca geriye dönük fallback. */
+function resolveToModuleIds(values: string[], moduleList: GanttModuleOption[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const t = String(raw ?? "").trim();
+    if (!t) continue;
+    let id = "";
+    if (MODULE_GUID_RE.test(t)) {
+      id = canonicalModuleId(t);
+    } else {
+      const lower = t.toLowerCase();
+      const byName = moduleList.find((m) => String(m.name).trim().toLowerCase() === lower);
+      if (byName) id = canonicalModuleId(byName.id);
+    }
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
   }
-  if (typeof raw === "string") {
-    const t = raw.trim();
-    return t ? [t] : [];
+  return out;
+}
+
+function extractModuleIdsFromApiTask(task: any, moduleList: GanttModuleOption[] = []): string[] {
+  const rawIds = task?.moduleIds ?? task?.ModuleIds;
+  if (Array.isArray(rawIds) && rawIds.length > 0) {
+    return resolveToModuleIds(rawIds.map(String), moduleList);
+  }
+  if (typeof rawIds === "string" && rawIds.trim()) {
+    return resolveToModuleIds([rawIds], moduleList);
+  }
+
+  // Eski cevap: yalnızca Modules (ad) — mümkünse id'ye çevir
+  const rawNames = task?.modules ?? task?.Modules;
+  if (Array.isArray(rawNames) && rawNames.length > 0) {
+    return resolveToModuleIds(rawNames.map(String), moduleList);
+  }
+  if (typeof rawNames === "string" && rawNames.trim()) {
+    return resolveToModuleIds([rawNames], moduleList);
   }
   return [];
 }
@@ -297,12 +356,12 @@ function clearSyncfusionGanttSpinner(gantt: GanttComponent | null) {
   try {
     g.hideLoadingIndicator?.();
   } catch {
-    
+
   }
   try {
     g.hideSpinner?.();
   } catch {
-    
+
   }
 }
 
@@ -311,7 +370,7 @@ function removeOrphanSyncfusionDialogOverlays(doc: Document) {
     if (doc.querySelector(".e-dialog.e-popup-open")) return;
     doc.querySelectorAll(".e-dlg-overlay").forEach((n) => (n as HTMLElement).remove());
   } catch {
-    
+
   }
 }
 
@@ -320,7 +379,7 @@ function resetStuckEj2DialogBodyState(doc: Document) {
     doc.body?.classList.remove("e-dlg-target", "e-scroll-disabled");
     doc.documentElement?.classList.remove("e-dlg-target", "e-scroll-disabled");
   } catch {
-    
+
   }
 }
 
@@ -335,14 +394,14 @@ function tearDownSyncfusionBlockingUi(gantt: GanttComponent | null, doc?: Docume
 function releaseGanttAfterAsyncToolbarAction(gantt: GanttComponent | null) {
   if (!gantt) return;
   const inst = gantt as any;
-  
+
   try {
     inst.closeGanttActions?.();
     inst.editModule?.dialogObj?.hide?.();
   } catch {
-    
+
   }
-  
+
   const root = inst.element as HTMLElement | undefined;
   if (root) {
     root.style.removeProperty("pointer-events");
@@ -353,7 +412,7 @@ function releaseGanttAfterAsyncToolbarAction(gantt: GanttComponent | null) {
 
   document.querySelectorAll('.e-spinner-pane, .e-dialog-overlay').forEach((el) => {
     if (el && (el as HTMLElement).style.display !== 'none') {
-        (el as HTMLElement).style.display = 'none';
+      (el as HTMLElement).style.display = 'none';
     }
   });
 
@@ -409,9 +468,8 @@ function buildLocalRowPatchFromTaskData(
   calculatedDuration: number,
   existing: any
 ): Record<string, unknown> {
-  const modulesFromEdit = normalizeModuleIdsFromRow(taskData);
   const modulesArray = hasExplicitModuleEditPayload(taskData)
-    ? modulesFromEdit
+    ? resolveToModuleIds(normalizeModuleIdsFromRow(taskData), [])
     : normalizeModuleIdsFromRow(existing);
 
   const taskName = pickEditedTaskName(taskData, existing);
@@ -446,9 +504,9 @@ function buildLocalRowPatchFromTaskData(
 function normalizeModuleIdsFromRow(row: any): string[] {
   const raw =
     row?.moduleIds ??
+    row?.taskData?.moduleIds ??
     row?.modules ??
     row?.Modules ??
-    row?.taskData?.moduleIds ??
     row?.taskData?.modules ??
     row?.taskData?.ModuleIds ??
     row?.taskData?.Modules;
@@ -462,18 +520,73 @@ function normalizeModuleIdsFromRow(row: any): string[] {
   return [];
 }
 
+function readModuleIdsFromDialogElement(
+  root: HTMLElement | null | undefined,
+): string[] | undefined {
+  if (!root) return undefined;
+  const moduleHost =
+    root.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? root;
+  const inst = (moduleHost as any)?.ej2_instances?.[0];
+  if (!inst || inst.value === undefined) return undefined;
+  const v = inst.value;
+  if (Array.isArray(v)) {
+    return v.map(String).filter(Boolean).map(canonicalModuleId);
+  }
+  return v ? [canonicalModuleId(String(v))] : [];
+}
+
+/** Modüller sekmesi Syncfusion save data'ya her zaman yansımaz; kayıt öncesi DOM'dan okunur. */
+function mergeDialogModuleIdsIntoSaveData(data: any, moduleList: GanttModuleOption[]) {
+  const editor = document.querySelector<HTMLElement>(
+    ".e-dialog.e-popup-open .gantt-module-status-editor",
+  );
+  const fromDom = readModuleIdsFromDialogElement(editor);
+  const raw = fromDom !== undefined ? fromDom : normalizeModuleIdsFromRow(data);
+  applyModuleIdsToRow(data, resolveToModuleIds(raw, moduleList));
+}
+
 function refreshGanttDialogModuleStatusEditors(
   rowData: any,
   moduleList: GanttModuleOption[],
 ) {
+  const ids = resolveToModuleIds(normalizeModuleIdsFromRow(rowData), moduleList);
+  applyModuleIdsToRow(rowData, ids);
+  const status = normalizeProjectStatusFromRow(rowData);
+
   document
     .querySelectorAll<HTMLElement>(".e-dialog.e-popup-open .gantt-module-status-editor")
     .forEach((host) => {
-      const statusSlot = host.querySelector(".gantt-module-status-row__status");
-      const hasDropDown = statusSlot?.querySelector(".e-ddl, .e-dropdownlist");
-      if (!hasDropDown) {
-        renderModuleStatusEditor(host, rowData, moduleList, "composite");
+      const moduleHost =
+        host.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? host;
+      const statusHost = host.querySelector<HTMLElement>(".gantt-module-status-row__status");
+      const moduleInst = getEj2InstanceFromHost(moduleHost);
+
+      // Editor zaten varsa yeniden yaratma — Syncfusion boş string yazmış olabilir;
+      // mevcut MultiSelect / DropDown değerini satır verisiyle güncelle.
+      if (moduleInst) {
+        try {
+          moduleInst.dataSource = moduleList;
+          moduleInst.value = ids;
+          moduleInst.dataBind?.();
+        } catch {
+          renderModuleStatusEditor(host, rowData, moduleList, "composite");
+          return;
+        }
+        if (statusHost) {
+          const statusInst = getEj2InstanceFromHost(statusHost);
+          if (statusInst) {
+            try {
+              statusInst.value = (status ?? null) as unknown as number;
+              statusInst.dataBind?.();
+            } catch {
+              /* durum güncellenemedi — modüller yine de set edildi */
+            }
+          }
+        }
+        return;
       }
+
+      renderModuleStatusEditor(host, rowData, moduleList, "composite");
     });
 }
 
@@ -587,7 +700,9 @@ function appendModuleMultiSelect(
   rowData: any,
   moduleList: GanttModuleOption[],
 ) {
-  const ids = normalizeModuleIdsFromRow(rowData);
+  // Grid'de ad görünebilir; MultiSelect value alanı Guid id ister
+  const ids = resolveToModuleIds(normalizeModuleIdsFromRow(rowData), moduleList);
+  applyModuleIdsToRow(rowData, ids);
   const ms = new MultiSelect({
     dataSource: moduleList,
     fields: { text: "name", value: "id" },
@@ -597,15 +712,27 @@ function appendModuleMultiSelect(
     value: ids,
     change: (e: { value?: unknown }) => {
       const v = e.value;
-      const next = Array.isArray(v)
-        ? v.map(String).filter(Boolean).map(canonicalModuleId)
-        : v
-          ? [canonicalModuleId(String(v))]
-          : [];
+      const next = resolveToModuleIds(
+        Array.isArray(v)
+          ? v.map(String).filter(Boolean)
+          : v
+            ? [String(v)]
+            : [],
+        moduleList,
+      );
       applyModuleIdsToRow(rowData, next);
     },
   });
   ms.appendTo(host);
+  // Constructor value bazen dataSource bağlanmadan uygulanmaz
+  if (ids.length > 0) {
+    try {
+      ms.value = ids;
+      ms.dataBind();
+    } catch {
+      /* ignore */
+    }
+  }
   return ms;
 }
 
@@ -720,11 +847,20 @@ function ProjectChart() {
         gantt?.editModule?.editedRecord;
       if (!row) return;
 
+      const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
+      const moduleList = moduleDataRef.current as GanttModuleOption[];
+      if (taskGuid) {
+        const cached = taskModuleIdsCacheRef.current.get(String(taskGuid));
+        if (cached?.length) {
+          applyModuleIdsToRow(row, resolveToModuleIds(cached, moduleList));
+        } else {
+          const fromRow = resolveToModuleIds(normalizeModuleIdsFromRow(row), moduleList);
+          if (fromRow.length) applyModuleIdsToRow(row, fromRow);
+        }
+      }
+
       requestAnimationFrame(() => {
-        refreshGanttDialogModuleStatusEditors(
-          row,
-          moduleDataRef.current as GanttModuleOption[],
-        );
+        refreshGanttDialogModuleStatusEditors(row, moduleList);
       });
     };
 
@@ -797,14 +933,19 @@ function ProjectChart() {
     const row = args?.data;
     const taskGuid = row?.taskData?.Id ?? row?.taskData?.id ?? row?.Id ?? row?.id;
     if (!taskGuid) return;
-    if (taskModuleIdsCacheRef.current.has(taskGuid)) {
+    const cached = taskModuleIdsCacheRef.current.get(taskGuid);
+    // Boş cache ile erken çıkma — liste endpoint'i modül döndürmemiş olabilir
+    if (cached && cached.length > 0) {
       return;
     }
     try {
       const config = getConfiguration();
       const api = new ProjectTasksApi(config);
       const res = await api.apiProjectTasksGetTaskModulesGet(taskGuid);
-      const ids = (res.data ?? []).map(String).filter(Boolean).map(canonicalModuleId);
+      const ids = resolveToModuleIds(
+        (res.data ?? []).map(String).filter(Boolean),
+        moduleDataRef.current as GanttModuleOption[],
+      );
       taskModuleIdsCacheRef.current.set(taskGuid, ids);
       setProjectData((prev) =>
         prev.map((t: any) =>
@@ -944,7 +1085,7 @@ function ProjectChart() {
           // columns: [
           //   { field: 'id', headerText: 'ID' },
           //   { field: 'TaskName', headerText: 'Başlık' },
-          //   { field: 'Notes', headerText: 'Notlar' }, 
+          //   { field: 'Notes', headerText: 'Notlar' },
           // ] as unknown as Column[],
         };
 
@@ -1080,7 +1221,14 @@ function ProjectChart() {
       const transformedData = response.data.map((task: any) => {
         // Ensure users is always defined, even if it comes as null or undefined
         const users = task.Users || task.users || [];
-        const modulesArray = extractModulesFromApiTask(task).map((x) => canonicalModuleId(String(x)));
+        const modulesArray = extractModuleIdsFromApiTask(
+          task,
+          moduleDataRef.current as GanttModuleOption[],
+        );
+        const taskGuid = String(task.id ?? task.Id ?? "");
+        if (taskGuid) {
+          taskModuleIdsCacheRef.current.set(taskGuid, modulesArray.slice());
+        }
         return {
           Id: task.id,
           TaskID: task.taskId,
@@ -1153,7 +1301,7 @@ function ProjectChart() {
     milestone: "Milestone",
     notes: "Notes",
     manual: "IsManual",
-    resourceInfo: "resources",    
+    resourceInfo: "resources",
 
     // taskId: "TaskID",
   };
@@ -1182,15 +1330,23 @@ function ProjectChart() {
           "composite",
         );
       },
-      read: (element: HTMLElement) => {
-        const rowData = (element as any).__ganttEditRowData;
+      read: (element: HTMLElement, value?: unknown) => {
         const status = readProjectStatusFromCompositeElement(element);
-        if (status !== undefined && rowData) {
-          applyProjectStatusToRow(rowData, status);
+        if (status !== undefined) {
+          const rowData = (element as any).__ganttEditRowData;
+          if (rowData) applyProjectStatusToRow(rowData, status);
         }
-        const moduleIds = readModuleIdsFromCompositeElement(element) ?? [];
-        if (rowData) applyModuleIdsToRow(rowData, moduleIds);
-        return moduleIds;
+        let raw: string[] = [];
+        if (Array.isArray(value)) {
+          raw = value.filter(Boolean).map(String);
+        } else {
+          const moduleHost =
+            element.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? element;
+          const inst = (moduleHost as any).ej2_instances?.[0];
+          const v = inst?.value ?? [];
+          raw = Array.isArray(v) ? v.map(String).filter(Boolean) : v ? [String(v)] : [];
+        }
+        return resolveToModuleIds(raw, moduleDataRef.current as GanttModuleOption[]);
       },
     }),
     [] // eslint-disable-line react-hooks/exhaustive-deps
@@ -1224,17 +1380,17 @@ function ProjectChart() {
   };
 
   const editDialogFields: EditDialogFieldSettingsModel[] = [
-    { type: "General" as DialogFieldType, headerText: "General" },
-    { type: "Dependency" as DialogFieldType, headerText: "Dependency" },
-    { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
-    { type: "Notes" as DialogFieldType, headerText: "Notes" },
+    { type: "General" as DialogFieldType, headerText: "Genel", fields: GANTT_GENERAL_DIALOG_FIELDS },
+    { type: "Dependency" as DialogFieldType, headerText: "Bağımlılık" },
+    { type: "Resources" as DialogFieldType, headerText: "Kaynaklar", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
+    { type: "Notes" as DialogFieldType, headerText: "Notlar" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
   ];
   const addDialogFields: AddDialogFieldSettingsModel[] = [
-    { type: "General" as DialogFieldType, headerText: "General" },
-    { type: "Dependency" as DialogFieldType, headerText: "Dependency" },
-    { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
-    { type: "Notes" as DialogFieldType, headerText: "Notes" },
+    { type: "General" as DialogFieldType, headerText: "Genel", fields: GANTT_GENERAL_DIALOG_FIELDS },
+    { type: "Dependency" as DialogFieldType, headerText: "Bağımlılık" },
+    { type: "Resources" as DialogFieldType, headerText: "Kaynaklar", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
+    { type: "Notes" as DialogFieldType, headerText: "Notlar" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
   ];
   const toolbarOptions = [
@@ -1344,7 +1500,10 @@ function ProjectChart() {
       const calculatedDuration = durationForInsert(startDate, endDate);
 
       const config = getConfiguration();
-      const moduleIdsPayload = normalizeModuleIdsFromRow(args.taskData);
+      const moduleIdsPayload = resolveToModuleIds(
+        normalizeModuleIdsFromRow(args.taskData),
+        moduleDataRef.current as GanttModuleOption[],
+      );
 
       const taskName =
         typeof args.taskData.TaskName === "string" && args.taskData.TaskName.trim().length > 0
@@ -1515,7 +1674,10 @@ function ProjectChart() {
 
       const calculatedDuration = calculateDuration(startDate, endDate);
 
-      const moduleIdsPayload = normalizeModuleIdsFromRow(taskData);
+      const moduleIdsPayload = resolveToModuleIds(
+        normalizeModuleIdsFromRow(taskData),
+        moduleDataRef.current as GanttModuleOption[],
+      );
       const existing = projectDataRef.current.find((t: any) => t.Id === taskData.Id) as any;
 
       const config = getConfiguration();
@@ -1621,6 +1783,7 @@ function ProjectChart() {
       dispatchAlert({
         message: "Silinecek görev bulunamadı.",
         type: "error",
+
       });
       return;
     }
@@ -1676,20 +1839,22 @@ function ProjectChart() {
 
     if (args.requestType === "beforeAdd") {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
-      mergeDialogModuleStatusIntoSaveData(args.data);
+      mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
+      mergeDialogProjectStatusIntoSaveData(args.data);
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
-      
+
     } else if (args.requestType === "beforeDelete") {
       args.cancel = true; // ÖNCE İPTAL EDİN
       await deleteTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
-      
+
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
-      mergeDialogModuleStatusIntoSaveData(args.data);
+      mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
+      mergeDialogProjectStatusIntoSaveData(args.data);
       await updateTask(args.data);
-      
+
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
       if (ganttRef.current) {
         try {
@@ -1699,7 +1864,7 @@ function ProjectChart() {
         }
       }
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
-      
+
     } else if (args.requestType === "beforeOpenAddDialog") {
       applyTodayAsDefaultTaskDates(args.rowData);
     } else if (args.requestType === "beforeOpenEditDialog") {
@@ -1707,28 +1872,31 @@ function ProjectChart() {
       const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
       if (taskGuid) {
         try {
+          const moduleList = moduleDataRef.current as GanttModuleOption[];
           let ids = taskModuleIdsCacheRef.current.get(taskGuid);
-          if (!ids) {
+          // Boş veya yoksa API'den çek; ad/GUID karışık gelebilir → resolveToModuleIds
+          if (!ids || ids.length === 0) {
             const config = getConfiguration();
             const api = new ProjectTasksApi(config);
             const res = await api.apiProjectTasksGetTaskModulesGet(taskGuid);
-            ids = (res.data ?? []).map(String).filter(Boolean).map(canonicalModuleId);
+            ids = resolveToModuleIds(
+              (res.data ?? []).map(String).filter(Boolean),
+              moduleList,
+            );
             taskModuleIdsCacheRef.current.set(taskGuid, ids);
+          } else {
+            ids = resolveToModuleIds(ids, moduleList);
           }
-          const normalizedIds = ids.map(canonicalModuleId);
-          row.moduleIds = normalizedIds;
-          if (row.taskData) {
-            row.taskData.moduleIds = normalizedIds;
-            row.taskData.modules = normalizedIds;
-          }
+          applyModuleIdsToRow(row, ids);
+          // Dialog write çoğu zaman bu await'ten önce boş value ile çalışır; sekmeye
+          // geçince ve sonraki frame'lerde MultiSelect'i yeniden doldur.
+          const pushToEditors = () =>
+            refreshGanttDialogModuleStatusEditors(row, moduleList);
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              refreshGanttDialogModuleStatusEditors(
-                row,
-                moduleDataRef.current as GanttModuleOption[],
-              );
-            });
+            requestAnimationFrame(pushToEditors);
           });
+          window.setTimeout(pushToEditors, 0);
+          window.setTimeout(pushToEditors, 120);
         } catch (e) {
           console.error("GetTaskModules:", e);
         }
@@ -2014,17 +2182,17 @@ function ProjectChart() {
           labelSettings={labelSettings}
         >
           <AddDialogFieldsDirective>
-            <AddDialogFieldDirective type="General" headerText="General" />
-            <AddDialogFieldDirective type="Dependency" headerText="Dependency" />
-            <AddDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
-            <AddDialogFieldDirective type="Notes" headerText="Notes" />
+            <AddDialogFieldDirective type="General" headerText="Genel" fields={GANTT_GENERAL_DIALOG_FIELDS} />
+            <AddDialogFieldDirective type="Dependency" headerText="Bağımlılık" />
+            <AddDialogFieldDirective type="Resources" headerText="Kaynaklar" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
+            <AddDialogFieldDirective type="Notes" headerText="Notlar" />
             <AddDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
           </AddDialogFieldsDirective>
           <EditDialogFieldsDirective>
-            <EditDialogFieldDirective type="General" headerText="General" />
-            <EditDialogFieldDirective type="Dependency" headerText="Dependency" />
-            <EditDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
-            <EditDialogFieldDirective type="Notes" headerText="Notes" />
+            <EditDialogFieldDirective type="General" headerText="Genel" fields={GANTT_GENERAL_DIALOG_FIELDS} />
+            <EditDialogFieldDirective type="Dependency" headerText="Bağımlılık" />
+            <EditDialogFieldDirective type="Resources" headerText="Kaynaklar" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
+            <EditDialogFieldDirective type="Notes" headerText="Notlar" />
             <EditDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
           </EditDialogFieldsDirective>
           <Inject
@@ -2048,7 +2216,7 @@ function ProjectChart() {
             <ColumnDirective field="TaskID" headerText="ID" />
             <ColumnDirective
               field="TaskName"
-              headerText="Task Name"
+              headerText="Görev Adı"
               template={(props: any) => {
                 if (!props.Notes || props.Notes.length === 0) {
                   return <div>{props.TaskName}</div>;
@@ -2073,7 +2241,7 @@ function ProjectChart() {
             />
             <ColumnDirective
               field="resources"
-              headerText="Assignees"
+              headerText="Atananlar"
               template={(props: any) => {
                 const assignees = getAssigneeDisplayNames(props.resources);
                 if (assignees.length === 0) return <>-</>;
@@ -2101,7 +2269,7 @@ function ProjectChart() {
             />
             <ColumnDirective
               field="moduleIds"
-              headerText="Modules"
+              headerText="Modüller"
               width="150"
               edit={moduleIdsColumnEdit}
               template={(props: any) => {
@@ -2123,26 +2291,26 @@ function ProjectChart() {
 
             <ColumnDirective
               field="StartDate"
-              headerText="Start Date"
+              headerText="Başlangıç"
               width="150"
               format={formatOption}
               type="date"
               edit={{ params: { format: "dd.MM.yyyy" } }}
             />
 
-            <ColumnDirective field="Duration" headerText="Duration (days)" allowEditing={false} />
+            <ColumnDirective field="Duration" headerText="Süre (gün)" allowEditing={false} />
             <ColumnDirective
               field="EndDate"
-              headerText="End Date"
+              headerText="Bitiş"
               type="date"
               format={formatOption}
               edit={{ params: { format: "dd.MM.yyyy" } }}
             />
-            <ColumnDirective field="Progress" headerText="Progress (%)" />
+            <ColumnDirective field="Progress" headerText="İlerleme (%)" />
           </ColumnsDirective>
         </GanttComponent>
       </div>
-      
+
 
       {/* Excel Export Dialog */}
       <ShadcnDialog open={excelDialogOpen} onOpenChange={(open) => !open && handleExcelDialogClose()}>

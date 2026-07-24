@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { isReAuthOpen, subscribeReAuth } from "utils/reAuthGate";
 
 export type BusySeverity = string;
 
@@ -24,6 +25,9 @@ interface BusyProviderProps {
 
 export function BusyProvider({ children }: BusyProviderProps): JSX.Element {
   const [activeRequests, setActiveRequests] = useState(0);
+  const [reAuthOpen, setReAuthOpen] = useState(isReAuthOpen());
+
+  useEffect(() => subscribeReAuth(setReAuthOpen), []);
 
   const dispatchBusy = useCallback(({ isBusy }: BusyDispatchArgs) => {
     setActiveRequests((prevCount) => {
@@ -35,7 +39,8 @@ export function BusyProvider({ children }: BusyProviderProps): JSX.Element {
     });
   }, []);
 
-  const isVisible = activeRequests > 0;
+  // Re-auth modal açıkken busy overlay'i gizle — aksi halde z-index ile modalı kilitler
+  const isVisible = activeRequests > 0 && !reAuthOpen;
 
   return (
     <BusyContext.Provider value={dispatchBusy}>
