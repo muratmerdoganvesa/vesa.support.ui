@@ -1,13 +1,188 @@
-/* Modüller dialog: modül + durum yan yana */
+/* ─── Gantt Task Information / Edit Dialog ─────────────────────────────── */
+
+.e-gantt-dialog.e-dialog {
+  border-radius: 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow:
+    0 25px 50px -12px rgba(15, 23, 42, 0.25),
+    0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+  overflow: hidden !important;
+  font-family: inherit;
+}
+
+.e-gantt-dialog .e-dlg-header-content {
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 14px 18px !important;
+}
+
+.e-gantt-dialog .e-dlg-header {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  letter-spacing: -0.01em;
+}
+
+.e-gantt-dialog .e-btn.e-dlg-closeicon-btn {
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  transition: background 0.15s, color 0.15s;
+}
+
+.e-gantt-dialog .e-btn.e-dlg-closeicon-btn:hover {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+/* Tabs */
+.e-gantt-dialog .e-tab .e-tab-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 0 12px !important;
+}
+
+.e-gantt-dialog .e-tab .e-tab-header .e-toolbar-item .e-tab-text {
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b !important;
+}
+
+.e-gantt-dialog .e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-text {
+  color: #3e5d8f !important;
+}
+
+.e-gantt-dialog .e-tab .e-tab-header .e-indicator {
+  background: #3e5d8f !important;
+  height: 2px !important;
+  border-radius: 2px 2px 0 0;
+}
+
+.e-gantt-dialog .e-tab .e-content {
+  background: #f8fafc !important;
+}
+
+.e-gantt-dialog .e-dlg-content {
+  background: #f8fafc !important;
+  padding: 0 !important;
+}
+
+/* Form columns / fields */
+.e-gantt-dialog .e-edit-form-row,
+.e-gantt-dialog .e-gantt-form-container {
+  padding: 16px 18px !important;
+}
+
+.e-gantt-dialog .e-edit-form-column {
+  padding: 8px 10px !important;
+}
+
+.e-gantt-dialog .e-float-text,
+.e-gantt-dialog label,
+.e-gantt-dialog .e-label {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  letter-spacing: 0.02em;
+}
+
+.e-gantt-dialog .e-input-group,
+.e-gantt-dialog .e-control-wrapper,
+.e-gantt-dialog .e-float-input,
+.e-gantt-dialog input.e-input,
+.e-gantt-dialog textarea.e-input,
+.e-gantt-dialog .e-multiselect,
+.e-gantt-dialog .e-ddl {
+  border-radius: 10px !important;
+}
+
+.e-gantt-dialog .e-input-group:not(.e-success):not(.e-warning):not(.e-error),
+.e-gantt-dialog .e-input-group.e-control-wrapper:not(.e-success):not(.e-warning):not(.e-error) {
+  border-color: #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.e-gantt-dialog .e-input-group.e-input-focus:not(.e-success):not(.e-warning):not(.e-error),
+.e-gantt-dialog .e-input-group.e-control-wrapper.e-input-focus:not(.e-success):not(.e-warning):not(.e-error) {
+  border-color: #3e5d8f !important;
+  box-shadow: 0 0 0 3px rgba(62, 93, 143, 0.12) !important;
+}
+
+.e-gantt-dialog textarea.e-input {
+  min-height: 96px;
+  line-height: 1.5;
+}
+
+/* Footer */
+.e-gantt-dialog .e-footer-content {
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 12px 18px !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+}
+
+.e-gantt-dialog .e-footer-content .e-btn {
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  min-height: 36px !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+}
+
+.e-gantt-dialog .e-footer-content .e-primary,
+.e-gantt-dialog .e-footer-content .e-btn.e-primary {
+  background: #3e5d8f !important;
+  border-color: #3e5d8f !important;
+  color: #fff !important;
+}
+
+.e-gantt-dialog .e-footer-content .e-primary:hover,
+.e-gantt-dialog .e-footer-content .e-btn.e-primary:hover {
+  background: #324d7a !important;
+  border-color: #324d7a !important;
+}
+
+.e-gantt-dialog .e-footer-content .e-flat,
+.e-gantt-dialog .e-footer-content .e-btn:not(.e-primary) {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.e-gantt-dialog .e-footer-content .e-btn:not(.e-primary):hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Overlay */
+.e-dlg-overlay {
+  background-color: rgba(15, 23, 42, 0.35) !important;
+  backdrop-filter: blur(2px);
+}
+
+/* ─── Modüller sekmesi: modül + durum ──────────────────────────────────── */
+
 .gantt-module-status-editor {
   width: 100%;
 }
 
 .gantt-module-status-row {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  box-sizing: border-box;
 }
 
 .gantt-module-status-row__modules {
@@ -22,17 +197,33 @@
 
 .gantt-module-status-row__status-label {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: rgba(0, 0, 0, 0.6);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-/* Yalnızca Modüller sekmesi — diğer tab'ların iki sütunlu layout'u korunur */
 .e-gantt-dialog .e-edit-form-column.gantt-modules-tab-column {
   float: left;
-  padding: 16px 18px 0 18px;
+  padding: 16px 18px 18px 18px;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box;
+}
+
+.e-gantt-dialog .gantt-module-status-row .e-multiselect,
+.e-gantt-dialog .gantt-module-status-row .e-ddl {
+  width: 100% !important;
+}
+
+@media (max-width: 720px) {
+  .gantt-module-status-row {
+    flex-direction: column;
+  }
+
+  .gantt-module-status-row__status {
+    width: 100%;
+  }
 }
