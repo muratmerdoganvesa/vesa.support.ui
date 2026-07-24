@@ -508,6 +508,7 @@ function renderModuleStatusEditor(
 
 function applyModuleIdsToRow(rowData: any, next: string[]) {
   rowData.moduleIds = next;
+  rowData.modules = next;
   if (rowData.taskData) {
     rowData.taskData.moduleIds = next;
     rowData.taskData.modules = next;
@@ -521,6 +522,16 @@ function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
   }
 }
 
+function getEj2InstanceFromHost(host: HTMLElement | null | undefined): any | undefined {
+  if (!host) return undefined;
+  const direct = (host as any).ej2_instances?.[0];
+  if (direct) return direct;
+  const child = host.querySelector(
+    ".e-multiselect, .e-dropdownlist, .e-ddl",
+  ) as HTMLElement | null;
+  return (child as any)?.ej2_instances?.[0];
+}
+
 function readProjectStatusFromCompositeElement(
   root: HTMLElement | null | undefined,
 ): ProjectTypes | null | undefined {
@@ -529,21 +540,46 @@ function readProjectStatusFromCompositeElement(
     ? root
     : root.querySelector<HTMLElement>(".gantt-module-status-row__status");
   if (!statusHost) return undefined;
-  const inst = (statusHost as any).ej2_instances?.[0];
+  const inst = getEj2InstanceFromHost(statusHost);
   if (!inst) return undefined;
   const v = inst.value;
   if (v == null || v === "") return null;
   return Number(v) as ProjectTypes;
 }
 
+function readModuleIdsFromCompositeElement(
+  root: HTMLElement | null | undefined,
+): string[] | undefined {
+  if (!root) return undefined;
+  const moduleHost = root.classList.contains("gantt-module-status-row__modules")
+    ? root
+    : root.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? root;
+  const inst = getEj2InstanceFromHost(moduleHost);
+  if (!inst) return undefined;
+  const v = inst.value;
+  if (v == null || v === "") return [];
+  if (Array.isArray(v)) {
+    return v.map(String).filter(Boolean).map(canonicalModuleId);
+  }
+  return [canonicalModuleId(String(v))];
+}
+
 /** Modüller sekmesindeki birleşik editör dialog kaydına dahil değil; save öncesi DOM'dan okunur. */
-function mergeDialogProjectStatusIntoSaveData(data: any) {
+function mergeDialogModuleStatusIntoSaveData(data: any) {
   const editor = document.querySelector<HTMLElement>(
     ".e-dialog.e-popup-open .gantt-module-status-editor",
   );
+  if (!editor) return;
+
+  const moduleIds = readModuleIdsFromCompositeElement(editor);
+  if (moduleIds !== undefined) {
+    applyModuleIdsToRow(data, moduleIds);
+  }
+
   const status = readProjectStatusFromCompositeElement(editor);
-  if (status === undefined) return;
-  applyProjectStatusToRow(data, status);
+  if (status !== undefined) {
+    applyProjectStatusToRow(data, status);
+  }
 }
 
 function appendModuleMultiSelect(
@@ -1146,19 +1182,15 @@ function ProjectChart() {
           "composite",
         );
       },
-      read: (element: HTMLElement, value?: unknown) => {
+      read: (element: HTMLElement) => {
+        const rowData = (element as any).__ganttEditRowData;
         const status = readProjectStatusFromCompositeElement(element);
-        if (status !== undefined) {
-          const rowData = (element as any).__ganttEditRowData;
-          if (rowData) applyProjectStatusToRow(rowData, status);
+        if (status !== undefined && rowData) {
+          applyProjectStatusToRow(rowData, status);
         }
-        if (Array.isArray(value)) {
-          return value.filter(Boolean) as string[];
-        }
-        const moduleHost =
-          element.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? element;
-        const inst = (moduleHost as any).ej2_instances?.[0];
-        return (inst?.value ?? []) as string[];
+        const moduleIds = readModuleIdsFromCompositeElement(element) ?? [];
+        if (rowData) applyModuleIdsToRow(rowData, moduleIds);
+        return moduleIds;
       },
     }),
     [] // eslint-disable-line react-hooks/exhaustive-deps
@@ -1644,7 +1676,7 @@ function ProjectChart() {
 
     if (args.requestType === "beforeAdd") {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
-      mergeDialogProjectStatusIntoSaveData(args.data);
+      mergeDialogModuleStatusIntoSaveData(args.data);
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
       
@@ -1655,7 +1687,7 @@ function ProjectChart() {
       
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
-      mergeDialogProjectStatusIntoSaveData(args.data);
+      mergeDialogModuleStatusIntoSaveData(args.data);
       await updateTask(args.data);
       
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
