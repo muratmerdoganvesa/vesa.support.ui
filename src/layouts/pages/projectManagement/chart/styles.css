@@ -247,6 +247,36 @@
   letter-spacing: 0.06em;
 }
 
+select.gantt-module-status-select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 38px;
+  padding: 8px 36px 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+select.gantt-module-status-select:focus {
+  outline: none;
+  border-color: #3e5d8f;
+  box-shadow: 0 0 0 3px rgba(62, 93, 143, 0.12);
+}
+
+select.gantt-module-status-select:hover {
+  border-color: #cbd5e1;
+}
+
 .e-gantt-dialog .e-edit-form-column.gantt-modules-tab-column {
   float: left;
   padding: 16px 18px 18px 18px;

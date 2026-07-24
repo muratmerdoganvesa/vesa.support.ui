@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, LayoutGrid, RefreshCw, Plus, Users } from "lucide-react";
+import { AlertTriangle, Boxes, LayoutGrid, RefreshCw, Plus, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchProjectCompanyMap } from "layouts/pages/ticketProjects/api/fetchProjectCompanyMap";
@@ -23,6 +23,7 @@ import {
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { buildProjectPersonStats } from "layouts/pages/ticketProjects/utils/buildProjectPersonStats";
+import { buildProjectModuleStats } from "layouts/pages/ticketProjects/utils/buildProjectModuleStats";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
 import { Button } from "components/ui/button";
@@ -30,17 +31,23 @@ import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 import ProjectStatisticsFilterBar from "./ProjectStatisticsFilterBar";
 import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
+import ProjectStatsModulesView from "./ProjectStatsModulesView";
 import SimulatedProjectPlanDialog from "./SimulatedProjectPlanDialog";
 import { useProjectStatisticsFilters } from "../hooks/useProjectStatisticsFilters";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
-type StatisticsViewTab = "kanban" | "people";
+type StatisticsViewTab = "kanban" | "people" | "modules";
 
-export const getStatisticsSearchCopy = (activeTab: StatisticsViewTab) =>
-  activeTab === "people"
-    ? { placeholder: "Kişi ara...", ariaLabel: "Kişilerde ara" }
-    : { placeholder: "Proje, müşteri, kişi ara...", ariaLabel: "Projelerde ara" };
+export const getStatisticsSearchCopy = (activeTab: StatisticsViewTab) => {
+  if (activeTab === "people") {
+    return { placeholder: "Kişi ara...", ariaLabel: "Kişilerde ara" };
+  }
+  if (activeTab === "modules") {
+    return { placeholder: "Modül ara...", ariaLabel: "Modüllerde ara" };
+  }
+  return { placeholder: "Proje, müşteri, kişi ara...", ariaLabel: "Projelerde ara" };
+};
 
 const MOBILE_BREAKPOINT = 767;
 
@@ -258,6 +265,20 @@ const ViewTabSwitcher = ({
       <Users className="size-3.5" aria-hidden />
       Kişi
     </button>
+    <button
+      type="button"
+      onClick={() => onTabChange("modules")}
+      aria-pressed={activeTab === "modules"}
+      className={cn(
+        "flex items-center gap-1.5 border-l border-slate-200 px-3 py-1.5 font-medium transition-colors dark:border-border",
+        activeTab === "modules"
+          ? "bg-slate-800 text-white dark:bg-primary dark:text-primary-foreground"
+          : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted",
+      )}
+    >
+      <Boxes className="size-3.5" aria-hidden />
+      Modül
+    </button>
   </div>
 );
 
@@ -454,12 +475,40 @@ const ProjectStatisticsTab = () => {
     userLevelById,
   ]);
 
+  const moduleStats = useMemo(
+    () => buildProjectModuleStats(filters.filteredItemsIgnoringSearch),
+    [filters.filteredItemsIgnoringSearch],
+  );
+
+  const visibleModuleStats = useMemo(() => {
+    let list = moduleStats;
+
+    if (filters.selectedModule !== "All") {
+      list = list.filter((module) => module.moduleName === filters.selectedModule);
+    }
+
+    const query = filters.searchTerm.trim().toLowerCase();
+    if (query) {
+      list = list.filter((module) => module.moduleName.toLowerCase().includes(query));
+    }
+
+    return list;
+  }, [moduleStats, filters.selectedModule, filters.searchTerm]);
+
   const handlePersonCardClick = useCallback(
     (personId: string) => {
       filters.handlePersonSelect(personId);
       setActiveTab("kanban");
     },
     [filters.handlePersonSelect],
+  );
+
+  const handleModuleCardClick = useCallback(
+    (moduleName: string) => {
+      filters.handleModuleSelect(moduleName);
+      setActiveTab("kanban");
+    },
+    [filters.handleModuleSelect],
   );
 
   const handleOpenCreatePlan = useCallback(() => {
@@ -596,6 +645,11 @@ const ProjectStatisticsTab = () => {
                   stats={visiblePersonStats}
                   onPersonClick={handlePersonCardClick}
                   personDetailsById={personDetailsById}
+                />
+              ) : activeTab === "modules" ? (
+                <ProjectStatsModulesView
+                  stats={visibleModuleStats}
+                  onModuleClick={handleModuleCardClick}
                 />
               ) : isMobile ? (
                 <MobileBoard

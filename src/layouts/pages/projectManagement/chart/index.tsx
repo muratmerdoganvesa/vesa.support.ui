@@ -35,7 +35,7 @@ import {
   AddDialogFieldDirective,
 } from "@syncfusion/ej2-react-gantt";
 import { PdfFontStyle, PdfTrueTypeFont } from "@syncfusion/ej2-pdf-export";
-import { MultiSelect, DropDownList } from "@syncfusion/ej2-dropdowns";
+import { MultiSelect } from "@syncfusion/ej2-dropdowns";
 import { L10n } from "@syncfusion/ej2-base";
 import "@syncfusion/ej2-base/styles/material.css";
 import "@syncfusion/ej2-buttons/styles/material.css";
@@ -573,13 +573,20 @@ function refreshGanttDialogModuleStatusEditors(
           return;
         }
         if (statusHost) {
-          const statusInst = getEj2InstanceFromHost(statusHost);
-          if (statusInst) {
-            try {
-              statusInst.value = (status ?? null) as unknown as number;
-              statusInst.dataBind?.();
-            } catch {
-              /* durum güncellenemedi — modüller yine de set edildi */
+          const select = statusHost.querySelector<HTMLSelectElement>(
+            "select.gantt-module-status-select",
+          );
+          if (select) {
+            select.value = status == null ? STATUS_UNSET : String(status);
+          } else {
+            const statusInst = getEj2InstanceFromHost(statusHost);
+            if (statusInst) {
+              try {
+                statusInst.value = status == null ? STATUS_UNSET : String(status);
+                statusInst.dataBind?.();
+              } catch {
+                /* durum güncellenemedi — modüller yine de set edildi */
+              }
             }
           }
         }
@@ -636,29 +643,38 @@ function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
 }
 
 /**
- * Syncfusion DropDownList null value ile güvenilir çalışmaz; "Seçilmedi" için sentinel kullan.
+ * Durum değeri: Syncfusion DropDownList dialog içinde güvenilir değil;
+ * native select kullan (popup/z-index/value tipi sorunları yok).
  */
-const STATUS_UNSET = "" as const;
+const STATUS_UNSET = "__unset__" as const;
+
+const GANTT_STATUS_NATIVE_OPTIONS: { label: string; value: string }[] = [
+  { label: "Seçilmedi", value: STATUS_UNSET },
+  ...projectTypeOptions.map((o) => ({ label: o.label, value: String(o.value) })),
+];
+
+function parseStatusSelectValue(raw: string | null | undefined): ProjectTypes | null {
+  if (raw == null || raw === "" || raw === STATUS_UNSET) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? (n as ProjectTypes) : null;
+}
 
 function getEj2InstanceFromHost(host: HTMLElement | null | undefined): any | undefined {
   if (!host) return undefined;
   const direct = (host as any).ej2_instances?.[0];
   if (direct) return direct;
   const child = host.querySelector(
-    ".e-multiselect, .e-dropdownlist, .e-ddl, .e-input-group",
+    ".e-multiselect, .e-dropdownlist, .e-ddl",
   ) as HTMLElement | null;
   if (child && (child as any).ej2_instances?.[0]) {
     return (child as any).ej2_instances[0];
   }
-  // Label + input birlikte host'ta olabilir; tüm ej2 çocuklarını tara
-  const withInst = host.querySelectorAll("*");
-  for (let i = 0; i < withInst.length; i++) {
-    const inst = (withInst[i] as any).ej2_instances?.[0];
-    if (inst && (inst.getModuleName?.() === "dropdownlist" || inst.value !== undefined)) {
-      // MultiSelect de value taşır; durum host'unda DropDownList beklenir
-      const name = inst.getModuleName?.();
-      if (name === "dropdownlist" || name === "multiselect") return inst;
-    }
+  const nodes = host.querySelectorAll<HTMLElement>("*");
+  for (let i = 0; i < nodes.length; i++) {
+    const inst = (nodes[i] as any).ej2_instances?.[0];
+    if (!inst) continue;
+    const name = inst.getModuleName?.();
+    if (name === "dropdownlist" || name === "multiselect") return inst;
   }
   return undefined;
 }
@@ -671,12 +687,17 @@ function readProjectStatusFromCompositeElement(
     ? root
     : root.querySelector<HTMLElement>(".gantt-module-status-row__status");
   if (!statusHost) return undefined;
+
+  const select = statusHost.querySelector<HTMLSelectElement>("select.gantt-module-status-select");
+  if (select) {
+    return parseStatusSelectValue(select.value);
+  }
+
   const inst = getEj2InstanceFromHost(statusHost);
   if (!inst) return undefined;
-  const v = inst.value;
-  if (v == null || v === "" || v === STATUS_UNSET) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? (n as ProjectTypes) : null;
+  return parseStatusSelectValue(
+    inst.value == null ? STATUS_UNSET : String(inst.value),
+  );
 }
 
 function readModuleIdsFromCompositeElement(
@@ -767,42 +788,44 @@ function appendModuleMultiSelect(
   return ms;
 }
 
-const GANTT_STATUS_DROPDOWN_OPTIONS: { label: string; value: ProjectTypes | typeof STATUS_UNSET }[] = [
-  { label: "Seçilmedi", value: STATUS_UNSET },
-  ...projectTypeOptions.map((o) => ({ label: o.label, value: o.value })),
-];
-
 function appendStatusDropDown(host: HTMLElement, rowData: any) {
+  // Önceki Syncfusion instance / çocukları temizle
+  host.querySelectorAll(".e-dropdownlist, .e-ddl, select.gantt-module-status-select").forEach((el) => {
+    const inst = (el as any).ej2_instances?.[0];
+    try {
+      inst?.destroy?.();
+    } catch {
+      /* ignore */
+    }
+  });
+  host.innerHTML = "";
+
   const label = document.createElement("label");
   label.className = "gantt-module-status-row__status-label";
+  label.htmlFor = `gantt-status-${Math.random().toString(36).slice(2, 9)}`;
   label.textContent = "Durum";
   host.appendChild(label);
 
+  const select = document.createElement("select");
+  select.id = label.htmlFor;
+  select.className = "gantt-module-status-select";
+  select.setAttribute("aria-label", "Durum");
+
   const current = normalizeProjectStatusFromRow(rowData);
-  const ddl = new DropDownList({
-    dataSource: GANTT_STATUS_DROPDOWN_OPTIONS,
-    fields: { text: "label", value: "value" },
-    placeholder: "Durum seçin",
-    width: "100%",
-    value: current == null ? STATUS_UNSET : current,
-    change: (e: { value?: ProjectTypes | typeof STATUS_UNSET | null }) => {
-      const raw = e.value;
-      const next =
-        raw === STATUS_UNSET || raw == null
-          ? null
-          : (Number(raw) as ProjectTypes);
-      applyProjectStatusToRow(rowData, Number.isFinite(next as number) ? next : null);
-    },
-  });
-  ddl.appendTo(host);
-  // İlk değer bazen constructor'da tutunmaz
-  try {
-    ddl.value = current == null ? STATUS_UNSET : current;
-    ddl.dataBind();
-  } catch {
-    /* ignore */
+  for (const opt of GANTT_STATUS_NATIVE_OPTIONS) {
+    const option = document.createElement("option");
+    option.value = opt.value;
+    option.textContent = opt.label;
+    select.appendChild(option);
   }
-  return ddl;
+  select.value = current == null ? STATUS_UNSET : String(current);
+
+  select.addEventListener("change", () => {
+    applyProjectStatusToRow(rowData, parseStatusSelectValue(select.value));
+  });
+
+  host.appendChild(select);
+  return select;
 }
 
 const RESOURCES_ADDITIONAL_PARAMS = {
@@ -1391,16 +1414,20 @@ function ProjectChart() {
 
   const projectStatusColumnEdit = useMemo(
     () => ({
-      create: () => document.createElement("input"),
+      create: () => {
+        const el = document.createElement("div");
+        el.className = "gantt-module-status-row__status";
+        return el;
+      },
       write: (args: { rowData: any; element: HTMLElement }) => {
         appendStatusDropDown(args.element, args.rowData);
       },
-      read: (element: HTMLElement, value?: unknown) => {
-        const inst = getEj2InstanceFromHost(element) ?? (element as any).ej2_instances?.[0];
-        const v = inst?.value ?? value;
-        if (v == null || v === STATUS_UNSET) return null;
-        const n = Number(v);
-        return Number.isFinite(n) ? (n as ProjectTypes) : null;
+      read: (element: HTMLElement) => {
+        const select = element.querySelector<HTMLSelectElement>(
+          "select.gantt-module-status-select",
+        );
+        if (select) return parseStatusSelectValue(select.value);
+        return normalizeProjectStatusFromRow((element as any).__ganttEditRowData);
       },
     }),
     [] // eslint-disable-line react-hooks/exhaustive-deps
