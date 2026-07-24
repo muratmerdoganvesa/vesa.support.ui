@@ -5,6 +5,7 @@ import {
   linkManager,
 } from '@luigi-project/client';
 import { isPlatformModuleMode } from 'platform/platformMode';
+import { persistPlatformSession } from 'utils/authSession';
 
 export type SupportTheme = 'sap_horizon' | 'sap_horizon_dark';
 
@@ -37,8 +38,7 @@ function toSupportContext(raw: Record<string, unknown>): SupportContext {
 
 export function applyPlatformContext(context: SupportContext): void {
   if (context.accessToken) {
-    localStorage.setItem('accessToken', context.accessToken);
-    localStorage.setItem('lastTokenValidation', Date.now().toString());
+    persistPlatformSession(context.accessToken);
   }
 }
 

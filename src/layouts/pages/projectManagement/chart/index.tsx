@@ -186,19 +186,44 @@ function buildAddMenuWithChildPopup(ganttId: string) {
   };
 }
 
-/** Proje görev listesi API (ProjectTasksListDto): modules / moduleIds, PascalCase veya camelCase. */
-function extractModulesFromApiTask(task: any): string[] {
-  const raw =
-    task?.modules ??
-    task?.Modules ??
-    task?.moduleIds ??
-    task?.ModuleIds;
-  if (Array.isArray(raw)) {
-    return raw.map(String).filter(Boolean);
+/** Proje görev listesi: kayıt için Guid id. Modules (ad) yalnızca geriye dönük fallback. */
+function resolveToModuleIds(values: string[], moduleList: GanttModuleOption[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of values) {
+    const t = String(raw ?? "").trim();
+    if (!t) continue;
+    let id = "";
+    if (MODULE_GUID_RE.test(t)) {
+      id = canonicalModuleId(t);
+    } else {
+      const lower = t.toLowerCase();
+      const byName = moduleList.find((m) => String(m.name).trim().toLowerCase() === lower);
+      if (byName) id = canonicalModuleId(byName.id);
+    }
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
   }
-  if (typeof raw === "string") {
-    const t = raw.trim();
-    return t ? [t] : [];
+  return out;
+}
+
+function extractModuleIdsFromApiTask(task: any, moduleList: GanttModuleOption[] = []): string[] {
+  const rawIds = task?.moduleIds ?? task?.ModuleIds;
+  if (Array.isArray(rawIds) && rawIds.length > 0) {
+    return resolveToModuleIds(rawIds.map(String), moduleList);
+  }
+  if (typeof rawIds === "string" && rawIds.trim()) {
+    return resolveToModuleIds([rawIds], moduleList);
+  }
+
+  // Eski cevap: yalnızca Modules (ad) — mümkünse id'ye çevir
+  const rawNames = task?.modules ?? task?.Modules;
+  if (Array.isArray(rawNames) && rawNames.length > 0) {
+    return resolveToModuleIds(rawNames.map(String), moduleList);
+  }
+  if (typeof rawNames === "string" && rawNames.trim()) {
+    return resolveToModuleIds([rawNames], moduleList);
   }
   return [];
 }
@@ -409,9 +434,8 @@ function buildLocalRowPatchFromTaskData(
   calculatedDuration: number,
   existing: any
 ): Record<string, unknown> {
-  const modulesFromEdit = normalizeModuleIdsFromRow(taskData);
   const modulesArray = hasExplicitModuleEditPayload(taskData)
-    ? modulesFromEdit
+    ? resolveToModuleIds(normalizeModuleIdsFromRow(taskData), [])
     : normalizeModuleIdsFromRow(existing);
 
   const taskName = pickEditedTaskName(taskData, existing);
@@ -446,9 +470,9 @@ function buildLocalRowPatchFromTaskData(
 function normalizeModuleIdsFromRow(row: any): string[] {
   const raw =
     row?.moduleIds ??
+    row?.taskData?.moduleIds ??
     row?.modules ??
     row?.Modules ??
-    row?.taskData?.moduleIds ??
     row?.taskData?.modules ??
     row?.taskData?.ModuleIds ??
     row?.taskData?.Modules;
@@ -460,6 +484,31 @@ function normalizeModuleIdsFromRow(row: any): string[] {
     return t ? [canonicalModuleId(t)] : [];
   }
   return [];
+}
+
+function readModuleIdsFromDialogElement(
+  root: HTMLElement | null | undefined,
+): string[] | undefined {
+  if (!root) return undefined;
+  const moduleHost =
+    root.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? root;
+  const inst = (moduleHost as any)?.ej2_instances?.[0];
+  if (!inst || inst.value === undefined) return undefined;
+  const v = inst.value;
+  if (Array.isArray(v)) {
+    return v.map(String).filter(Boolean).map(canonicalModuleId);
+  }
+  return v ? [canonicalModuleId(String(v))] : [];
+}
+
+/** Modüller sekmesi Syncfusion save data'ya her zaman yansımaz; kayıt öncesi DOM'dan okunur. */
+function mergeDialogModuleIdsIntoSaveData(data: any, moduleList: GanttModuleOption[]) {
+  const editor = document.querySelector<HTMLElement>(
+    ".e-dialog.e-popup-open .gantt-module-status-editor",
+  );
+  const fromDom = readModuleIdsFromDialogElement(editor);
+  const raw = fromDom !== undefined ? fromDom : normalizeModuleIdsFromRow(data);
+  applyModuleIdsToRow(data, resolveToModuleIds(raw, moduleList));
 }
 
 function refreshGanttDialogModuleStatusEditors(
@@ -1044,7 +1093,14 @@ function ProjectChart() {
       const transformedData = response.data.map((task: any) => {
         // Ensure users is always defined, even if it comes as null or undefined
         const users = task.Users || task.users || [];
-        const modulesArray = extractModulesFromApiTask(task).map((x) => canonicalModuleId(String(x)));
+        const modulesArray = extractModuleIdsFromApiTask(
+          task,
+          moduleDataRef.current as GanttModuleOption[],
+        );
+        const taskGuid = String(task.id ?? task.Id ?? "");
+        if (taskGuid) {
+          taskModuleIdsCacheRef.current.set(taskGuid, modulesArray.slice());
+        }
         return {
           Id: task.id,
           TaskID: task.taskId,
@@ -1152,13 +1208,17 @@ function ProjectChart() {
           const rowData = (element as any).__ganttEditRowData;
           if (rowData) applyProjectStatusToRow(rowData, status);
         }
+        let raw: string[] = [];
         if (Array.isArray(value)) {
-          return value.filter(Boolean) as string[];
+          raw = value.filter(Boolean).map(String);
+        } else {
+          const moduleHost =
+            element.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? element;
+          const inst = (moduleHost as any).ej2_instances?.[0];
+          const v = inst?.value ?? [];
+          raw = Array.isArray(v) ? v.map(String).filter(Boolean) : v ? [String(v)] : [];
         }
-        const moduleHost =
-          element.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? element;
-        const inst = (moduleHost as any).ej2_instances?.[0];
-        return (inst?.value ?? []) as string[];
+        return resolveToModuleIds(raw, moduleDataRef.current as GanttModuleOption[]);
       },
     }),
     [] // eslint-disable-line react-hooks/exhaustive-deps
@@ -1312,7 +1372,10 @@ function ProjectChart() {
       const calculatedDuration = durationForInsert(startDate, endDate);
 
       const config = getConfiguration();
-      const moduleIdsPayload = normalizeModuleIdsFromRow(args.taskData);
+      const moduleIdsPayload = resolveToModuleIds(
+        normalizeModuleIdsFromRow(args.taskData),
+        moduleDataRef.current as GanttModuleOption[],
+      );
 
       const taskName =
         typeof args.taskData.TaskName === "string" && args.taskData.TaskName.trim().length > 0
@@ -1483,7 +1546,10 @@ function ProjectChart() {
 
       const calculatedDuration = calculateDuration(startDate, endDate);
 
-      const moduleIdsPayload = normalizeModuleIdsFromRow(taskData);
+      const moduleIdsPayload = resolveToModuleIds(
+        normalizeModuleIdsFromRow(taskData),
+        moduleDataRef.current as GanttModuleOption[],
+      );
       const existing = projectDataRef.current.find((t: any) => t.Id === taskData.Id) as any;
 
       const config = getConfiguration();
@@ -1644,6 +1710,7 @@ function ProjectChart() {
 
     if (args.requestType === "beforeAdd") {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
+      mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
@@ -1655,6 +1722,7 @@ function ProjectChart() {
       
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
+      mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
       await updateTask(args.data);
       
