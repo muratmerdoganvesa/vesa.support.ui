@@ -1749,6 +1749,7 @@ function ProjectChart() {
       dispatchAlert({
         message: "Silinecek görev bulunamadı.",
         type: "error",
+
       });
       return;
     }
