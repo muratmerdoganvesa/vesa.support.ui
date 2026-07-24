@@ -635,14 +635,32 @@ function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
   }
 }
 
+/**
+ * Syncfusion DropDownList null value ile güvenilir çalışmaz; "Seçilmedi" için sentinel kullan.
+ */
+const STATUS_UNSET = "" as const;
+
 function getEj2InstanceFromHost(host: HTMLElement | null | undefined): any | undefined {
   if (!host) return undefined;
   const direct = (host as any).ej2_instances?.[0];
   if (direct) return direct;
   const child = host.querySelector(
-    ".e-multiselect, .e-dropdownlist, .e-ddl",
+    ".e-multiselect, .e-dropdownlist, .e-ddl, .e-input-group",
   ) as HTMLElement | null;
-  return (child as any)?.ej2_instances?.[0];
+  if (child && (child as any).ej2_instances?.[0]) {
+    return (child as any).ej2_instances[0];
+  }
+  // Label + input birlikte host'ta olabilir; tüm ej2 çocuklarını tara
+  const withInst = host.querySelectorAll("*");
+  for (let i = 0; i < withInst.length; i++) {
+    const inst = (withInst[i] as any).ej2_instances?.[0];
+    if (inst && (inst.getModuleName?.() === "dropdownlist" || inst.value !== undefined)) {
+      // MultiSelect de value taşır; durum host'unda DropDownList beklenir
+      const name = inst.getModuleName?.();
+      if (name === "dropdownlist" || name === "multiselect") return inst;
+    }
+  }
+  return undefined;
 }
 
 function readProjectStatusFromCompositeElement(
@@ -656,8 +674,9 @@ function readProjectStatusFromCompositeElement(
   const inst = getEj2InstanceFromHost(statusHost);
   if (!inst) return undefined;
   const v = inst.value;
-  if (v == null || v === "") return null;
-  return Number(v) as ProjectTypes;
+  if (v == null || v === "" || v === STATUS_UNSET) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? (n as ProjectTypes) : null;
 }
 
 function readModuleIdsFromCompositeElement(
@@ -689,6 +708,18 @@ function mergeDialogModuleStatusIntoSaveData(data: any) {
     applyModuleIdsToRow(data, moduleIds);
   }
 
+  const status = readProjectStatusFromCompositeElement(editor);
+  if (status !== undefined) {
+    applyProjectStatusToRow(data, status);
+  }
+}
+
+/** Durum (projectStatus) yalnızca Modüller sekmesi composite editöründe; kayıttan önce DOM'dan çek. */
+function mergeDialogProjectStatusIntoSaveData(data: any) {
+  const editor = document.querySelector<HTMLElement>(
+    ".e-dialog.e-popup-open .gantt-module-status-editor",
+  );
+  if (!editor) return;
   const status = readProjectStatusFromCompositeElement(editor);
   if (status !== undefined) {
     applyProjectStatusToRow(data, status);
@@ -736,14 +767,9 @@ function appendModuleMultiSelect(
   return ms;
 }
 
-/**
- * Syncfusion DropDownList, native <select> gibi davranır: bir kez değer seçilince
- * temizleme ("x") butonu ya da yazarak silme yolu yoktur. Bu yüzden listeye açıkça
- * "Seçilmedi" (null) seçeneği eklenir; aksi halde durum bir daha boşa alınamaz.
- */
-const GANTT_STATUS_DROPDOWN_OPTIONS: { label: string; value: ProjectTypes | null }[] = [
-  { label: "Seçilmedi", value: null },
-  ...projectTypeOptions,
+const GANTT_STATUS_DROPDOWN_OPTIONS: { label: string; value: ProjectTypes | typeof STATUS_UNSET }[] = [
+  { label: "Seçilmedi", value: STATUS_UNSET },
+  ...projectTypeOptions.map((o) => ({ label: o.label, value: o.value })),
 ];
 
 function appendStatusDropDown(host: HTMLElement, rowData: any) {
@@ -752,19 +778,30 @@ function appendStatusDropDown(host: HTMLElement, rowData: any) {
   label.textContent = "Durum";
   host.appendChild(label);
 
-  const value = normalizeProjectStatusFromRow(rowData);
+  const current = normalizeProjectStatusFromRow(rowData);
   const ddl = new DropDownList({
     dataSource: GANTT_STATUS_DROPDOWN_OPTIONS,
     fields: { text: "label", value: "value" },
     placeholder: "Durum seçin",
     width: "100%",
-    value: (value ?? null) as unknown as number,
-    change: (e: { value?: number | null }) => {
-      const next = e.value == null ? null : (Number(e.value) as ProjectTypes);
-      applyProjectStatusToRow(rowData, next);
+    value: current == null ? STATUS_UNSET : current,
+    change: (e: { value?: ProjectTypes | typeof STATUS_UNSET | null }) => {
+      const raw = e.value;
+      const next =
+        raw === STATUS_UNSET || raw == null
+          ? null
+          : (Number(raw) as ProjectTypes);
+      applyProjectStatusToRow(rowData, Number.isFinite(next as number) ? next : null);
     },
   });
   ddl.appendTo(host);
+  // İlk değer bazen constructor'da tutunmaz
+  try {
+    ddl.value = current == null ? STATUS_UNSET : current;
+    ddl.dataBind();
+  } catch {
+    /* ignore */
+  }
   return ddl;
 }
 
@@ -1359,10 +1396,11 @@ function ProjectChart() {
         appendStatusDropDown(args.element, args.rowData);
       },
       read: (element: HTMLElement, value?: unknown) => {
-        const inst = (element as any).ej2_instances?.[0];
+        const inst = getEj2InstanceFromHost(element) ?? (element as any).ej2_instances?.[0];
         const v = inst?.value ?? value;
-        if (v == null || v === "") return null;
-        return Number(v) as ProjectTypes;
+        if (v == null || v === STATUS_UNSET) return null;
+        const n = Number(v);
+        return Number.isFinite(n) ? (n as ProjectTypes) : null;
       },
     }),
     [] // eslint-disable-line react-hooks/exhaustive-deps
@@ -1841,6 +1879,20 @@ function ProjectChart() {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
+      try {
+        const editor = document.querySelector<HTMLElement>(
+          ".e-dialog.e-popup-open .gantt-module-status-editor",
+        );
+        const rowFromEditor = (editor as any)?.__ganttEditRowData;
+        if (rowFromEditor && Object.prototype.hasOwnProperty.call(rowFromEditor, "projectStatus")) {
+          applyProjectStatusToRow(
+            args.data,
+            normalizeProjectStatusFromRow(rowFromEditor),
+          );
+        }
+      } catch {
+        /* ignore */
+      }
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
 
@@ -1852,7 +1904,30 @@ function ProjectChart() {
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
+      // Durum: 1) DOM dropdown 2) composite editörün rowData'sı 3) Syncfusion editedRecord
       mergeDialogProjectStatusIntoSaveData(args.data);
+      try {
+        const editor = document.querySelector<HTMLElement>(
+          ".e-dialog.e-popup-open .gantt-module-status-editor",
+        );
+        const rowFromEditor = (editor as any)?.__ganttEditRowData;
+        if (rowFromEditor && Object.prototype.hasOwnProperty.call(rowFromEditor, "projectStatus")) {
+          applyProjectStatusToRow(
+            args.data,
+            normalizeProjectStatusFromRow(rowFromEditor),
+          );
+        } else {
+          const gantt = ganttRef.current as any;
+          const edited =
+            gantt?.editModule?.dialogModule?.processedRecord ??
+            gantt?.editModule?.editedRecord;
+          if (edited && Object.prototype.hasOwnProperty.call(edited, "projectStatus")) {
+            applyProjectStatusToRow(args.data, normalizeProjectStatusFromRow(edited));
+          }
+        }
+      } catch {
+        /* ignore */
+      }
       await updateTask(args.data);
 
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
