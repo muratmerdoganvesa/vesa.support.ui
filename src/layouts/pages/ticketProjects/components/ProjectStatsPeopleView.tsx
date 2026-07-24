@@ -130,7 +130,7 @@ const PersonCard = ({ person, detail, getPhoto, onPersonClick }: PersonCardProps
 
         <div className="min-w-0 flex-1 pt-0.5">
           <div className="flex items-start justify-between gap-2">
-            <p className="truncate text-sm font-semibold leading-snug text-slate-800 transition-colors group-hover:text-indigo-700 dark:text-foreground">
+            <p className="m-0 truncate text-sm font-semibold leading-snug text-slate-800 transition-colors group-hover:text-indigo-700 dark:text-foreground">
               {person.name}
               {detail?.levelLabel && (
                 <span className="font-medium text-slate-400 dark:text-muted-foreground">
@@ -140,20 +140,18 @@ const PersonCard = ({ person, detail, getPhoto, onPersonClick }: PersonCardProps
               )}
             </p>
             <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-              {person.total}
+              {person.total} 
             </span>
           </div>
 
           {subtitle && (
-            <p className="truncate text-[11px] text-slate-400 dark:text-muted-foreground">
+            <p className="m-0 mt-0.5 truncate text-[11px] text-slate-400 dark:text-muted-foreground">
               {subtitle}
             </p>
           )}
 
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium text-slate-400 dark:text-muted-foreground">
-              {person.activeCount} aktif
-            </span>
+            
             {person.donePercent === 100 && (
               <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-400">
                 <CheckCircle2 className="size-2.5" aria-hidden />
