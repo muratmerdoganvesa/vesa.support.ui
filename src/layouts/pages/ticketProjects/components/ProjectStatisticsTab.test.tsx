@@ -75,4 +75,11 @@ describe("getStatisticsSearchCopy", () => {
       ariaLabel: "Kişilerde ara",
     });
   });
+
+  it("describes module-only search in the modules view", () => {
+    expect(getStatisticsSearchCopy("modules")).toEqual({
+      placeholder: "Modül ara...",
+      ariaLabel: "Modüllerde ara",
+    });
+  });
 });
