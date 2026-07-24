@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, LayoutGrid, RefreshCw, Users } from "lucide-react";
+import { AlertTriangle, LayoutGrid, RefreshCw, Plus, Users } from "lucide-react";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchProjectCompanyMap } from "layouts/pages/ticketProjects/api/fetchProjectCompanyMap";
@@ -7,6 +7,13 @@ import {
   fetchPersonDetailData,
   type PersonDetailInfo,
 } from "layouts/pages/ticketProjects/api/fetchPersonDetailMap";
+import {
+  createSimulatedProjectPlan,
+  deleteSimulatedProjectPlan,
+  fetchSimulatedProjectPlans,
+  updateSimulatedProjectPlan,
+  type SimulatedProjectPlanPayload,
+} from "layouts/pages/ticketProjects/api/simulatedProjectPlanApi";
 import {
   getProjectTypeColumns,
   getProjectTypeColumnColors,
@@ -18,10 +25,12 @@ import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { buildProjectPersonStats } from "layouts/pages/ticketProjects/utils/buildProjectPersonStats";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
+import { Button } from "components/ui/button";
 import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 import ProjectStatisticsFilterBar from "./ProjectStatisticsFilterBar";
 import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
+import SimulatedProjectPlanDialog from "./SimulatedProjectPlanDialog";
 import { useProjectStatisticsFilters } from "../hooks/useProjectStatisticsFilters";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -111,13 +120,16 @@ type MobileBoardProps = {
   groupedItems: Record<ProjectTypeColumnKey, StatsBoardItem[]>;
   selectedStatus: ProjectTypeColumnKey | "All";
   highlightPersonIds?: Set<string> | null;
+  onEditSimulated?: (item: StatsBoardItem) => void;
+  onDeleteSimulated?: (item: StatsBoardItem) => void;
 };
 
-export const MobileBoard = ({
+const MobileBoard = ({
   columns,
   groupedItems,
-  selectedStatus,
   highlightPersonIds,
+  onEditSimulated,
+  onDeleteSimulated,
 }: MobileBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
@@ -172,6 +184,8 @@ export const MobileBoard = ({
               item={item}
               cardBorderClass={activeColors?.cardBorder ?? "border-l-slate-300"}
               highlightPersonIds={highlightPersonIds}
+              onEditSimulated={onEditSimulated}
+              onDeleteSimulated={onDeleteSimulated}
             />
           ))
         )}
@@ -247,6 +261,10 @@ const ViewTabSwitcher = ({
 );
 
 const sortBoardItems = (a: StatsBoardItem, b: StatsBoardItem): number => {
+  // Simülasyon kartları kolon içinde üstte dursun (planlama görünürlüğü)
+  if (a.kind === "simulated" && b.kind !== "simulated") return -1;
+  if (b.kind === "simulated" && a.kind !== "simulated") return 1;
+
   const projectCmp = (a.projectDescription ?? "").localeCompare(b.projectDescription ?? "", "tr");
   if (projectCmp !== 0) return projectCmp;
   if (a.kind === "project" && b.kind === "project") return 0;
@@ -266,6 +284,8 @@ const ProjectStatisticsTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<StatisticsViewTab>("kanban");
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [editingPlanItem, setEditingPlanItem] = useState<StatsBoardItem | null>(null);
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
   const searchCopy = getStatisticsSearchCopy(activeTab);
@@ -283,41 +303,22 @@ const ProjectStatisticsTab = () => {
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
-      setLoadError(null);
-
-      const [statisticsResult, companyResult, personDetailResult] = await Promise.allSettled([
-        fetchProjectStatistics(),
-        fetchProjectCompanyMap(),
-        fetchPersonDetailData(),
-      ]);
-
-      if (statisticsResult.status === "rejected") {
-        throw statisticsResult.reason;
-      }
-
-      const data = statisticsResult.value;
-      const companyMap =
-        companyResult.status === "fulfilled" ? companyResult.value : new Map<string, string>();
-      const personDetailData =
-        personDetailResult.status === "fulfilled"
-          ? personDetailResult.value
-          : { detailsById: new Map<string, PersonDetailInfo>(), unavailableMetadata: [] };
-      const departmentMap = new Map<string, string>();
-
-      for (const [personId, detail] of personDetailData.detailsById) {
-        if (detail.department) {
-          departmentMap.set(personId, detail.department);
-        }
-      }
-
-      setBoardItems(
-        data
-          .filter((item) => item.isActive !== false)
-          .map((item) => ({
-            ...item,
-            workCompanyId: companyMap.get(item.projectId) ?? null,
-          })),
-      );
+      const [data, simulatedPlans, departmentMap, companyMap, personDetailMap] =
+        await Promise.all([
+          fetchProjectStatistics(),
+          fetchSimulatedProjectPlans().catch(() => [] as StatsBoardItem[]),
+          fetchUserDepartmentMap().catch(() => new Map<string, string>()),
+          fetchProjectCompanyMap().catch(() => new Map<string, string>()),
+          fetchPersonDetailMap().catch(() => new Map<string, PersonDetailInfo>()),
+        ]);
+      const realItems = data
+        .filter((item) => item.isActive !== false)
+        .map((item) => ({
+          ...item,
+          workCompanyId: companyMap.get(item.projectId) ?? null,
+        }));
+      const planItems = simulatedPlans.filter((item) => item.isActive !== false);
+      setBoardItems([...planItems, ...realItems]);
       setUserDepartmentById(departmentMap);
       setPersonDetailsById(personDetailData.detailsById);
 
@@ -434,6 +435,63 @@ const ProjectStatisticsTab = () => {
     [filters.handlePersonSelect],
   );
 
+  const handleOpenCreatePlan = useCallback(() => {
+    setEditingPlanItem(null);
+    setIsPlanDialogOpen(true);
+  }, []);
+
+  const handleEditSimulated = useCallback((item: StatsBoardItem) => {
+    setEditingPlanItem(item);
+    setIsPlanDialogOpen(true);
+  }, []);
+
+  const handleDeleteSimulated = useCallback(
+    async (item: StatsBoardItem) => {
+      if (!window.confirm(`"${item.customerName} — ${item.projectDescription}" plan kartı silinsin mi?`)) {
+        return;
+      }
+      try {
+        await deleteSimulatedProjectPlan(item.id);
+        setBoardItems((prev) => prev.filter((x) => x.id !== item.id));
+        dispatchAlert({ message: "Plan kartı silindi.", type: "Success" });
+      } catch {
+        dispatchAlert({ message: "Plan kartı silinirken hata oluştu.", type: "Error" });
+      }
+    },
+    [dispatchAlert],
+  );
+
+  const handlePlanSubmit = useCallback(
+    async (payload: SimulatedProjectPlanPayload) => {
+      try {
+        if (editingPlanItem) {
+          const updated = await updateSimulatedProjectPlan({
+            ...payload,
+            id: editingPlanItem.id,
+            isActive: true,
+          });
+          setBoardItems((prev) =>
+            prev.map((item) => (item.id === editingPlanItem.id ? updated : item)),
+          );
+          dispatchAlert({ message: "Plan kartı güncellendi.", type: "Success" });
+        } else {
+          const created = await createSimulatedProjectPlan(payload);
+          setBoardItems((prev) => [created, ...prev]);
+          dispatchAlert({ message: "Plan kartı eklendi.", type: "Success" });
+        }
+      } catch {
+        dispatchAlert({
+          message: editingPlanItem
+            ? "Plan kartı güncellenirken hata oluştu."
+            : "Plan kartı eklenirken hata oluştu.",
+          type: "Error",
+        });
+        throw new Error("plan-save-failed");
+      }
+    },
+    [dispatchAlert, editingPlanItem],
+  );
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
@@ -465,6 +523,9 @@ const ProjectStatisticsTab = () => {
           uniqueLevels={filters.uniqueLevels}
           selectedLevel={filters.selectedLevel}
           onLevelSelect={filters.handleLevelSelect}
+          planVisibility={filters.planVisibility}
+          onPlanVisibilitySelect={filters.handlePlanVisibilitySelect}
+          planVisibilityCounts={filters.planVisibilityCounts}
           totalCount={filters.totalCount}
           filteredCount={filters.filteredCount}
           isMobileFilterOpen={filters.isMobileFilterOpen}
@@ -472,63 +533,78 @@ const ProjectStatisticsTab = () => {
         />
 
         <div className="min-w-0 flex-1 overflow-hidden">
-          {loadError && !isLoading ? (
-            <StatisticsLoadError onRetry={handleRetryStatistics} />
-          ) : (
-            <>
-              <div className="mb-3 flex items-center gap-3">
-                {isLoading ? (
-                  <StatsSummarySkeleton columnCount={columns.length} />
-                ) : (
-                  <div className="flex-1">
-                    <StatsSummaryRow columns={columns} counts={columnCounts} />
-                  </div>
-                )}
-
-                {!isLoading && (
-                  <ViewTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
-                )}
+          <div className="mb-3 flex flex-wrap items-center gap-3">
+            {isLoading ? (
+              <StatsSummarySkeleton columnCount={columns.length} />
+            ) : (
+              <div className="min-w-0 flex-1">
+                <StatsSummaryRow columns={columns} counts={columnCounts} />
               </div>
+            )}
 
-              {isLoading ? (
-                <BoardSkeleton columnCount={columns.length} />
-              ) : activeTab === "people" ? (
-                <ProjectStatsPeopleView
-                  stats={visiblePersonStats}
-                  onPersonClick={handlePersonCardClick}
-                  personDetailsById={personDetailsById}
-                />
-              ) : isMobile ? (
-                <MobileBoard
-                  columns={columns}
-                  groupedItems={groupedItems}
-                  selectedStatus={filters.selectedStatus}
-                  highlightPersonIds={filters.highlightPersonIds}
-                />
-              ) : (
-                <div className="overflow-x-auto pb-1">
-                  <div
-                    className="grid gap-3"
-                    style={{
-                      gridTemplateColumns: `repeat(${columns.length}, minmax(210px, 1fr))`,
-                      minWidth: `${columns.length * 220}px`,
-                    }}
-                  >
-                    {columns.map((column) => (
-                      <ProjectStatsKanbanColumn
-                        key={String(column.key)}
-                        column={column}
-                        items={groupedItems[column.key] ?? []}
-                        highlightPersonIds={filters.highlightPersonIds}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+            {!isLoading && (
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleOpenCreatePlan}
+                  className="bg-rose-600 text-white hover:bg-rose-700"
+                >
+                  <Plus className="size-3.5" aria-hidden />
+                  Plan Ekle
+                </Button>
+                <ViewTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <BoardSkeleton columnCount={columns.length} />
+          ) : activeTab === "people" ? (
+            <ProjectStatsPeopleView
+              stats={visiblePersonStats}
+              onPersonClick={handlePersonCardClick}
+              personDetailsById={personDetailsById}
+            />
+          ) : isMobile ? (
+            <MobileBoard
+              columns={columns}
+              groupedItems={groupedItems}
+              highlightPersonIds={highlightPersonIds}
+              onEditSimulated={handleEditSimulated}
+              onDeleteSimulated={handleDeleteSimulated}
+            />
+          ) : (
+            <div className="overflow-x-auto pb-1">
+              <div
+                className="grid gap-3"
+                style={{
+                  gridTemplateColumns: `repeat(${columns.length}, minmax(210px, 1fr))`,
+                  minWidth: `${columns.length * 220}px`,
+                }}
+              >
+                {columns.map((column) => (
+                  <ProjectStatsKanbanColumn
+                    key={String(column.key)}
+                    column={column}
+                    items={groupedItems[column.key] ?? []}
+                    highlightPersonIds={highlightPersonIds}
+                    onEditSimulated={handleEditSimulated}
+                    onDeleteSimulated={handleDeleteSimulated}
+                  />
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </div>
+
+      <SimulatedProjectPlanDialog
+        open={isPlanDialogOpen}
+        onOpenChange={setIsPlanDialogOpen}
+        editingItem={editingPlanItem}
+        onSubmit={handlePlanSubmit}
+      />
     </DashboardLayout>
   );
 };

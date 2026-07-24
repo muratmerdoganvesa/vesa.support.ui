@@ -1,9 +1,13 @@
 import { memo, type KeyboardEvent } from "react";
-import { Building2, CalendarClock } from "lucide-react";
+import { Building2, CalendarClock, Pencil, Trash2 } from "lucide-react";
 import { cn } from "lib/utils";
-import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import {
+  getProjectStatusLabel,
+  SIMULATED_PLAN_CARD_COLORS,
+} from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Badge } from "components/ui/badge";
+import { Button } from "components/ui/button";
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
@@ -29,7 +33,7 @@ const buildDisplayName = (item: StatsBoardItem): string => {
     ? `${item.projectDescription} — ${item.projectSubDescription}`
     : item.projectDescription;
 
-  if (item.kind === "project") {
+  if (item.kind === "project" || item.kind === "simulated") {
     return projectPart || "—";
   }
 
@@ -42,18 +46,27 @@ type ProjectStatsKanbanCardProps = {
   item: StatsBoardItem;
   cardBorderClass: string;
   highlightPersonIds?: Set<string> | null;
+  onEditSimulated?: (item: StatsBoardItem) => void;
+  onDeleteSimulated?: (item: StatsBoardItem) => void;
 };
 
 const ProjectStatsKanbanCard = ({
   item,
   cardBorderClass,
   highlightPersonIds,
+  onEditSimulated,
+  onDeleteSimulated,
 }: ProjectStatsKanbanCardProps) => {
+  const isSimulated = item.kind === "simulated";
   const displayName = buildDisplayName(item);
   const statusLabel =
-    item.kind === "project" ? "Seçilmedi" : getProjectStatusLabel(item.projectStatus);
+    item.kind === "project"
+      ? "Seçilmedi"
+      : item.projectStatus == null
+        ? "Seçilmedi"
+        : getProjectStatusLabel(item.projectStatus);
 
-  const canNavigateToGantt = Boolean(item.workCompanyId && item.projectId);
+  const canNavigateToGantt = !isSimulated && Boolean(item.workCompanyId && item.projectId);
 
   const handleCardClick = () => {
     if (!canNavigateToGantt) return;
@@ -84,8 +97,10 @@ const ProjectStatsKanbanCard = ({
       onClick={handleCardClick}
       onKeyDown={handleCardKeyDown}
       className={cn(
-        "group min-w-0 w-full bg-white border-l-[3px] p-3 shadow-sm transition-shadow hover:shadow-md dark:bg-card",
-        cardBorderClass,
+        "group min-w-0 w-full border-l-[3px] p-3 shadow-sm transition-shadow hover:shadow-md",
+        isSimulated
+          ? cn(SIMULATED_PLAN_CARD_COLORS.cardBorder, SIMULATED_PLAN_CARD_COLORS.cardBg)
+          : cn("bg-white dark:bg-card", cardBorderClass),
         canNavigateToGantt &&
           "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}
@@ -96,11 +111,74 @@ const ProjectStatsKanbanCard = ({
       }
     >
       {item.customerName && (
-        <div className="mb-1.5 flex items-center gap-1.5">
-          <Building2 className="size-3.5 shrink-0 text-slate-400" aria-hidden />
-          <p className="break-words text-[13px] font-bold leading-snug text-slate-900 dark:text-foreground">
-            {item.customerName}
-          </p>
+        <div className="mb-1.5 flex items-start justify-between gap-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Building2 className="size-3.5 shrink-0 text-slate-400" aria-hidden />
+            <p className="break-words text-[13px] font-bold leading-snug text-slate-900 dark:text-foreground">
+              {item.customerName}
+            </p>
+          </div>
+          {isSimulated && (
+            <div className="flex shrink-0 items-center gap-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+                aria-label="Plan kartını düzenle"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditSimulated?.(item);
+                }}
+              >
+                <Pencil className="size-3" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+                aria-label="Plan kartını sil"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteSimulated?.(item);
+                }}
+              >
+                <Trash2 className="size-3" />
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!item.customerName && isSimulated && (
+        <div className="mb-1.5 flex justify-end gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+            aria-label="Plan kartını düzenle"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditSimulated?.(item);
+            }}
+          >
+            <Pencil className="size-3" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+            aria-label="Plan kartını sil"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteSimulated?.(item);
+            }}
+          >
+            <Trash2 className="size-3" />
+          </Button>
         </div>
       )}
 
@@ -109,6 +187,16 @@ const ProjectStatsKanbanCard = ({
       </p>
 
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        {isSimulated && (
+          <span
+            className={cn(
+              "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
+              SIMULATED_PLAN_CARD_COLORS.badge,
+            )}
+          >
+            Plan
+          </span>
+        )}
         <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-border dark:bg-muted dark:text-muted-foreground">
           {statusLabel}
         </span>

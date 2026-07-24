@@ -143,6 +143,9 @@ importers:
       axios:
         specifier: ^1.7.9
         version: 1.15.2
+      bootstrap:
+        specifier: 4.6.2
+        version: 4.6.2(jquery@4.0.0)(popper.js@1.16.1)
       chart.js:
         specifier: 3.0.1
         version: 3.0.1
@@ -173,6 +176,9 @@ importers:
       flatpickr:
         specifier: 4.6.13
         version: 4.6.13
+      font-awesome:
+        specifier: 4.7.0
+        version: 4.7.0
       formik:
         specifier: 2.2.9
         version: 2.2.9(react@18.3.1)
@@ -2916,6 +2922,13 @@ packages:
     resolution: {integrity: sha512-oP5VkATKlNwcgvxi0vM0p/D3n2C3EReYVX+DNYs5TjZFn/oQt2j+4sVJtSMr18pdRr8wjTcBl6LoV+FUwzPmNA==}
     engines: {node: '>=18'}
 
+  bootstrap@4.6.2:
+    resolution: {integrity: sha512-51Bbp/Uxr9aTuy6ca/8FbFloBUJZLHwnhTcnjIeRn2suQWsWzcuJhGjKDB5eppVte/8oCdOL3VuwxvZDUggwGQ==}
+    deprecated: This version of Bootstrap is no longer supported. Please upgrade to the latest version.
+    peerDependencies:
+      jquery: 1.9.1 - 3
+      popper.js: ^1.16.1
+
   brace-expansion@1.1.14:
     resolution: {integrity: sha512-MWPGfDxnyzKU7rNOW9SP/c50vi3xrmrua/+6hfPbCS2ABNWfx24vPidzvC7krjU/RTo235sV776ymlsMtGKj8g==}
 
@@ -3909,6 +3922,10 @@ packages:
     peerDependenciesMeta:
       debug:
         optional: true
+
+  font-awesome@4.7.0:
+    resolution: {integrity: sha512-U6kGnykA/6bFmg1M/oT9EkFeIYv7JlX3bozwQJWiiLz6L0w3F5vBVPxHlwyX/vtNq1ckcpRKOB9f2Qal/VtFpg==}
+    engines: {node: '>=0.10.3'}
 
   for-each@0.3.5:
     resolution: {integrity: sha512-dKx12eRCVIzqCxFGplyFKJMPvLEWgmNtUrpTiJIR5u97zEhRG8ySrtboPHZXx7daLxQVrl643cTzbab2tkQjxg==}
@@ -5103,6 +5120,10 @@ packages:
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
+
+  popper.js@1.16.1:
+    resolution: {integrity: sha512-Wb4p1J4zyFTbM+u6WuO4XstYx4Ky9Cewe4DWrel7B0w6VVICvPwdOpotjzcf6eD8TsckVnIMNONQyPIUFOUbCQ==}
+    deprecated: You can find the new Popper v2 at @popperjs/core, this package is dedicated to the legacy v1
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -9353,6 +9374,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  bootstrap@4.6.2(jquery@4.0.0)(popper.js@1.16.1):
+    dependencies:
+      jquery: 4.0.0
+      popper.js: 1.16.1
+
   brace-expansion@1.1.14:
     dependencies:
       balanced-match: 1.0.2
@@ -10491,6 +10517,8 @@ snapshots:
   flatted@3.4.2: {}
 
   follow-redirects@1.16.0: {}
+
+  font-awesome@4.7.0: {}
 
   for-each@0.3.5:
     dependencies:
@@ -11679,6 +11707,8 @@ snapshots:
   picomatch@4.0.4: {}
 
   pkce-challenge@5.0.1: {}
+
+  popper.js@1.16.1: {}
 
   possible-typed-array-names@1.1.0: {}
 

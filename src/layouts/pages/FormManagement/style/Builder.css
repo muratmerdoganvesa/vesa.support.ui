@@ -1,19 +1,117 @@
+/* Form.io builder — force component chips visible (Tailwind + Bootstrap conflicts) */
 
-
-
-#group-container-basic,
-#group-container-advanced,
-#group-container-layout,
-#group-container-premium,
-#group-container-data {
-  display: grid;
-  gap: 0.1rem;
-}
-
-.builder-group-button {
+.formio-builder-host,
+.formio-builder-host .formbuilder {
   width: 100%;
+  min-height: 480px;
 }
 
+.formio-builder-host .formcomponents {
+  min-width: 200px;
+}
+
+.formio-builder-host .formarea {
+  min-height: 420px;
+}
+
+/* Neutralize Bootstrap collapse fighting Form.io inline display toggles */
+.formio-builder-host .collapse.show,
+.formio-builder-host .collapse[style*="display: inherit"],
+.formio-builder-host .collapse[style*="display: block"],
+.formio-builder-host .collapse[style*="display:inherit"],
+.formio-builder-host .collapse[style*="display:block"] {
+  display: block !important;
+  height: auto !important;
+  overflow: visible !important;
+  visibility: visible !important;
+}
+
+.formio-builder-host .collapsing {
+  height: auto !important;
+  overflow: visible !important;
+  transition: none !important;
+}
+
+/* Sidebar group body: always show stacked component chips */
+.formio-builder-host [ref="sidebar-container"],
+.formio-builder-host .card-body.no-drop,
+.formio-builder-host #group-container-basic,
+.formio-builder-host #group-container-advanced,
+.formio-builder-host #group-container-layout,
+.formio-builder-host #group-container-premium,
+.formio-builder-host #group-container-data,
+.formio-builder-host #group-container-custom {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  padding: 8px !important;
+}
+
+.formio-builder-host .builder-group-button {
+  width: 100%;
+  text-align: left;
+}
+
+.formio-builder-host .builder-sidebar_search {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/*
+ * Component chips render as <span class="btn btn-primary ... formcomponent">.
+ * Tailwind / theme can wipe Bootstrap btn backgrounds → white text on white.
+ */
+.formio-builder-host .formcomponent,
+.formio-builder-host .formcomponent.drag-copy,
+.formio-builder-host span.formcomponent,
+.formio-builder-host .btn.formcomponent,
+.formio-builder-host [ref="sidebar-component"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 32px !important;
+  margin: 0 !important;
+  padding: 6px 8px !important;
+  overflow: visible !important;
+  background-color: #6c757d !important;
+  background-image: none !important;
+  border: 1px solid #5a6268 !important;
+  border-radius: 0.3em !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  white-space: normal !important;
+  cursor: move !important;
+  box-shadow: none !important;
+  clip: auto !important;
+  clip-path: none !important;
+  transform: none !important;
+  z-index: 1 !important;
+}
+
+.formio-builder-host .formcomponent:hover,
+.formio-builder-host .btn.formcomponent:hover,
+.formio-builder-host [ref="sidebar-component"]:hover {
+  background-color: #5a6268 !important;
+  border-color: #545b62 !important;
+  color: #ffffff !important;
+}
+
+.formio-builder-host .formcomponent i,
+.formio-builder-host [ref="sidebar-component"] i {
+  color: #ffffff !important;
+  margin-right: 6px !important;
+}
 
 .nav-link a {
   color: inherit;
