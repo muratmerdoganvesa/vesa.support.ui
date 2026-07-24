@@ -1,22 +1,17 @@
 import React, { useEffect } from "react";
 import { useQueryClient } from "react-query";
 import { useNavigate } from "react-router-dom";
+import { clearAuthSession } from "utils/authSession";
 
 const Logout: React.FC = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
     useEffect(() => {
-
-        // 1. Token'ı temizle
-        localStorage.removeItem("menuNameSurmane"); // LocalStorage
-        localStorage.removeItem("accessToken"); // SessionStorage
+        clearAuthSession();
         queryClient.clear();
-        // 2. Kullanıcıyı Login sayfasına yönlendir
         navigate("/authentication/sign-in/cover");
-
-
-    }, [navigate]);
+    }, [navigate, queryClient]);
 
     return (
         <div

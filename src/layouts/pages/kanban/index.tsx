@@ -807,9 +807,19 @@ function KanbanPage() {
     const required: (keyof typeof dialogForm)[] = [
       "Status", "Type", "Priority", "Assignee", "AssigneeId", "Summary",
     ];
+    const labels: Record<string, string> = {
+      Status: "Durum",
+      Type: "Tür",
+      Priority: "Öncelik",
+      Assignee: "Atanan",
+      AssigneeId: "Atanan",
+      Summary: "Özet",
+    };
     const errors: Record<string, string> = {};
     for (const key of required) {
-      if (!dialogForm[key]?.trim()) errors[key] = `${key} zorunludur`;
+      if (!dialogForm[key]?.trim()) {
+        errors[key] = `${labels[key] ?? key} zorunludur`;
+      }
     }
     setDialogErrors(errors);
     return Object.keys(errors).length === 0;
@@ -867,11 +877,6 @@ function KanbanPage() {
   const handleSearch = (term: string) => {
     setSearchTerm(term);
     applyFilters(currentFilter, term, currentPriorityFilter, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
-  };
-
-  const handlePriorityFilter = (priority: string) => {
-    setCurrentPriorityFilter(priority);
-    applyFilters(currentFilter, searchTerm, priority, currentAssigneeFilter, currentProjectFilter, currentDueDateFilter, effectiveDepartmentFilter);
   };
 
   const handleAssigneeFilter = (assigneeId: string) => {
@@ -1000,7 +1005,6 @@ function KanbanPage() {
   }, [radioItems, selectedRadio]);
 
   const typeItems = ["All", ...uniqueTypes];
-  const priorityItems = ["All", ...PRIORITY_OPTIONS];
 
   const uniqueAssignees = useMemo(() => {
     let users = assigneeData;
@@ -1155,52 +1159,6 @@ function KanbanPage() {
                               isActive ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
                             )}>
                               {typeCount}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* ÖNCELİK */}
-                  <div>
-                    <p className="px-2 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <AlertTriangle className="w-3 h-3" />
-                      Öncelik
-                    </p>
-                    <div className="space-y-0.5">
-                      {priorityItems.map((priority) => {
-                        const color = PRIORITY_COLORS[priority];
-                        const isActive = currentPriorityFilter === priority;
-                        const pCount = priority === "All"
-                          ? sidebarBaseData.length
-                          : sidebarBaseData.filter((d) => d.Priority === priority).length;
-                        return (
-                          <button
-                            key={priority}
-                            type="button"
-                            onClick={() => handlePriorityFilter(priority)}
-                            className={cn(
-                              "w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors text-left",
-                              isActive
-                                ? "bg-indigo-50 text-indigo-700 font-semibold"
-                                : "text-slate-600 hover:bg-slate-50"
-                            )}
-                          >
-                            {priority !== "All" ? (
-                              <span
-                                className="w-2 h-2 rounded-full shrink-0"
-                                style={{ backgroundColor: color ?? "#94a3b8" }}
-                              />
-                            ) : (
-                              <span className="w-2 h-2 rounded-full shrink-0 bg-slate-300" />
-                            )}
-                            <span className="flex-1 truncate">{priority === "All" ? "Tümü" : priority}</span>
-                            <span className={cn(
-                              "text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full min-w-[20px] text-center shrink-0",
-                              isActive ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"
-                            )}>
-                              {pCount}
                             </span>
                           </button>
                         );

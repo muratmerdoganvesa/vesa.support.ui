@@ -42,7 +42,8 @@
       "platform": ["./src/platform/index"],
       "platform/*": ["./src/platform/*"],
       "luigi": ["./src/luigi"],
-      "config/*": ["./src/config/*"]
+      "config/*": ["./src/config/*"],
+      "auth/*": ["./src/auth/*"]
     }
   },
   "include": [

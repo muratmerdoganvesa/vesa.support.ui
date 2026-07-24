@@ -31,9 +31,9 @@ import { loadApiConfig } from "config/apiConfig";
 import { BusyProvider } from "layouts/pages/hooks/useBusy";
 import { AlertProvider } from "layouts/pages/hooks/useAlert";
 import { MsalProvider } from "@azure/msal-react";
-import { PublicClientApplication } from "@azure/msal-browser";
 import { UserProvider } from "layouts/pages/hooks/userName";
 import { registerChunkPreloadErrorHandler } from "utils/chunkReload";
+import { msalInstance } from "auth/msalApp";
 
 registerChunkPreloadErrorHandler();
 
@@ -44,7 +44,7 @@ const root = createRoot(document.getElementById("root"));
 
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { TooltipProvider } from "components/ui/tooltip";
-const isLocalhost = window.location.hostname === "localhost";
+import SessionExpiredModal from "components/auth/SessionExpiredModal";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,29 +58,7 @@ const queryClient = new QueryClient({
     },
   },
 });
-const msalConfig = isLocalhost
-  ? {
-    auth: {
-      clientId: "28116fc8-fd64-4ccb-ab4d-96d2f3653846", // Uygulama (istemci) kimliği
-      authority: "https://login.microsoftonline.com/8b3326df-62dc-4c93-84c2-db8f6f28f4bb", // Kiracı ID'si (authority)
-      redirectUri: "http://localhost:3000", // Azure portalda tanımlı geri dönüş URI'si
-    },
-  }
-  : {
-    auth: {
-      clientId: "1a4e7070-9c88-4097-9805-caf72e245e79", // Uygulama (istemci) kimliği
-      authority: "https://login.microsoftonline.com/8b3326df-62dc-4c93-84c2-db8f6f28f4bb", // Dizin (kiracı) kimliği
-      redirectUri: "https://support.vesa-tech.com", // Azure portalda tanımlı SPA geri dönüş URI'si
-    },
-    cache: {
-      cacheLocation: "localStorage", // Token'ları saklamak için kullanılacak yer (localStorage veya sessionStorage)
-      storeAuthStateInCookie: true, // Çerez kullanımı (tarayıcı uyumluluğu için önerilir)
-    },
-  };
 
-
-
-const msalInstance = new PublicClientApplication(msalConfig);
 const RouterComponent = isPlatformModule ? PlatformHashRouter : BrowserRouter;
 
 void loadApiConfig().then(() => {
@@ -94,6 +72,7 @@ void loadApiConfig().then(() => {
                 <MsalProvider instance={msalInstance}>
                   <QueryClientProvider client={queryClient}>
                     <App />
+                    <SessionExpiredModal />
                   </QueryClientProvider>
                   <Suspense fallback={null} />
                 </MsalProvider>

@@ -43,6 +43,8 @@ type Props = {
   isLoading: boolean;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  searchPlaceholder: string;
+  searchAriaLabel: string;
   uniqueStatuses: StatusItem[];
   selectedStatus: ProjectTypeColumnKey | "All";
   onStatusSelect: (status: ProjectTypeColumnKey | "All") => void;
@@ -212,7 +214,7 @@ const FilterOptionList = ({
         <span className="flex-1 truncate">{option.label}</span>
         <span
           className={cn(
-            "min-w-[20px] shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums",
+            "min-w-5 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums",
             option.isSelected ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-400",
           )}
         >
@@ -305,6 +307,8 @@ const ProjectStatisticsFilterBar = ({
   isLoading,
   searchTerm,
   onSearchChange,
+  searchPlaceholder,
+  searchAriaLabel,
   uniqueStatuses,
   selectedStatus,
   onStatusSelect,
@@ -752,10 +756,10 @@ const ProjectStatisticsFilterBar = ({
           <SearchField
             value={searchTerm}
             onChange={onSearchChange}
-            placeholder="Proje, müşteri, kişi ara..."
-            ariaLabel="Projelerde ara"
+            placeholder={searchPlaceholder}
+            ariaLabel={searchAriaLabel}
             disabled={isLoading}
-            className="min-w-[180px] flex-1 sm:max-w-xs"
+            className="min-w-45 flex-1 sm:max-w-xs"
           />
 
           <div className="hidden flex-wrap items-center gap-1.5 md:flex">
@@ -771,7 +775,7 @@ const ProjectStatisticsFilterBar = ({
                       group.activeLabel ? `, seçili: ${group.activeLabel}` : ""
                     }`}
                     className={cn(
-                      "max-w-[190px] justify-start border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-border dark:bg-card dark:text-muted-foreground",
+                      "max-w-47.5 justify-start border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-border dark:bg-card dark:text-muted-foreground",
                       group.activeLabel &&
                         "border-slate-300 bg-slate-50 text-slate-900 dark:bg-muted dark:text-foreground",
                     )}
