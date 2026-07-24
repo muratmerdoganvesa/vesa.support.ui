@@ -106,7 +106,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:analyze": "vite build && open stats.html",
-    "test": "vite test",
+    "test": "vitest",
     "eject": "vite eject"
   },
   "eslintConfig": {
@@ -156,6 +156,7 @@
     "eslint-plugin-prettier": "4.2.1",
     "eslint-plugin-react": "7.32.2",
     "eslint-plugin-react-hooks": "4.6.0",
+    "jsdom": "^29.1.1",
     "prettier": "2.8.8",
     "rollup-plugin-visualizer": "^7.0.1",
     "sass": "^1.99.0",
@@ -165,6 +166,7 @@
     "typescript": "^5.8.3",
     "vite": "^8.0.8",
     "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.10",
     "web-vitals": "3.3.1"
   },
   "overrides": {

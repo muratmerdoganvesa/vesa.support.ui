@@ -59,6 +59,11 @@ export default defineConfig(() => ({
   define: {
     global: 'window',
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+  },
   build: {
     // Giris modulunun tum async vendor parcalarini <link rel="modulepreload"> ile onceden cekmeyi kapatir.
     modulePreload: false,

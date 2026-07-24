@@ -5,6 +5,10 @@ import {
   type ProjectTypeColumnKey,
 } from "../projectTypeHelpers";
 import type { StatsBoardItem } from "../types";
+import {
+  getHighlightPersonIds,
+  getMatchingItemPersonIds,
+} from "../utils/projectStatisticsPersonFilters";
 
 export type PersonItem = { id: string; name: string; count: number };
 export type LabelCountItem = { name: string; count: number };
@@ -27,15 +31,6 @@ const getItemPersonIds = (item: StatsBoardItem): string[] => {
     if (e.id) ids.push(e.id);
   }
   return ids;
-};
-
-const itemMatchesLookup = (
-  item: StatsBoardItem,
-  value: string,
-  lookupById: Map<string, string>,
-): boolean => {
-  const personIds = getItemPersonIds(item);
-  return personIds.some((id) => lookupById.get(id) === value);
 };
 
 const itemMatchesStatus = (
@@ -84,14 +79,6 @@ const applyClientFilters = (
     });
   }
 
-  if (selectedPersonId !== "All") {
-    filtered = filtered.filter(
-      (item) =>
-        item.projectManager?.id === selectedPersonId ||
-        item.employees.some((e) => e.id === selectedPersonId),
-    );
-  }
-
   if (selectedCustomer !== "All") {
     filtered = filtered.filter((item) => item.customerName === selectedCustomer);
   }
@@ -104,14 +91,19 @@ const applyClientFilters = (
     filtered = filtered.filter((item) => itemMatchesStatus(item, selectedStatus));
   }
 
-  if (selectedDepartment !== "All") {
-    filtered = filtered.filter((item) =>
-      itemMatchesLookup(item, selectedDepartment, userDepartmentById),
-    );
-  }
+  const hasPersonCriteria =
+    selectedPersonId !== "All" || selectedDepartment !== "All" || selectedLevel !== "All";
 
-  if (selectedLevel !== "All") {
-    filtered = filtered.filter((item) => itemMatchesLookup(item, selectedLevel, userLevelById));
+  if (hasPersonCriteria) {
+    filtered = filtered.filter(
+      (item) =>
+        getMatchingItemPersonIds(
+          item,
+          { selectedPersonId, selectedDepartment, selectedLevel },
+          userDepartmentById,
+          userLevelById,
+        ).length > 0,
+    );
   }
 
   return filtered;
@@ -156,6 +148,28 @@ export const useProjectStatisticsFilters = (
   const filteredItems = useMemo(
     () => applyClientFilters(items, filterParams, userDepartmentById, userLevelById),
     [items, filterParams, userDepartmentById, userLevelById],
+  );
+
+  const highlightPersonIds = useMemo(
+    () =>
+      getHighlightPersonIds(
+        filteredItems,
+        {
+          selectedPersonId,
+          selectedDepartment,
+          selectedLevel,
+        },
+        userDepartmentById,
+        userLevelById,
+      ),
+    [
+      filteredItems,
+      selectedPersonId,
+      selectedDepartment,
+      selectedLevel,
+      userDepartmentById,
+      userLevelById,
+    ],
   );
 
   const baseForPerson = useMemo(
@@ -253,12 +267,16 @@ export const useProjectStatisticsFilters = (
       allPersons.map(({ id, name }) => ({
         id,
         name,
-        count: baseForPerson.filter(
-          (item) =>
-            item.projectManager?.id === id || item.employees.some((e) => e.id === id),
+        count: baseForPerson.filter((item) =>
+          getMatchingItemPersonIds(
+            item,
+            { ...filterParams, selectedPersonId: id },
+            userDepartmentById,
+            userLevelById,
+          ).includes(id),
         ).length,
       })),
-    [allPersons, baseForPerson],
+    [allPersons, baseForPerson, filterParams, userDepartmentById, userLevelById],
   );
 
   const uniqueCustomers = useMemo(
@@ -305,11 +323,17 @@ export const useProjectStatisticsFilters = (
       .sort((a, b) => a.localeCompare(b, "tr"))
       .map((name) => ({
         name,
-        count: baseForDepartment.filter((item) =>
-          itemMatchesLookup(item, name, userDepartmentById),
+        count: baseForDepartment.filter(
+          (item) =>
+            getMatchingItemPersonIds(
+              item,
+              { ...filterParams, selectedDepartment: name },
+              userDepartmentById,
+              userLevelById,
+            ).length > 0,
         ).length,
       }));
-  }, [baseForDepartment, userDepartmentById]);
+  }, [baseForDepartment, filterParams, userDepartmentById, userLevelById]);
 
   const uniqueLevels = useMemo((): LabelCountItem[] => {
     const levelSet = new Set<string>();
@@ -323,9 +347,17 @@ export const useProjectStatisticsFilters = (
       .sort((a, b) => a.localeCompare(b, "tr"))
       .map((name) => ({
         name,
-        count: baseForLevel.filter((item) => itemMatchesLookup(item, name, userLevelById)).length,
+        count: baseForLevel.filter(
+          (item) =>
+            getMatchingItemPersonIds(
+              item,
+              { ...filterParams, selectedLevel: name },
+              userDepartmentById,
+              userLevelById,
+            ).length > 0,
+        ).length,
       }));
-  }, [baseForLevel, userLevelById]);
+  }, [baseForLevel, filterParams, userDepartmentById, userLevelById]);
 
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
@@ -399,6 +431,7 @@ export const useProjectStatisticsFilters = (
     handleLevelSelect,
     filteredItems,
     filteredItemsIgnoringSearch,
+    highlightPersonIds,
     uniquePersons,
     uniqueCustomers,
     uniqueModules,
