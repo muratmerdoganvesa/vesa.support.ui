@@ -16,19 +16,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://cdn.form.io" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preconnect" href="https://cdn.svar.dev" />
     <link rel="preconnect" href="https://rsms.me" />
 
-    <!-- FormIO CSS (FormManagement); istenirse ileride yalnizca ilgili route'ta yuklenebilir -->
+    <!-- Form.io builder requires Bootstrap 4 + Font Awesome + formio CSS -->
     <link
       rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
       href="https://cdn.form.io/formiojs/formio.full.min.css"
     />
-    <noscript>
-      <link rel="stylesheet" href="https://cdn.form.io/formiojs/formio.full.min.css" />
-    </noscript>
 
     <!-- Svar icon fonts (wx-react-gantt vb.) — non-blocking -->
     <link

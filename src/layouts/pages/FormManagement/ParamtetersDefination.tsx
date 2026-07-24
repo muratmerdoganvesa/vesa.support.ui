@@ -13,7 +13,7 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { Components, Form, FormBuilder, Formio, form } from "@formio/react";
+import { Form, FormBuilder, Formio } from "@formio/react";
 
 import { useEffect, useRef, useState } from "react";
 
@@ -24,7 +24,7 @@ import * as Yup from "yup";
 // import { setLoading, useMaterialUIController } from "context";
 
 import React from "react";
-import components from "./Custom";
+import "./Custom"; // side-effect: registers DS* components via Formio.Components.addComponent
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import {
@@ -320,11 +320,11 @@ const ParamtetersDefination = (): JSX.Element => {
   });
 
   useEffect(() => {
-    Components.setComponents(components);
+    // Custom components already register themselves via Formio.Components.addComponent
+    // in each Custom/* module. Do NOT call Components.setComponents() with class-name
+    // keys — that pollutes the registry and can break builder sidebar groups.
 
     Formio.setBaseUrl("https://api.cfapps.us21.hana.ondemand.com/api");
-
-    // Alternatif olarak, projenin URL'ini değiştirmek için
     Formio.setProjectUrl("https://api.cfapps.us21.hana.ondemand.com/api");
   }, []);
 
@@ -415,22 +415,20 @@ const ParamtetersDefination = (): JSX.Element => {
   }
 
   const options = {
-    // Premium bileşenleri gizler
+    // Force Form.io's own sidebar toggle (no Bootstrap JS dependency)
+    bootstrap: 0,
     builder: {
-      // // basic: true, // Varsayılan "Basic" bileşenlerini gizler
-      // advanced: false, // Varsayılan "Advanced" bileşenlerini gizler
-      // layout: false, // Varsayılan "Layout" bileşenlerini gizler
-      // data: false, // Varsayılan "Data" bileşenlerini gizler
       premium: false,
       custom: {
         title: "Vesa Design System",
-        Key: "dscomponents",
+        key: "custom",
         weight: 10,
+        default: false,
         components: {
           dsinput: {
             title: "DS Inbox",
             key: "dsinput",
-            icon: "dsinput",
+            icon: "terminal",
             schema: {
               label: "dsinput",
               type: "dsinput",
@@ -440,7 +438,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsselect: {
             title: "DS Select",
             key: "dsselect",
-            icon: "dsselect",
+            icon: "list",
             schema: {
               label: "dsselect",
               type: "dsselect",
@@ -450,7 +448,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dscheckbox: {
             title: "DS CheckBox",
             key: "dscheckbox",
-            icon: "dscheckbox",
+            icon: "check-square",
             schema: {
               label: "dscheckbox",
               type: "dscheckbox",
@@ -460,7 +458,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsselectboxes: {
             title: "DS Selectboxes",
             key: "dsselectboxes",
-            icon: "dsselectboxes",
+            icon: "plus-square",
             schema: {
               label: "dsselectboxes",
               type: "dsselectboxes",
@@ -470,7 +468,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsradio: {
             title: "DS Radio",
             key: "dsradio",
-            icon: "dsradio",
+            icon: "dot-circle-o",
             schema: {
               label: "dsradio",
               type: "dsradio",
@@ -480,7 +478,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsnumber: {
             title: "DS Number",
             key: "dsnumber",
-            icon: "dsnumber",
+            icon: "hashtag",
             schema: {
               label: "dsnumber",
               type: "dsnumber",
@@ -490,7 +488,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dspassword: {
             title: "DS Password",
             key: "dspassword",
-            icon: "dspassword",
+            icon: "lock",
             schema: {
               label: "dspassword",
               type: "dspassword",
@@ -500,7 +498,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsbutton: {
             title: "DS Button",
             key: "dsbutton",
-            icon: "dsbutton",
+            icon: "stop",
             schema: {
               label: "dsbutton",
               type: "dsbutton",
@@ -510,7 +508,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsemail: {
             title: "DS Email",
             key: "dsemail",
-            icon: "dsemail",
+            icon: "at",
             schema: {
               label: "dsemail",
               type: "dsemail",
@@ -520,7 +518,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsphone: {
             title: "DS Phone",
             key: "dsphone",
-            icon: "dsphone",
+            icon: "phone-square",
             schema: {
               label: "dsphone",
               type: "dsphone",
@@ -530,7 +528,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsdatetime: {
             title: "DS DateTime",
             key: "dsdatetime",
-            icon: "dsdatetime",
+            icon: "calendar",
             schema: {
               label: "dsdatetime",
               type: "dsdatetime",
@@ -540,7 +538,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsday: {
             title: "DS Day",
             key: "dsday",
-            icon: "dsday",
+            icon: "calendar",
             schema: {
               label: "dsday",
               type: "dsday",
@@ -550,7 +548,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dstime: {
             title: "DS Time",
             key: "dstime",
-            icon: "dstime",
+            icon: "clock-o",
             schema: {
               label: "dstime",
               type: "dstime",
@@ -560,7 +558,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dscurrency: {
             title: "DS Currency",
             key: "dscurrency",
-            icon: "dscurrency",
+            icon: "usd",
             schema: {
               label: "dscurrency",
               type: "dscurrency",
@@ -570,7 +568,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dssurvey: {
             title: "DS Survey",
             key: "dssurvey",
-            icon: "dssurvey",
+            icon: "list",
             schema: {
               label: "dssurvey",
               type: "dssurvey",
@@ -580,7 +578,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dssignature: {
             title: "DS Signature",
             key: "dssignature",
-            icon: "dssignature",
+            icon: "pencil",
             schema: {
               label: "dssignature",
               type: "dssignature",
@@ -590,7 +588,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dstable: {
             title: "DS Table",
             key: "dstable",
-            icon: "dstable",
+            icon: "table",
             schema: {
               label: "dstable",
               type: "dstable",
@@ -600,7 +598,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsusername: {
             title: "DS Username",
             key: "dsusername",
-            icon: "dsusername",
+            icon: "user",
             schema: {
               label: "dsusername",
               type: "dsusername",
@@ -610,7 +608,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dshtmlelement: {
             title: "DS HTML",
             key: "dshtmlelement",
-            icon: "dshtmlelement",
+            icon: "code",
             schema: {
               label: "dshtmlelement",
               type: "dshtmlelement",
@@ -620,7 +618,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dstextarea: {
             title: "DS Text Area",
             key: "dstextarea",
-            icon: "dstextarea",
+            icon: "font",
             schema: {
               label: "dstextarea",
               type: "dstextarea",
@@ -630,7 +628,7 @@ const ParamtetersDefination = (): JSX.Element => {
           dsapproval: {
             title: "DS Approval",
             key: "dsapproval",
-            icon: "dsapproval",
+            icon: "check",
             schema: {
               label: "dsapproval",
               type: "dsapproval",
@@ -968,7 +966,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <TabsContent value="1" className="focus:outline-none">
               <div className="flex min-h-[calc(100vh-15rem)] w-full flex-col rounded-xl border border-border/60 shadow-sm lg:flex-row">
                 <div className="relative min-h-[520px] min-w-0 flex-1 overflow-auto border-border/60 bg-background lg:border-r">
-                  <div className="flex min-h-[520px] w-full [&_.formbuilder]:min-h-[480px]">
+                  <div className="formio-builder-host block min-h-[520px] w-full overflow-x-auto p-2 [&_.formbuilder]:min-h-[480px]">
                     <FormBuilder options={options} form={jsonSchema} onChange={onFormChange} />
                   </div>
                 </div>
