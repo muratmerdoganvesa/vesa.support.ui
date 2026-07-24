@@ -320,7 +320,7 @@ export default function App() {
              <Route path="/crmModul" element={<CrmModulPage />} />
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
-
+            <Route path="/formlist/:formId" element={<FormList />} />
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
@@ -373,7 +373,7 @@ export default function App() {
             <Route path="/formAuth" element={<FormAuth />} />
             <Route path="/formAuth/detail" element={<FormAuthDetail />} />
             <Route path="/formAuth/detail/:id" element={<FormAuthDetail />} />
-            <Route path="/formlist/:formId" element={<FormList />} />
+
             <Route path="/allManagerList" element={<AllManagerList />} />
             <Route path="/donemTanimlama" element={<DonemTanimlamaMainView />} />
             <Route path="/donemTanimlama/detail" element={<DonemTanimlamaEditCreate />} />

@@ -15,28 +15,44 @@ type RawUserLevelDto = {
   description?: string | null;
 };
 
+export type UnavailablePersonMetadata = "positions" | "levels";
+
+export type PersonDetailData = {
+  detailsById: Map<string, PersonDetailInfo>;
+  unavailableMetadata: UnavailablePersonMetadata[];
+};
+
 /** Kişi kartlarında gösterilecek departman/pozisyon/yönetici/seviye bilgilerini kullanıcı id'sine göre eşler. */
-export const fetchPersonDetailMap = async (): Promise<Map<string, PersonDetailInfo>> => {
+export const fetchPersonDetailData = async (): Promise<PersonDetailData> => {
   const config = getConfiguration();
   const userApi = new UserApi(config);
   const positionsApi = new PositionsApi(config);
 
-  const [usersRes, positionsRes, levelsRes] = await Promise.all([
-    userApi.apiUserVesaUsersWithoutPhotoGet(),
+  const usersRes = await userApi.apiUserVesaUsersWithoutPhotoGet();
+  const [positionsResult, levelsResult] = await Promise.allSettled([
     positionsApi.apiPositionsGet(),
     userApi.apiUserUserLevelsGet(),
   ]);
 
   const users = usersRes.data;
+  const unavailableMetadata: UnavailablePersonMetadata[] = [];
 
   const positionNameById = new Map<string, string>();
-  for (const position of positionsRes.data) {
-    if (position.id && position.name) positionNameById.set(position.id, position.name);
+  if (positionsResult.status === "fulfilled") {
+    for (const position of positionsResult.value.data) {
+      if (position.id && position.name) positionNameById.set(position.id, position.name);
+    }
+  } else {
+    unavailableMetadata.push("positions");
   }
 
   const levelLabelById = new Map<number, string>();
-  for (const level of (levelsRes.data as unknown as RawUserLevelDto[]) ?? []) {
-    if (level.id != null && level.description) levelLabelById.set(level.id, level.description);
+  if (levelsResult.status === "fulfilled") {
+    for (const level of (levelsResult.value.data as unknown as RawUserLevelDto[]) ?? []) {
+      if (level.id != null && level.description) levelLabelById.set(level.id, level.description);
+    }
+  } else {
+    unavailableMetadata.push("levels");
   }
 
   const nameById = new Map<string, string>();
@@ -63,5 +79,10 @@ export const fetchPersonDetailMap = async (): Promise<Map<string, PersonDetailIn
     });
   }
 
-  return map;
+  return { detailsById: map, unavailableMetadata };
+};
+
+export const fetchPersonDetailMap = async (): Promise<Map<string, PersonDetailInfo>> => {
+  const { detailsById } = await fetchPersonDetailData();
+  return detailsById;
 };

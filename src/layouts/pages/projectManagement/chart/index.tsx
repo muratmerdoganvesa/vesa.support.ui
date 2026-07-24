@@ -322,12 +322,12 @@ function clearSyncfusionGanttSpinner(gantt: GanttComponent | null) {
   try {
     g.hideLoadingIndicator?.();
   } catch {
-    
+
   }
   try {
     g.hideSpinner?.();
   } catch {
-    
+
   }
 }
 
@@ -336,7 +336,7 @@ function removeOrphanSyncfusionDialogOverlays(doc: Document) {
     if (doc.querySelector(".e-dialog.e-popup-open")) return;
     doc.querySelectorAll(".e-dlg-overlay").forEach((n) => (n as HTMLElement).remove());
   } catch {
-    
+
   }
 }
 
@@ -345,7 +345,7 @@ function resetStuckEj2DialogBodyState(doc: Document) {
     doc.body?.classList.remove("e-dlg-target", "e-scroll-disabled");
     doc.documentElement?.classList.remove("e-dlg-target", "e-scroll-disabled");
   } catch {
-    
+
   }
 }
 
@@ -360,14 +360,14 @@ function tearDownSyncfusionBlockingUi(gantt: GanttComponent | null, doc?: Docume
 function releaseGanttAfterAsyncToolbarAction(gantt: GanttComponent | null) {
   if (!gantt) return;
   const inst = gantt as any;
-  
+
   try {
     inst.closeGanttActions?.();
     inst.editModule?.dialogObj?.hide?.();
   } catch {
-    
+
   }
-  
+
   const root = inst.element as HTMLElement | undefined;
   if (root) {
     root.style.removeProperty("pointer-events");
@@ -378,7 +378,7 @@ function releaseGanttAfterAsyncToolbarAction(gantt: GanttComponent | null) {
 
   document.querySelectorAll('.e-spinner-pane, .e-dialog-overlay').forEach((el) => {
     if (el && (el as HTMLElement).style.display !== 'none') {
-        (el as HTMLElement).style.display = 'none';
+      (el as HTMLElement).style.display = 'none';
     }
   });
 
@@ -557,6 +557,7 @@ function renderModuleStatusEditor(
 
 function applyModuleIdsToRow(rowData: any, next: string[]) {
   rowData.moduleIds = next;
+  rowData.modules = next;
   if (rowData.taskData) {
     rowData.taskData.moduleIds = next;
     rowData.taskData.modules = next;
@@ -570,6 +571,16 @@ function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
   }
 }
 
+function getEj2InstanceFromHost(host: HTMLElement | null | undefined): any | undefined {
+  if (!host) return undefined;
+  const direct = (host as any).ej2_instances?.[0];
+  if (direct) return direct;
+  const child = host.querySelector(
+    ".e-multiselect, .e-dropdownlist, .e-ddl",
+  ) as HTMLElement | null;
+  return (child as any)?.ej2_instances?.[0];
+}
+
 function readProjectStatusFromCompositeElement(
   root: HTMLElement | null | undefined,
 ): ProjectTypes | null | undefined {
@@ -578,21 +589,46 @@ function readProjectStatusFromCompositeElement(
     ? root
     : root.querySelector<HTMLElement>(".gantt-module-status-row__status");
   if (!statusHost) return undefined;
-  const inst = (statusHost as any).ej2_instances?.[0];
+  const inst = getEj2InstanceFromHost(statusHost);
   if (!inst) return undefined;
   const v = inst.value;
   if (v == null || v === "") return null;
   return Number(v) as ProjectTypes;
 }
 
+function readModuleIdsFromCompositeElement(
+  root: HTMLElement | null | undefined,
+): string[] | undefined {
+  if (!root) return undefined;
+  const moduleHost = root.classList.contains("gantt-module-status-row__modules")
+    ? root
+    : root.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? root;
+  const inst = getEj2InstanceFromHost(moduleHost);
+  if (!inst) return undefined;
+  const v = inst.value;
+  if (v == null || v === "") return [];
+  if (Array.isArray(v)) {
+    return v.map(String).filter(Boolean).map(canonicalModuleId);
+  }
+  return [canonicalModuleId(String(v))];
+}
+
 /** Modüller sekmesindeki birleşik editör dialog kaydına dahil değil; save öncesi DOM'dan okunur. */
-function mergeDialogProjectStatusIntoSaveData(data: any) {
+function mergeDialogModuleStatusIntoSaveData(data: any) {
   const editor = document.querySelector<HTMLElement>(
     ".e-dialog.e-popup-open .gantt-module-status-editor",
   );
+  if (!editor) return;
+
+  const moduleIds = readModuleIdsFromCompositeElement(editor);
+  if (moduleIds !== undefined) {
+    applyModuleIdsToRow(data, moduleIds);
+  }
+
   const status = readProjectStatusFromCompositeElement(editor);
-  if (status === undefined) return;
-  applyProjectStatusToRow(data, status);
+  if (status !== undefined) {
+    applyProjectStatusToRow(data, status);
+  }
 }
 
 function appendModuleMultiSelect(
@@ -957,7 +993,7 @@ function ProjectChart() {
           // columns: [
           //   { field: 'id', headerText: 'ID' },
           //   { field: 'TaskName', headerText: 'Başlık' },
-          //   { field: 'Notes', headerText: 'Notlar' }, 
+          //   { field: 'Notes', headerText: 'Notlar' },
           // ] as unknown as Column[],
         };
 
@@ -1173,7 +1209,7 @@ function ProjectChart() {
     milestone: "Milestone",
     notes: "Notes",
     manual: "IsManual",
-    resourceInfo: "resources",    
+    resourceInfo: "resources",
 
     // taskId: "TaskID",
   };
@@ -1714,18 +1750,18 @@ function ProjectChart() {
       mergeDialogProjectStatusIntoSaveData(args.data);
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
-      
+
     } else if (args.requestType === "beforeDelete") {
       args.cancel = true; // ÖNCE İPTAL EDİN
       await deleteTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
-      
+
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
       await updateTask(args.data);
-      
+
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
       if (ganttRef.current) {
         try {
@@ -1735,7 +1771,7 @@ function ProjectChart() {
         }
       }
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
-      
+
     } else if (args.requestType === "beforeOpenAddDialog") {
       applyTodayAsDefaultTaskDates(args.rowData);
     } else if (args.requestType === "beforeOpenEditDialog") {
@@ -2178,7 +2214,7 @@ function ProjectChart() {
           </ColumnsDirective>
         </GanttComponent>
       </div>
-      
+
 
       {/* Excel Export Dialog */}
       <ShadcnDialog open={excelDialogOpen} onOpenChange={(open) => !open && handleExcelDialogClose()}>
