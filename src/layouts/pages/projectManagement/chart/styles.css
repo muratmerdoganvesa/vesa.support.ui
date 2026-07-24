@@ -42,17 +42,59 @@
   padding: 0 12px !important;
 }
 
+/* Tab labels */
 .e-gantt-dialog .e-tab .e-tab-header .e-toolbar-item .e-tab-text {
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 12.5px !important;
+  font-weight: 650 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em;
   color: #64748b !important;
 }
 
 .e-gantt-dialog .e-tab .e-tab-header .e-toolbar-item.e-active .e-tab-text {
   color: #3e5d8f !important;
 }
+
+/* Görev Adı — General sekmesinde tam genişlik / hero alan */
+.e-gantt-dialog .e-edit-form-column:has(#TaskName),
+.e-gantt-dialog .e-edit-form-column:has([name="TaskName"]),
+.e-gantt-dialog .e-edit-form-column:has([id*="TaskName"]) {
+  width: 100% !important;
+  max-width: 100% !important;
+  float: none !important;
+  padding-bottom: 12px !important;
+}
+
+.e-gantt-dialog .e-edit-form-column:has(#TaskName) .e-float-text,
+.e-gantt-dialog .e-edit-form-column:has([id*="TaskName"]) .e-float-text,
+.e-gantt-dialog .e-edit-form-column:has(#TaskName) label,
+.e-gantt-dialog .e-edit-form-column:has([id*="TaskName"]) label {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.e-gantt-dialog .e-edit-form-column:has(#TaskName) input.e-input,
+.e-gantt-dialog .e-edit-form-column:has([id*="TaskName"]) input.e-input {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  min-height: 40px;
+}
+
+/* Genel form satırı nefes alsın */
+.e-gantt-dialog .e-edit-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+}
+
+.e-gantt-dialog .e-edit-form-column {
+  box-sizing: border-box;
+}
+
 
 .e-gantt-dialog .e-tab .e-tab-header .e-indicator {
   background: #3e5d8f !important;

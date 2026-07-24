@@ -36,6 +36,7 @@ import {
 } from "@syncfusion/ej2-react-gantt";
 import { PdfFontStyle, PdfTrueTypeFont } from "@syncfusion/ej2-pdf-export";
 import { MultiSelect, DropDownList } from "@syncfusion/ej2-dropdowns";
+import { L10n } from "@syncfusion/ej2-base";
 import "@syncfusion/ej2-base/styles/material.css";
 import "@syncfusion/ej2-buttons/styles/material.css";
 import "@syncfusion/ej2-calendars/styles/material.css";
@@ -102,6 +103,39 @@ import { useAlert } from "layouts/pages/hooks/useAlert";
 import { font, photoBase64 } from "./font";
 import { ExcelExportProperties } from "@syncfusion/ej2-grids";
 import "./styles.css";
+
+/** Syncfusion Gantt diyalog / buton metinleri (locale=en-US üzerine TR) */
+L10n.load({
+  "en-US": {
+    gantt: {
+      generalTab: "Genel",
+      customTab: "Özel",
+      writeNotes: "Not yazın",
+      addDialogTitle: "Yeni Görev",
+      editDialogTitle: "Görev Bilgisi",
+      saveButton: "Kaydet",
+      cancel: "İptal",
+      delete: "Sil",
+      add: "Ekle",
+      edit: "Düzenle",
+      update: "Güncelle",
+      resourceName: "Kaynaklar",
+      dependency: "Bağımlılık",
+      notes: "Notlar",
+      days: "gün",
+      day: "gün",
+    },
+  },
+});
+
+/** Genel sekmede gösterilecek alanlar — TaskID bilinçli olarak hariç */
+const GANTT_GENERAL_DIALOG_FIELDS = [
+  "TaskName",
+  "StartDate",
+  "Duration",
+  "EndDate",
+  "Progress",
+];
 
 // force css ile rich text editori gizleme
 const customStyles = `
@@ -1346,17 +1380,17 @@ function ProjectChart() {
   };
 
   const editDialogFields: EditDialogFieldSettingsModel[] = [
-    { type: "General" as DialogFieldType, headerText: "General" },
-    { type: "Dependency" as DialogFieldType, headerText: "Dependency" },
-    { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
-    { type: "Notes" as DialogFieldType, headerText: "Notes" },
+    { type: "General" as DialogFieldType, headerText: "Genel", fields: GANTT_GENERAL_DIALOG_FIELDS },
+    { type: "Dependency" as DialogFieldType, headerText: "Bağımlılık" },
+    { type: "Resources" as DialogFieldType, headerText: "Kaynaklar", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
+    { type: "Notes" as DialogFieldType, headerText: "Notlar" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
   ];
   const addDialogFields: AddDialogFieldSettingsModel[] = [
-    { type: "General" as DialogFieldType, headerText: "General" },
-    { type: "Dependency" as DialogFieldType, headerText: "Dependency" },
-    { type: "Resources" as DialogFieldType, headerText: "Assignees", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
-    { type: "Notes" as DialogFieldType, headerText: "Notes" },
+    { type: "General" as DialogFieldType, headerText: "Genel", fields: GANTT_GENERAL_DIALOG_FIELDS },
+    { type: "Dependency" as DialogFieldType, headerText: "Bağımlılık" },
+    { type: "Resources" as DialogFieldType, headerText: "Kaynaklar", additionalParams: RESOURCES_ADDITIONAL_PARAMS },
+    { type: "Notes" as DialogFieldType, headerText: "Notlar" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
   ];
   const toolbarOptions = [
@@ -2148,17 +2182,17 @@ function ProjectChart() {
           labelSettings={labelSettings}
         >
           <AddDialogFieldsDirective>
-            <AddDialogFieldDirective type="General" headerText="General" />
-            <AddDialogFieldDirective type="Dependency" headerText="Dependency" />
-            <AddDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
-            <AddDialogFieldDirective type="Notes" headerText="Notes" />
+            <AddDialogFieldDirective type="General" headerText="Genel" fields={GANTT_GENERAL_DIALOG_FIELDS} />
+            <AddDialogFieldDirective type="Dependency" headerText="Bağımlılık" />
+            <AddDialogFieldDirective type="Resources" headerText="Kaynaklar" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
+            <AddDialogFieldDirective type="Notes" headerText="Notlar" />
             <AddDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
           </AddDialogFieldsDirective>
           <EditDialogFieldsDirective>
-            <EditDialogFieldDirective type="General" headerText="General" />
-            <EditDialogFieldDirective type="Dependency" headerText="Dependency" />
-            <EditDialogFieldDirective type="Resources" headerText="Resources" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
-            <EditDialogFieldDirective type="Notes" headerText="Notes" />
+            <EditDialogFieldDirective type="General" headerText="Genel" fields={GANTT_GENERAL_DIALOG_FIELDS} />
+            <EditDialogFieldDirective type="Dependency" headerText="Bağımlılık" />
+            <EditDialogFieldDirective type="Resources" headerText="Kaynaklar" additionalParams={RESOURCES_ADDITIONAL_PARAMS} />
+            <EditDialogFieldDirective type="Notes" headerText="Notlar" />
             <EditDialogFieldDirective type="Custom" headerText="Modüller" fields={["moduleIds"]} />
           </EditDialogFieldsDirective>
           <Inject
@@ -2182,7 +2216,7 @@ function ProjectChart() {
             <ColumnDirective field="TaskID" headerText="ID" />
             <ColumnDirective
               field="TaskName"
-              headerText="Task Name"
+              headerText="Görev Adı"
               template={(props: any) => {
                 if (!props.Notes || props.Notes.length === 0) {
                   return <div>{props.TaskName}</div>;
@@ -2207,7 +2241,7 @@ function ProjectChart() {
             />
             <ColumnDirective
               field="resources"
-              headerText="Assignees"
+              headerText="Atananlar"
               template={(props: any) => {
                 const assignees = getAssigneeDisplayNames(props.resources);
                 if (assignees.length === 0) return <>-</>;
@@ -2235,7 +2269,7 @@ function ProjectChart() {
             />
             <ColumnDirective
               field="moduleIds"
-              headerText="Modules"
+              headerText="Modüller"
               width="150"
               edit={moduleIdsColumnEdit}
               template={(props: any) => {
@@ -2257,22 +2291,22 @@ function ProjectChart() {
 
             <ColumnDirective
               field="StartDate"
-              headerText="Start Date"
+              headerText="Başlangıç"
               width="150"
               format={formatOption}
               type="date"
               edit={{ params: { format: "dd.MM.yyyy" } }}
             />
 
-            <ColumnDirective field="Duration" headerText="Duration (days)" allowEditing={false} />
+            <ColumnDirective field="Duration" headerText="Süre (gün)" allowEditing={false} />
             <ColumnDirective
               field="EndDate"
-              headerText="End Date"
+              headerText="Bitiş"
               type="date"
               format={formatOption}
               edit={{ params: { format: "dd.MM.yyyy" } }}
             />
-            <ColumnDirective field="Progress" headerText="Progress (%)" />
+            <ColumnDirective field="Progress" headerText="İlerleme (%)" />
           </ColumnsDirective>
         </GanttComponent>
       </div>
