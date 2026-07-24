@@ -807,9 +807,19 @@ function KanbanPage() {
     const required: (keyof typeof dialogForm)[] = [
       "Status", "Type", "Priority", "Assignee", "AssigneeId", "Summary",
     ];
+    const labels: Record<string, string> = {
+      Status: "Durum",
+      Type: "Tür",
+      Priority: "Öncelik",
+      Assignee: "Atanan",
+      AssigneeId: "Atanan",
+      Summary: "Özet",
+    };
     const errors: Record<string, string> = {};
     for (const key of required) {
-      if (!dialogForm[key]?.trim()) errors[key] = `${key} zorunludur`;
+      if (!dialogForm[key]?.trim()) {
+        errors[key] = `${labels[key] ?? key} zorunludur`;
+      }
     }
     setDialogErrors(errors);
     return Object.keys(errors).length === 0;

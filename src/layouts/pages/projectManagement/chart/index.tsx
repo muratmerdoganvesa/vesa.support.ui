@@ -515,14 +515,44 @@ function refreshGanttDialogModuleStatusEditors(
   rowData: any,
   moduleList: GanttModuleOption[],
 ) {
+  const ids = resolveToModuleIds(normalizeModuleIdsFromRow(rowData), moduleList);
+  applyModuleIdsToRow(rowData, ids);
+  const status = normalizeProjectStatusFromRow(rowData);
+
   document
     .querySelectorAll<HTMLElement>(".e-dialog.e-popup-open .gantt-module-status-editor")
     .forEach((host) => {
-      const statusSlot = host.querySelector(".gantt-module-status-row__status");
-      const hasDropDown = statusSlot?.querySelector(".e-ddl, .e-dropdownlist");
-      if (!hasDropDown) {
-        renderModuleStatusEditor(host, rowData, moduleList, "composite");
+      const moduleHost =
+        host.querySelector<HTMLElement>(".gantt-module-status-row__modules") ?? host;
+      const statusHost = host.querySelector<HTMLElement>(".gantt-module-status-row__status");
+      const moduleInst = getEj2InstanceFromHost(moduleHost);
+
+      // Editor zaten varsa yeniden yaratma — Syncfusion boş string yazmış olabilir;
+      // mevcut MultiSelect / DropDown değerini satır verisiyle güncelle.
+      if (moduleInst) {
+        try {
+          moduleInst.dataSource = moduleList;
+          moduleInst.value = ids;
+          moduleInst.dataBind?.();
+        } catch {
+          renderModuleStatusEditor(host, rowData, moduleList, "composite");
+          return;
+        }
+        if (statusHost) {
+          const statusInst = getEj2InstanceFromHost(statusHost);
+          if (statusInst) {
+            try {
+              statusInst.value = (status ?? null) as unknown as number;
+              statusInst.dataBind?.();
+            } catch {
+              /* durum güncellenemedi — modüller yine de set edildi */
+            }
+          }
+        }
+        return;
       }
+
+      renderModuleStatusEditor(host, rowData, moduleList, "composite");
     });
 }
 
@@ -636,7 +666,9 @@ function appendModuleMultiSelect(
   rowData: any,
   moduleList: GanttModuleOption[],
 ) {
-  const ids = normalizeModuleIdsFromRow(rowData);
+  // Grid'de ad görünebilir; MultiSelect value alanı Guid id ister
+  const ids = resolveToModuleIds(normalizeModuleIdsFromRow(rowData), moduleList);
+  applyModuleIdsToRow(rowData, ids);
   const ms = new MultiSelect({
     dataSource: moduleList,
     fields: { text: "name", value: "id" },
@@ -646,15 +678,27 @@ function appendModuleMultiSelect(
     value: ids,
     change: (e: { value?: unknown }) => {
       const v = e.value;
-      const next = Array.isArray(v)
-        ? v.map(String).filter(Boolean).map(canonicalModuleId)
-        : v
-          ? [canonicalModuleId(String(v))]
-          : [];
+      const next = resolveToModuleIds(
+        Array.isArray(v)
+          ? v.map(String).filter(Boolean)
+          : v
+            ? [String(v)]
+            : [],
+        moduleList,
+      );
       applyModuleIdsToRow(rowData, next);
     },
   });
   ms.appendTo(host);
+  // Constructor value bazen dataSource bağlanmadan uygulanmaz
+  if (ids.length > 0) {
+    try {
+      ms.value = ids;
+      ms.dataBind();
+    } catch {
+      /* ignore */
+    }
+  }
   return ms;
 }
 
@@ -769,11 +813,20 @@ function ProjectChart() {
         gantt?.editModule?.editedRecord;
       if (!row) return;
 
+      const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
+      const moduleList = moduleDataRef.current as GanttModuleOption[];
+      if (taskGuid) {
+        const cached = taskModuleIdsCacheRef.current.get(String(taskGuid));
+        if (cached?.length) {
+          applyModuleIdsToRow(row, resolveToModuleIds(cached, moduleList));
+        } else {
+          const fromRow = resolveToModuleIds(normalizeModuleIdsFromRow(row), moduleList);
+          if (fromRow.length) applyModuleIdsToRow(row, fromRow);
+        }
+      }
+
       requestAnimationFrame(() => {
-        refreshGanttDialogModuleStatusEditors(
-          row,
-          moduleDataRef.current as GanttModuleOption[],
-        );
+        refreshGanttDialogModuleStatusEditors(row, moduleList);
       });
     };
 
@@ -846,14 +899,19 @@ function ProjectChart() {
     const row = args?.data;
     const taskGuid = row?.taskData?.Id ?? row?.taskData?.id ?? row?.Id ?? row?.id;
     if (!taskGuid) return;
-    if (taskModuleIdsCacheRef.current.has(taskGuid)) {
+    const cached = taskModuleIdsCacheRef.current.get(taskGuid);
+    // Boş cache ile erken çıkma — liste endpoint'i modül döndürmemiş olabilir
+    if (cached && cached.length > 0) {
       return;
     }
     try {
       const config = getConfiguration();
       const api = new ProjectTasksApi(config);
       const res = await api.apiProjectTasksGetTaskModulesGet(taskGuid);
-      const ids = (res.data ?? []).map(String).filter(Boolean).map(canonicalModuleId);
+      const ids = resolveToModuleIds(
+        (res.data ?? []).map(String).filter(Boolean),
+        moduleDataRef.current as GanttModuleOption[],
+      );
       taskModuleIdsCacheRef.current.set(taskGuid, ids);
       setProjectData((prev) =>
         prev.map((t: any) =>
@@ -1779,28 +1837,31 @@ function ProjectChart() {
       const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
       if (taskGuid) {
         try {
+          const moduleList = moduleDataRef.current as GanttModuleOption[];
           let ids = taskModuleIdsCacheRef.current.get(taskGuid);
-          if (!ids) {
+          // Boş veya yoksa API'den çek; ad/GUID karışık gelebilir → resolveToModuleIds
+          if (!ids || ids.length === 0) {
             const config = getConfiguration();
             const api = new ProjectTasksApi(config);
             const res = await api.apiProjectTasksGetTaskModulesGet(taskGuid);
-            ids = (res.data ?? []).map(String).filter(Boolean).map(canonicalModuleId);
+            ids = resolveToModuleIds(
+              (res.data ?? []).map(String).filter(Boolean),
+              moduleList,
+            );
             taskModuleIdsCacheRef.current.set(taskGuid, ids);
+          } else {
+            ids = resolveToModuleIds(ids, moduleList);
           }
-          const normalizedIds = ids.map(canonicalModuleId);
-          row.moduleIds = normalizedIds;
-          if (row.taskData) {
-            row.taskData.moduleIds = normalizedIds;
-            row.taskData.modules = normalizedIds;
-          }
+          applyModuleIdsToRow(row, ids);
+          // Dialog write çoğu zaman bu await'ten önce boş value ile çalışır; sekmeye
+          // geçince ve sonraki frame'lerde MultiSelect'i yeniden doldur.
+          const pushToEditors = () =>
+            refreshGanttDialogModuleStatusEditors(row, moduleList);
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              refreshGanttDialogModuleStatusEditors(
-                row,
-                moduleDataRef.current as GanttModuleOption[],
-              );
-            });
+            requestAnimationFrame(pushToEditors);
           });
+          window.setTimeout(pushToEditors, 0);
+          window.setTimeout(pushToEditors, 120);
         } catch (e) {
           console.error("GetTaskModules:", e);
         }
