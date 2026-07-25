@@ -34,18 +34,32 @@ const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> |
         : "font-medium text-slate-700 dark:text-foreground",
   );
 
+/** "Tibet - SuccessFactors..." gibi proje metninden baştaki müşteri tekrarını düş */
+const stripLeadingCustomerName = (label: string, customerName: string): string => {
+  const labelTrim = label.trim();
+  const customer = customerName.trim();
+  if (!labelTrim || !customer) return labelTrim;
+
+  const escaped = customer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const prefix = new RegExp(`^${escaped}\\s*[-–—:]\\s*`, "i");
+  return labelTrim.replace(prefix, "").trim() || labelTrim;
+};
+
 const buildProjectLabel = (item: StatsBoardItem): string => {
   const projectPart = item.projectSubDescription
     ? `${item.projectDescription} — ${item.projectSubDescription}`
     : item.projectDescription;
 
+  let label = "";
   if (item.kind === "project" || item.kind === "simulated") {
-    return (projectPart || "").trim();
+    label = (projectPart || "").trim();
+  } else {
+    const kalemPart = item.kalemName?.trim();
+    if (projectPart && kalemPart) label = `${projectPart} — ${kalemPart}`;
+    else label = (projectPart || kalemPart || "").trim();
   }
 
-  const kalemPart = item.kalemName?.trim();
-  if (projectPart && kalemPart) return `${projectPart} — ${kalemPart}`;
-  return (projectPart || kalemPart || "").trim();
+  return stripLeadingCustomerName(label, item.customerName ?? "");
 };
 
 const openGanttChart = (item: StatsBoardItem) => {
@@ -132,16 +146,14 @@ const ProjectStatsKanbanCard = ({
         title={headline}
       >
         <div className="min-w-0 flex-1">
-          {/* Soft UI global `p` stillerinden kaçınmak için span */}
           <span className="block truncate text-[13px] font-bold leading-5 text-slate-900 dark:text-foreground">
-            {customerName || projectLabel || "İsimsiz kart"}
-            {customerName && projectLabel ? (
-              <span className="font-semibold text-slate-600 dark:text-muted-foreground">
-                {" · "}
-                {projectLabel}
-              </span>
-            ) : null}
+            {customerName || "İsimsiz müşteri"}
           </span>
+          {projectLabel ? (
+            <span className="mt-0.5 block line-clamp-2 text-[11px] font-medium leading-4 text-slate-600 dark:text-muted-foreground">
+              {projectLabel}
+            </span>
+          ) : null}
         </div>
 
         <ChevronDown
@@ -155,17 +167,6 @@ const ProjectStatsKanbanCard = ({
 
       {isExpanded && (
         <div className="space-y-2 border-t border-slate-100 px-2.5 pb-2.5 pt-2 dark:border-border">
-          {customerName && projectLabel && (
-            <div className="space-y-0.5">
-              <span className="block text-[12px] font-bold leading-snug text-slate-900 dark:text-foreground">
-                {customerName}
-              </span>
-              <span className="block text-[11px] font-medium leading-snug text-slate-600 dark:text-muted-foreground">
-                {projectLabel}
-              </span>
-            </div>
-          )}
-
           <div className="flex flex-wrap items-center gap-1.5">
             {isSimulated && (
               <span
