@@ -7,8 +7,8 @@ import {
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 
-/** Kart metninin okunabilir kalması için sabit kolon genişliği */
-export const PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX = 280;
+/** Yatay kaydırma ile okunabilir genişlik — kolonlar ezilmez */
+export const PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX = 260;
 
 type ProjectStatsKanbanColumnProps = {
   column: ProjectTypeColumnDef;
@@ -34,7 +34,7 @@ const ProjectStatsKanbanColumn = ({
   return (
     <div
       className={cn(
-        "flex w-[280px] shrink-0 flex-col overflow-hidden rounded-lg border border-t-[3px] shadow-sm",
+        "flex w-[260px] shrink-0 flex-col overflow-hidden rounded-lg border border-t-[3px] shadow-sm",
         colors.header,
         "border-slate-200/80 bg-white/40 backdrop-blur-sm dark:border-border dark:bg-card/40",
       )}

@@ -446,12 +446,6 @@ const ProjectStatisticsTab = () => {
     [columns, groupedItems],
   );
 
-  /** Boş kolonları gizle — 7 kolon ekranı eziyordu; üst özet çubuğunda sayılar duruyor */
-  const boardColumns = useMemo(() => {
-    const withItems = columns.filter((column) => (groupedItems[column.key]?.length ?? 0) > 0);
-    return withItems.length > 0 ? withItems : columns;
-  }, [columns, groupedItems]);
-
   const personStats = useMemo(
     () => buildProjectPersonStats(filters.filteredItemsIgnoringSearch),
     [filters.filteredItemsIgnoringSearch],
@@ -672,7 +666,7 @@ const ProjectStatisticsTab = () => {
                 />
               ) : isMobile ? (
                 <MobileBoard
-                  columns={boardColumns}
+                  columns={columns}
                   groupedItems={groupedItems}
                   selectedStatus={filters.selectedStatus}
                   expandedCardId={expandedCardId}
@@ -686,10 +680,10 @@ const ProjectStatisticsTab = () => {
                   <div
                     className="flex w-max gap-3"
                     style={{
-                      minWidth: `${boardColumns.length * (PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX + 12)}px`,
+                      minWidth: `${columns.length * (PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX + 12)}px`,
                     }}
                   >
-                    {boardColumns.map((column) => (
+                    {columns.map((column) => (
                       <ProjectStatsKanbanColumn
                         key={String(column.key)}
                         column={column}
