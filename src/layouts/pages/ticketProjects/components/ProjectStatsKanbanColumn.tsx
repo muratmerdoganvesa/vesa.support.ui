@@ -7,6 +7,9 @@ import {
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 
+/** Kart metninin okunabilir kalması için sabit kolon genişliği */
+export const PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX = 280;
+
 type ProjectStatsKanbanColumnProps = {
   column: ProjectTypeColumnDef;
   items: StatsBoardItem[];
@@ -31,16 +34,15 @@ const ProjectStatsKanbanColumn = ({
   return (
     <div
       className={cn(
-        "flex min-w-[210px] w-full flex-col overflow-hidden border border-t-[3px] shadow-sm",
+        "flex w-[280px] shrink-0 flex-col overflow-hidden rounded-lg border border-t-[3px] shadow-sm",
         colors.header,
         "border-slate-200/80 bg-white/40 backdrop-blur-sm dark:border-border dark:bg-card/40",
       )}
     >
-      <div className="flex shrink-0 items-center gap-2 border-b border-slate-200/70 bg-white/60 px-3 py-2.5 dark:border-border dark:bg-card/60">
+      <div className="flex shrink-0 items-center gap-2 border-b border-slate-200/70 bg-white/70 px-3 py-2 dark:border-border dark:bg-card/70">
         <span className={cn("size-2 shrink-0 rounded-full", colors.dot)} />
         <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700 dark:text-foreground">
           {column.label}
-          <span className="ml-1 font-normal text-slate-400">({items.length})</span>
         </h3>
         <span
           className={cn(
@@ -53,8 +55,8 @@ const ProjectStatsKanbanColumn = ({
       </div>
 
       <div
-        className="flex flex-col gap-1.5 overflow-y-auto bg-gray-50 p-1.5 dark:bg-muted/20"
-        style={{ maxHeight: "calc(100vh - 380px)", minHeight: "625px" }}
+        className="flex flex-col gap-1.5 overflow-y-auto bg-slate-50/90 p-2 dark:bg-muted/20"
+        style={{ maxHeight: "calc(100vh - 360px)", minHeight: "520px" }}
       >
         {items.length > 0 ? (
           items.map((item) => (

@@ -27,7 +27,9 @@ import { buildProjectModuleStats } from "layouts/pages/ticketProjects/utils/buil
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
 import { Button } from "components/ui/button";
-import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
+import ProjectStatsKanbanColumn, {
+  PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX,
+} from "./ProjectStatsKanbanColumn";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 import ProjectStatisticsFilterBar from "./ProjectStatisticsFilterBar";
 import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
@@ -444,6 +446,12 @@ const ProjectStatisticsTab = () => {
     [columns, groupedItems],
   );
 
+  /** Boş kolonları gizle — 7 kolon ekranı eziyordu; üst özet çubuğunda sayılar duruyor */
+  const boardColumns = useMemo(() => {
+    const withItems = columns.filter((column) => (groupedItems[column.key]?.length ?? 0) > 0);
+    return withItems.length > 0 ? withItems : columns;
+  }, [columns, groupedItems]);
+
   const personStats = useMemo(
     () => buildProjectPersonStats(filters.filteredItemsIgnoringSearch),
     [filters.filteredItemsIgnoringSearch],
@@ -664,7 +672,7 @@ const ProjectStatisticsTab = () => {
                 />
               ) : isMobile ? (
                 <MobileBoard
-                  columns={columns}
+                  columns={boardColumns}
                   groupedItems={groupedItems}
                   selectedStatus={filters.selectedStatus}
                   expandedCardId={expandedCardId}
@@ -674,15 +682,14 @@ const ProjectStatisticsTab = () => {
                   onDeleteSimulated={handleDeleteSimulated}
                 />
               ) : (
-                <div className="overflow-x-auto pb-1">
+                <div className="overflow-x-auto pb-2">
                   <div
-                    className="grid gap-3"
+                    className="flex w-max gap-3"
                     style={{
-                      gridTemplateColumns: `repeat(${columns.length}, minmax(210px, 1fr))`,
-                      minWidth: `${columns.length * 220}px`,
+                      minWidth: `${boardColumns.length * (PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX + 12)}px`,
                     }}
                   >
-                    {columns.map((column) => (
+                    {boardColumns.map((column) => (
                       <ProjectStatsKanbanColumn
                         key={String(column.key)}
                         column={column}

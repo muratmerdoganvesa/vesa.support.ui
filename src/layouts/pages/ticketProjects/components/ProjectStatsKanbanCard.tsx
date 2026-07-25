@@ -24,13 +24,6 @@ const formatDate = (dateStr: string | null | undefined): string => {
   });
 };
 
-const getInitials = (fullName: string): string => {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
-};
-
 const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> | null) =>
   cn(
     "text-[11px] leading-snug",
@@ -41,18 +34,27 @@ const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> |
         : "font-medium text-slate-700 dark:text-foreground",
   );
 
-const buildDisplayName = (item: StatsBoardItem): string => {
+const buildProjectLabel = (item: StatsBoardItem): string => {
   const projectPart = item.projectSubDescription
     ? `${item.projectDescription} — ${item.projectSubDescription}`
     : item.projectDescription;
 
   if (item.kind === "project" || item.kind === "simulated") {
-    return projectPart || "—";
+    return projectPart?.trim() || "";
   }
 
   const kalemPart = item.kalemName?.trim();
   if (projectPart && kalemPart) return `${projectPart} — ${kalemPart}`;
-  return projectPart || kalemPart || "—";
+  return (projectPart || kalemPart || "").trim();
+};
+
+/** Kapalı kartta tek satır: Müşteri · Proje */
+const buildHeadline = (item: StatsBoardItem): string => {
+  const customer = item.customerName?.trim() || "";
+  const project = buildProjectLabel(item);
+
+  if (customer && project) return `${customer} · ${project}`;
+  return customer || project || "—";
 };
 
 const openGanttChart = (item: StatsBoardItem) => {
@@ -87,9 +89,8 @@ const ProjectStatsKanbanCard = ({
   onDeleteSimulated,
 }: ProjectStatsKanbanCardProps) => {
   const isSimulated = item.kind === "simulated";
-  const displayName = buildDisplayName(item);
-  const title = item.customerName?.trim() || displayName;
-  const subtitle = item.customerName?.trim() ? displayName : null;
+  const headline = buildHeadline(item);
+  const projectLabel = buildProjectLabel(item);
   const statusLabel =
     item.kind === "project"
       ? "Seçilmedi"
@@ -98,7 +99,6 @@ const ProjectStatsKanbanCard = ({
         : getProjectStatusLabel(item.projectStatus);
 
   const canNavigateToGantt = !isSimulated && Boolean(item.workCompanyId && item.projectId);
-  const leadPerson = item.projectManager ?? item.employees[0] ?? null;
   const formattedDate = formatDate(item.createdDate);
 
   const handleToggle = () => {
@@ -115,19 +115,13 @@ const ProjectStatsKanbanCard = ({
   return (
     <article
       className={cn(
-        "group min-w-0 w-full overflow-hidden border-l-[3px] shadow-sm transition-[box-shadow,background-color] duration-150",
+        "group min-w-0 w-full overflow-hidden rounded-md border border-slate-200/80 border-l-[3px] bg-white shadow-sm transition-shadow duration-150 dark:border-border dark:bg-card",
         isSimulated
           ? cn(
               SIMULATED_PLAN_CARD_COLORS.cardBorder,
-              isExpanded
-                ? SIMULATED_PLAN_CARD_COLORS.cardBg
-                : "bg-white dark:bg-card hover:bg-rose-50/40 dark:hover:bg-rose-950/20",
+              isExpanded ? SIMULATED_PLAN_CARD_COLORS.cardBg : "hover:bg-rose-50/50 dark:hover:bg-rose-950/20",
             )
-          : cn(
-              "bg-white dark:bg-card",
-              cardBorderClass,
-              isExpanded && "shadow-md",
-            ),
+          : cn(cardBorderClass, isExpanded && "shadow-md", "hover:bg-slate-50/80 dark:hover:bg-muted/40"),
       )}
     >
       <div
@@ -137,59 +131,31 @@ const ProjectStatsKanbanCard = ({
         onClick={handleToggle}
         onKeyDown={handleHeaderKeyDown}
         className={cn(
-          "flex w-full cursor-pointer items-center gap-2 px-2.5 py-2 text-left",
+          "flex min-h-10 w-full cursor-pointer items-center gap-2 px-2.5 py-2 text-left",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
         )}
-        aria-label={`${title} kartını ${isExpanded ? "daralt" : "genişlet"}`}
+        aria-label={`${headline} kartını ${isExpanded ? "daralt" : "genişlet"}`}
+        title={headline}
       >
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            {isSimulated && (
-              <span
-                className="size-1.5 shrink-0 rounded-full bg-rose-500"
-                title="Plan"
-                aria-hidden
-              />
-            )}
-            <p className="truncate text-[12px] font-bold leading-tight text-slate-900 dark:text-foreground">
-              {title}
-            </p>
-          </div>
-          {subtitle && (
-            <p className="mt-0.5 truncate text-[11px] font-medium leading-tight text-slate-500 dark:text-muted-foreground">
-              {subtitle}
-            </p>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="hidden text-[10px] font-medium tabular-nums text-slate-400 sm:inline dark:text-muted-foreground">
-            {formattedDate}
-          </span>
-
-          {leadPerson && (
-            <span
-              className={cn(
-                "inline-flex size-6 items-center justify-center rounded-full text-[9px] font-bold",
-                highlightPersonIds?.has(leadPerson.id)
-                  ? "bg-slate-800 text-white dark:bg-foreground dark:text-background"
-                  : "bg-slate-100 text-slate-600 dark:bg-muted dark:text-muted-foreground",
-              )}
-              title={leadPerson.fullName}
-              aria-label={leadPerson.fullName}
-            >
-              {getInitials(leadPerson.fullName)}
-            </span>
-          )}
-
-          <ChevronDown
-            className={cn(
-              "size-3.5 shrink-0 text-slate-400 transition-transform duration-200",
-              isExpanded && "rotate-180",
-            )}
+        {isSimulated && (
+          <span
+            className="size-1.5 shrink-0 rounded-full bg-rose-500"
+            title="Plan"
             aria-hidden
           />
-        </div>
+        )}
+
+        <p className="min-w-0 flex-1 truncate text-[12px] font-semibold leading-snug text-slate-800 dark:text-foreground">
+          {headline}
+        </p>
+
+        <ChevronDown
+          className={cn(
+            "size-4 shrink-0 text-slate-400 transition-transform duration-200",
+            isExpanded && "rotate-180",
+          )}
+          aria-hidden
+        />
       </div>
 
       <div
@@ -200,10 +166,15 @@ const ProjectStatsKanbanCard = ({
       >
         <div className="min-h-0 overflow-hidden">
           <div className="space-y-2 border-t border-slate-100 px-2.5 pb-2.5 pt-2 dark:border-border">
-            {subtitle && (
-              <p className="break-words text-[12px] font-medium leading-snug text-slate-600 dark:text-muted-foreground">
-                {subtitle}
-              </p>
+            {item.customerName?.trim() && projectLabel && (
+              <div className="space-y-0.5">
+                <p className="break-words text-[12px] font-bold leading-snug text-slate-900 dark:text-foreground">
+                  {item.customerName.trim()}
+                </p>
+                <p className="break-words text-[11px] font-medium leading-snug text-slate-600 dark:text-muted-foreground">
+                  {projectLabel}
+                </p>
+              </div>
             )}
 
             <div className="flex flex-wrap items-center gap-1.5">
