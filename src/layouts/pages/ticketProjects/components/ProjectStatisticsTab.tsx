@@ -27,7 +27,9 @@ import { buildProjectModuleStats } from "layouts/pages/ticketProjects/utils/buil
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Skeleton } from "components/ui/skeleton";
 import { Button } from "components/ui/button";
-import ProjectStatsKanbanColumn from "./ProjectStatsKanbanColumn";
+import ProjectStatsKanbanColumn, {
+  PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX,
+} from "./ProjectStatsKanbanColumn";
 import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 import ProjectStatisticsFilterBar from "./ProjectStatisticsFilterBar";
 import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
@@ -126,18 +128,26 @@ type MobileBoardProps = {
   columns: ProjectTypeColumnDef[];
   groupedItems: Record<ProjectTypeColumnKey, StatsBoardItem[]>;
   selectedStatus: ProjectTypeColumnKey | "All";
+  expandedCardId: string | null;
+  onToggleExpand: (itemId: string) => void;
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onAskStatusSuccess?: (message: string) => void;
+  onAskStatusError?: (message: string) => void;
 };
 
 export const MobileBoard = ({
   columns,
   groupedItems,
   selectedStatus,
+  expandedCardId,
+  onToggleExpand,
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onAskStatusSuccess,
+  onAskStatusError,
 }: MobileBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
@@ -191,9 +201,13 @@ export const MobileBoard = ({
               key={item.id}
               item={item}
               cardBorderClass={activeColors?.cardBorder ?? "border-l-slate-300"}
+              isExpanded={expandedCardId === item.id}
+              onToggleExpand={onToggleExpand}
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}
+              onAskStatusSuccess={onAskStatusSuccess}
+              onAskStatusError={onAskStatusError}
             />
           ))
         )}
@@ -308,6 +322,25 @@ const ProjectStatisticsTab = () => {
   const [activeTab, setActiveTab] = useState<StatisticsViewTab>("kanban");
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [editingPlanItem, setEditingPlanItem] = useState<StatsBoardItem | null>(null);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
+  const handleToggleExpand = useCallback((itemId: string) => {
+    setExpandedCardId((current) => (current === itemId ? null : itemId));
+  }, []);
+
+  const handleAskStatusSuccess = useCallback(
+    (message: string) => {
+      dispatchAlert({ message, type: "Success" });
+    },
+    [dispatchAlert],
+  );
+
+  const handleAskStatusError = useCallback(
+    (message: string) => {
+      dispatchAlert({ message, type: "Error" });
+    },
+    [dispatchAlert],
+  );
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
   const searchCopy = getStatisticsSearchCopy(activeTab);
@@ -656,17 +689,20 @@ const ProjectStatisticsTab = () => {
                   columns={columns}
                   groupedItems={groupedItems}
                   selectedStatus={filters.selectedStatus}
+                  expandedCardId={expandedCardId}
+                  onToggleExpand={handleToggleExpand}
                   highlightPersonIds={filters.highlightPersonIds}
                   onEditSimulated={handleEditSimulated}
                   onDeleteSimulated={handleDeleteSimulated}
+                  onAskStatusSuccess={handleAskStatusSuccess}
+                  onAskStatusError={handleAskStatusError}
                 />
               ) : (
-                <div className="overflow-x-auto pb-1">
+                <div className="overflow-x-auto pb-2">
                   <div
-                    className="grid gap-3"
+                    className="flex w-max gap-3"
                     style={{
-                      gridTemplateColumns: `repeat(${columns.length}, minmax(210px, 1fr))`,
-                      minWidth: `${columns.length * 220}px`,
+                      minWidth: `${columns.length * (PROJECT_STATS_KANBAN_COLUMN_WIDTH_PX + 12)}px`,
                     }}
                   >
                     {columns.map((column) => (
@@ -674,9 +710,13 @@ const ProjectStatisticsTab = () => {
                         key={String(column.key)}
                         column={column}
                         items={groupedItems[column.key] ?? []}
+                        expandedCardId={expandedCardId}
+                        onToggleExpand={handleToggleExpand}
                         highlightPersonIds={filters.highlightPersonIds}
                         onEditSimulated={handleEditSimulated}
                         onDeleteSimulated={handleDeleteSimulated}
+                        onAskStatusSuccess={handleAskStatusSuccess}
+                        onAskStatusError={handleAskStatusError}
                       />
                     ))}
                   </div>

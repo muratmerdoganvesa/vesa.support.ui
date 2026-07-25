@@ -1,5 +1,11 @@
 import { memo, type KeyboardEvent } from "react";
-import { Building2, CalendarClock, Pencil, Trash2 } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronDown,
+  ExternalLink,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { cn } from "lib/utils";
 import {
   getProjectStatusLabel,
@@ -8,6 +14,7 @@ import {
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Badge } from "components/ui/badge";
 import { Button } from "components/ui/button";
+import AskProjectStatusPanel from "./AskProjectStatusPanel";
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
@@ -28,37 +35,79 @@ const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> |
         : "font-medium text-slate-700 dark:text-foreground",
   );
 
-const buildDisplayName = (item: StatsBoardItem): string => {
-  const projectPart = item.projectSubDescription
+/** "Tibet - SuccessFactors..." gibi proje metninden baştaki müşteri tekrarını düş */
+const stripLeadingCustomerName = (label: string, customerName: string): string => {
+  const labelTrim = label.trim();
+  const customer = customerName.trim();
+  if (!labelTrim || !customer) return labelTrim;
+
+  const escaped = customer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const prefix = new RegExp(`^${escaped}\\s*[-–—:]\\s*`, "i");
+  return labelTrim.replace(prefix, "").trim() || labelTrim;
+};
+
+type ProjectTitleParts = {
+  /** Proje yolu (müşteri öneki temizlenmiş) */
+  projectPath: string;
+  /** Kalem / adım adı — ayrı chip olarak gösterilir */
+  stepName: string;
+};
+
+const buildProjectTitleParts = (item: StatsBoardItem): ProjectTitleParts => {
+  const rawProject = item.projectSubDescription
     ? `${item.projectDescription} — ${item.projectSubDescription}`
     : item.projectDescription;
 
-  if (item.kind === "project" || item.kind === "simulated") {
-    return projectPart || "—";
-  }
+  const projectPath = stripLeadingCustomerName(
+    (rawProject || "").trim(),
+    item.customerName ?? "",
+  );
+  const stepName =
+    item.kind === "kalem" ? (item.kalemName?.trim() || "") : "";
 
-  const kalemPart = item.kalemName?.trim();
-  if (projectPart && kalemPart) return `${projectPart} — ${kalemPart}`;
-  return projectPart || kalemPart || "—";
+  return { projectPath, stepName };
+};
+
+const openGanttChart = (item: StatsBoardItem) => {
+  const params = new URLSearchParams({
+    cid: item.workCompanyId as string,
+    pid: item.projectId,
+  });
+  if (item.customerName) params.set("wcn", item.customerName);
+  if (item.projectDescription) params.set("pn", item.projectDescription);
+  if (item.projectSubDescription) params.set("psn", item.projectSubDescription);
+
+  window.open(`/projectmanagement/chart?${params.toString()}`, "_blank", "noopener,noreferrer");
 };
 
 type ProjectStatsKanbanCardProps = {
   item: StatsBoardItem;
   cardBorderClass: string;
+  isExpanded: boolean;
+  onToggleExpand: (itemId: string) => void;
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onAskStatusSuccess?: (message: string) => void;
+  onAskStatusError?: (message: string) => void;
 };
 
 const ProjectStatsKanbanCard = ({
   item,
   cardBorderClass,
+  isExpanded,
+  onToggleExpand,
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onAskStatusSuccess,
+  onAskStatusError,
 }: ProjectStatsKanbanCardProps) => {
   const isSimulated = item.kind === "simulated";
-  const displayName = buildDisplayName(item);
+  const customerName = item.customerName?.trim() || "";
+  const { projectPath, stepName } = buildProjectTitleParts(item);
+  const headline = [customerName, projectPath, stepName].filter(Boolean).join(" · ") || "İsimsiz kart";
+
   const statusLabel =
     item.kind === "project"
       ? "Seçilmedi"
@@ -67,190 +116,196 @@ const ProjectStatsKanbanCard = ({
         : getProjectStatusLabel(item.projectStatus);
 
   const canNavigateToGantt = !isSimulated && Boolean(item.workCompanyId && item.projectId);
+  const formattedDate = formatDate(item.createdDate);
 
-  const handleCardClick = () => {
-    if (!canNavigateToGantt) return;
-
-    const params = new URLSearchParams({
-      cid: item.workCompanyId as string,
-      pid: item.projectId,
-    });
-    if (item.customerName) params.set("wcn", item.customerName);
-    if (item.projectDescription) params.set("pn", item.projectDescription);
-    if (item.projectSubDescription) params.set("psn", item.projectSubDescription);
-
-    window.open(`/projectmanagement/chart?${params.toString()}`, "_blank", "noopener,noreferrer");
+  const handleToggle = () => {
+    onToggleExpand(item.id);
   };
 
-  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (!canNavigateToGantt) return;
+  const handleHeaderKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      handleCardClick();
+      handleToggle();
     }
   };
 
   return (
     <article
-      role={canNavigateToGantt ? "button" : undefined}
-      tabIndex={canNavigateToGantt ? 0 : undefined}
-      onClick={handleCardClick}
-      onKeyDown={handleCardKeyDown}
       className={cn(
-        "group min-w-0 w-full border-l-[3px] p-3 shadow-sm transition-shadow hover:shadow-md",
+        "w-full rounded-md border border-slate-200 bg-white shadow-sm dark:border-border dark:bg-card",
+        "border-l-[3px]",
         isSimulated
-          ? cn(SIMULATED_PLAN_CARD_COLORS.cardBorder, SIMULATED_PLAN_CARD_COLORS.cardBg)
-          : cn("bg-white dark:bg-card", cardBorderClass),
-        canNavigateToGantt &&
-          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          ? cn(
+              SIMULATED_PLAN_CARD_COLORS.cardBorder,
+              isExpanded && SIMULATED_PLAN_CARD_COLORS.cardBg,
+            )
+          : cn(cardBorderClass, isExpanded && "ring-1 ring-slate-200 dark:ring-border"),
       )}
-      aria-label={
-        canNavigateToGantt
-          ? `${displayName} kartı, gantt chart tablosunu yeni sekmede açmak için tıklayın`
-          : `${displayName} kartı`
-      }
     >
-      {item.customerName && (
-        <div className="mb-1.5 flex items-start justify-between gap-1.5">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <Building2 className="size-3.5 shrink-0 text-slate-400" aria-hidden />
-            <p className="break-words text-[13px] font-bold leading-snug text-slate-900 dark:text-foreground">
-              {item.customerName}
-            </p>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isExpanded}
+        onClick={handleToggle}
+        onKeyDown={handleHeaderKeyDown}
+        className="flex w-full cursor-pointer items-start gap-2 px-2.5 py-2 text-left hover:bg-slate-50/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring dark:hover:bg-muted/40"
+        aria-label={`${headline} kartını ${isExpanded ? "daralt" : "genişlet"}`}
+        title={headline}
+      >
+        <div className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-bold leading-5 text-slate-900 dark:text-foreground">
+            {customerName || "İsimsiz müşteri"}
+          </span>
+          {projectPath ? (
+            <span className="mt-0.5 block line-clamp-2 text-[11px] font-medium leading-4 text-slate-600 dark:text-muted-foreground">
+              {projectPath}
+            </span>
+          ) : null}
+          {stepName ? (
+            <span
+              className="mt-1 inline-flex max-w-full truncate rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
+              title={`Adım: ${stepName}`}
+            >
+              {stepName}
+            </span>
+          ) : null}
+        </div>
+
+        <ChevronDown
+          className={cn(
+            "mt-0.5 size-4 shrink-0 text-slate-400 transition-transform duration-200",
+            isExpanded && "rotate-180",
+          )}
+          aria-hidden
+        />
+      </div>
+
+      {isExpanded && (
+        <div className="space-y-2 border-t border-slate-100 px-2.5 pb-2.5 pt-2 dark:border-border">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {isSimulated && (
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
+                  SIMULATED_PLAN_CARD_COLORS.badge,
+                )}
+              >
+                Plan
+              </span>
+            )}
+            <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-border dark:bg-muted dark:text-muted-foreground">
+              {statusLabel}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-muted-foreground">
+              <CalendarClock className="size-2.5 shrink-0" aria-hidden />
+              {formattedDate}
+            </span>
           </div>
-          {isSimulated && (
-            <div className="flex shrink-0 items-center gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
-                aria-label="Plan kartını düzenle"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditSimulated?.(item);
-                }}
-              >
-                <Pencil className="size-3" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
-                aria-label="Plan kartını sil"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteSimulated?.(item);
-                }}
-              >
-                <Trash2 className="size-3" />
-              </Button>
+
+          {item.modules.length > 0 && (
+            <div className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Modüller
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {item.modules.map((moduleName) => (
+                  <Badge
+                    key={moduleName}
+                    variant="secondary"
+                    className="rounded-full px-2 py-0 text-[10px] font-medium"
+                  >
+                    {moduleName}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
-        </div>
-      )}
 
-      {!item.customerName && isSimulated && (
-        <div className="mb-1.5 flex justify-end gap-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
-            aria-label="Plan kartını düzenle"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditSimulated?.(item);
-            }}
-          >
-            <Pencil className="size-3" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            className="size-6 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
-            aria-label="Plan kartını sil"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteSimulated?.(item);
-            }}
-          >
-            <Trash2 className="size-3" />
-          </Button>
-        </div>
-      )}
+          {item.employees.length > 0 && (
+            <div className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Danışmanlar
+              </span>
+              <ul className="flex flex-col gap-0.5" aria-label="Danışman listesi">
+                {item.employees.map((employee) => (
+                  <li
+                    key={employee.id}
+                    className={getPersonNameClass(employee.id, highlightPersonIds)}
+                  >
+                    {employee.fullName}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-      <p className="mb-2 break-words text-[12px] font-medium leading-snug text-slate-600 dark:text-muted-foreground">
-        {displayName}
-      </p>
+          {item.projectManager && (
+            <div className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Proje Yöneticisi
+              </span>
+              <span className={getPersonNameClass(item.projectManager.id, highlightPersonIds)}>
+                {item.projectManager.fullName}
+              </span>
+            </div>
+          )}
 
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
-        {isSimulated && (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold",
-              SIMULATED_PLAN_CARD_COLORS.badge,
-            )}
-          >
-            Plan
-          </span>
-        )}
-        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-border dark:bg-muted dark:text-muted-foreground">
-          {statusLabel}
-        </span>
-      </div>
-
-      <div className="mb-2">
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-muted-foreground">
-          <CalendarClock className="size-2.5 shrink-0" aria-hidden />
-          {formatDate(item.createdDate)}
-        </span>
-      </div>
-
-      {item.modules.length > 0 && (
-        <div className="mb-2 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Modüller
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {item.modules.map((moduleName) => (
-              <Badge
-                key={moduleName}
-                variant="secondary"
-                className="rounded-full px-2 py-0 text-[10px] font-medium"
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {canNavigateToGantt && (
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                className="h-7 gap-1 text-[11px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openGanttChart(item);
+                }}
               >
-                {moduleName}
-              </Badge>
-            ))}
+                <ExternalLink className="size-3" aria-hidden />
+                Gantt
+              </Button>
+            )}
+
+            {isSimulated && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-7 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+                  aria-label="Plan kartını düzenle"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditSimulated?.(item);
+                  }}
+                >
+                  <Pencil className="size-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  className="size-7 text-rose-600 hover:bg-rose-100 hover:text-rose-700"
+                  aria-label="Plan kartını sil"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSimulated?.(item);
+                  }}
+                >
+                  <Trash2 className="size-3" />
+                </Button>
+              </>
+            )}
           </div>
-        </div>
-      )}
 
-      {item.employees.length > 0 && (
-        <div className="mb-2 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Danışmanlar
-          </p>
-          <ul className="flex flex-col gap-0.5" aria-label="Danışman listesi">
-            {item.employees.map((employee) => (
-              <li key={employee.id} className={getPersonNameClass(employee.id, highlightPersonIds)}>
-                {employee.fullName}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {item.projectManager && (
-        <div className="mb-2 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Proje Yöneticisi
-          </p>
-          <p className={getPersonNameClass(item.projectManager.id, highlightPersonIds)}>
-            {item.projectManager.fullName}
-          </p>
+          {onAskStatusSuccess && onAskStatusError && (
+            <AskProjectStatusPanel
+              item={item}
+              onSuccess={onAskStatusSuccess}
+              onError={onAskStatusError}
+            />
+          )}
         </div>
       )}
     </article>
