@@ -1,7 +1,8 @@
 import { axiosInstance } from "utils/axiosInstance";
 
 export type AskProjectStatusPayload = {
-  targetUserId: string;
+  /** İsteğe bağlı ek alıcı; TO'ya her zaman PMO eklenir */
+  targetUserId?: string | null;
   message?: string | null;
   projectId?: string | null;
   taskId?: number | null;

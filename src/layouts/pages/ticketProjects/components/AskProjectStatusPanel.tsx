@@ -15,6 +15,9 @@ import {
   SelectItem as ShadcnSelectItem,
 } from "components/ui/select";
 
+const PMO_EMAIL = "vesa.pmo@vesacons.com";
+const NO_EXTRA_RECIPIENT = "__none__";
+
 type AskProjectStatusPanelProps = {
   item: StatsBoardItem;
   onSuccess: (message: string) => void;
@@ -30,7 +33,6 @@ type MessageTemplate = {
 type TemplateContext = {
   customer: string;
   project: string;
-  /** Müşteri · Ana proje · (adım) — şablonlarda her zaman ana proje adı geçer */
   subject: string;
   step: string | null;
   boardStatus: string;
@@ -94,7 +96,6 @@ const buildTemplateContext = (item: StatsBoardItem): TemplateContext => {
         ? "Seçilmedi"
         : getProjectStatusLabel(item.projectStatus);
 
-  // Adım olsa bile ana proje adı her zaman yazılsın
   const subject = step
     ? `${customer} · ${project} · ${step}`
     : `${customer} · ${project}`;
@@ -113,17 +114,12 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
   const recipients = useMemo(() => collectRecipients(item), [item]);
   const templateCtx = useMemo(() => buildTemplateContext(item), [item]);
   const defaultTemplate = MESSAGE_TEMPLATES[0];
-  const defaultTargetId = item.projectManager?.id || recipients[0]?.id || "";
 
-  const [targetUserId, setTargetUserId] = useState(defaultTargetId);
+  const [extraRecipientId, setExtraRecipientId] = useState(NO_EXTRA_RECIPIENT);
   const [selectedTemplateId, setSelectedTemplateId] = useState(defaultTemplate.id);
   const [message, setMessage] = useState(() => defaultTemplate.build(templateCtx));
   const [isSending, setIsSending] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-
-  if (recipients.length === 0) {
-    return null;
-  }
 
   const applyTemplate = (templateId: string) => {
     const template = MESSAGE_TEMPLATES.find((t) => t.id === templateId) ?? defaultTemplate;
@@ -132,15 +128,11 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
   };
 
   const handleSend = async () => {
-    if (!targetUserId) {
-      onError("Durumu sorulacak kişiyi seçin.");
-      return;
-    }
-
     try {
       setIsSending(true);
       const resultMessage = await askProjectStatus({
-        targetUserId,
+        targetUserId:
+          extraRecipientId === NO_EXTRA_RECIPIENT ? null : extraRecipientId,
         message: message.trim() || null,
         projectId: item.kind === "simulated" ? null : item.projectId,
         taskId: item.taskId ?? null,
@@ -170,7 +162,7 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(true);
-          applyTemplate(selectedTemplateId);
+          applyTemplate(selectedTemplateId || defaultTemplate.id);
         }}
       >
         <MessageSquare className="size-3" aria-hidden />
@@ -207,24 +199,38 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
         </span>
       </div>
 
-      <div className="space-y-1">
-        <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-          Alıcı
+      <div className="rounded border border-emerald-200/80 bg-white px-2 py-1.5 dark:border-emerald-900 dark:bg-card">
+        <span className="block text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+          Alıcı (TO) — sabit
         </span>
-      <ShadcnSelect value={targetUserId} onValueChange={setTargetUserId}>
-        <ShadcnSelectTrigger className="h-8 w-full bg-white text-[11px] dark:bg-card">
-          <ShadcnSelectValue placeholder="Kişi seç" />
-        </ShadcnSelectTrigger>
-        <ShadcnSelectContent>
-          {recipients.map((person) => (
-            <ShadcnSelectItem key={person.id} value={person.id} className="text-[11px]">
-              {person.fullName}
-              {item.projectManager?.id === person.id ? " (PY)" : ""}
-            </ShadcnSelectItem>
-          ))}
-        </ShadcnSelectContent>
-      </ShadcnSelect>
+        <span className="block truncate text-[12px] font-bold text-slate-900 dark:text-foreground">
+          {PMO_EMAIL}
+        </span>
       </div>
+
+      {recipients.length > 0 && (
+        <div className="space-y-1">
+          <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            Ek alıcı (isteğe bağlı)
+          </span>
+          <ShadcnSelect value={extraRecipientId} onValueChange={setExtraRecipientId}>
+            <ShadcnSelectTrigger className="h-8 w-full bg-white text-[11px] dark:bg-card">
+              <ShadcnSelectValue placeholder="Kişi seçme" />
+            </ShadcnSelectTrigger>
+            <ShadcnSelectContent>
+              <ShadcnSelectItem value={NO_EXTRA_RECIPIENT} className="text-[11px]">
+                Sadece PMO
+              </ShadcnSelectItem>
+              {recipients.map((person) => (
+                <ShadcnSelectItem key={person.id} value={person.id} className="text-[11px]">
+                  {person.fullName}
+                  {item.projectManager?.id === person.id ? " (PY)" : ""}
+                </ShadcnSelectItem>
+              ))}
+            </ShadcnSelectContent>
+          </ShadcnSelect>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1">
         {MESSAGE_TEMPLATES.map((template) => {
@@ -273,7 +279,7 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
           type="button"
           size="xs"
           className={cn("h-7 gap-1 text-[11px]")}
-          disabled={isSending || !targetUserId}
+          disabled={isSending}
           onClick={() => void handleSend()}
         >
           {isSending ? (
