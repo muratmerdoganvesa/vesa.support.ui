@@ -45,21 +45,26 @@ const stripLeadingCustomerName = (label: string, customerName: string): string =
   return labelTrim.replace(prefix, "").trim() || labelTrim;
 };
 
-const buildProjectLabel = (item: StatsBoardItem): string => {
-  const projectPart = item.projectSubDescription
+type ProjectTitleParts = {
+  /** Proje yolu (müşteri öneki temizlenmiş) */
+  projectPath: string;
+  /** Kalem / adım adı — ayrı chip olarak gösterilir */
+  stepName: string;
+};
+
+const buildProjectTitleParts = (item: StatsBoardItem): ProjectTitleParts => {
+  const rawProject = item.projectSubDescription
     ? `${item.projectDescription} — ${item.projectSubDescription}`
     : item.projectDescription;
 
-  let label = "";
-  if (item.kind === "project" || item.kind === "simulated") {
-    label = (projectPart || "").trim();
-  } else {
-    const kalemPart = item.kalemName?.trim();
-    if (projectPart && kalemPart) label = `${projectPart} — ${kalemPart}`;
-    else label = (projectPart || kalemPart || "").trim();
-  }
+  const projectPath = stripLeadingCustomerName(
+    (rawProject || "").trim(),
+    item.customerName ?? "",
+  );
+  const stepName =
+    item.kind === "kalem" ? (item.kalemName?.trim() || "") : "";
 
-  return stripLeadingCustomerName(label, item.customerName ?? "");
+  return { projectPath, stepName };
 };
 
 const openGanttChart = (item: StatsBoardItem) => {
@@ -95,11 +100,8 @@ const ProjectStatsKanbanCard = ({
 }: ProjectStatsKanbanCardProps) => {
   const isSimulated = item.kind === "simulated";
   const customerName = item.customerName?.trim() || "";
-  const projectLabel = buildProjectLabel(item);
-  const headline =
-    customerName && projectLabel
-      ? `${customerName} · ${projectLabel}`
-      : customerName || projectLabel || "İsimsiz kart";
+  const { projectPath, stepName } = buildProjectTitleParts(item);
+  const headline = [customerName, projectPath, stepName].filter(Boolean).join(" · ") || "İsimsiz kart";
 
   const statusLabel =
     item.kind === "project"
@@ -149,9 +151,17 @@ const ProjectStatsKanbanCard = ({
           <span className="block truncate text-[13px] font-bold leading-5 text-slate-900 dark:text-foreground">
             {customerName || "İsimsiz müşteri"}
           </span>
-          {projectLabel ? (
+          {projectPath ? (
             <span className="mt-0.5 block line-clamp-2 text-[11px] font-medium leading-4 text-slate-600 dark:text-muted-foreground">
-              {projectLabel}
+              {projectPath}
+            </span>
+          ) : null}
+          {stepName ? (
+            <span
+              className="mt-1 inline-flex max-w-full truncate rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
+              title={`Adım: ${stepName}`}
+            >
+              {stepName}
             </span>
           ) : null}
         </div>
