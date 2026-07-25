@@ -10,6 +10,8 @@ import ProjectStatsKanbanCard from "./ProjectStatsKanbanCard";
 type ProjectStatsKanbanColumnProps = {
   column: ProjectTypeColumnDef;
   items: StatsBoardItem[];
+  expandedCardId: string | null;
+  onToggleExpand: (itemId: string) => void;
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
@@ -18,6 +20,8 @@ type ProjectStatsKanbanColumnProps = {
 const ProjectStatsKanbanColumn = ({
   column,
   items,
+  expandedCardId,
+  onToggleExpand,
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
@@ -49,7 +53,7 @@ const ProjectStatsKanbanColumn = ({
       </div>
 
       <div
-        className="flex flex-col gap-2 overflow-y-auto bg-gray-50 p-2 dark:bg-muted/20"
+        className="flex flex-col gap-1.5 overflow-y-auto bg-gray-50 p-1.5 dark:bg-muted/20"
         style={{ maxHeight: "calc(100vh - 380px)", minHeight: "625px" }}
       >
         {items.length > 0 ? (
@@ -58,6 +62,8 @@ const ProjectStatsKanbanColumn = ({
               key={item.id}
               item={item}
               cardBorderClass={colors.cardBorder}
+              isExpanded={expandedCardId === item.id}
+              onToggleExpand={onToggleExpand}
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}

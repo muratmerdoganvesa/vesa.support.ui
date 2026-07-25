@@ -126,6 +126,8 @@ type MobileBoardProps = {
   columns: ProjectTypeColumnDef[];
   groupedItems: Record<ProjectTypeColumnKey, StatsBoardItem[]>;
   selectedStatus: ProjectTypeColumnKey | "All";
+  expandedCardId: string | null;
+  onToggleExpand: (itemId: string) => void;
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
@@ -135,6 +137,8 @@ export const MobileBoard = ({
   columns,
   groupedItems,
   selectedStatus,
+  expandedCardId,
+  onToggleExpand,
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
@@ -191,6 +195,8 @@ export const MobileBoard = ({
               key={item.id}
               item={item}
               cardBorderClass={activeColors?.cardBorder ?? "border-l-slate-300"}
+              isExpanded={expandedCardId === item.id}
+              onToggleExpand={onToggleExpand}
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}
@@ -308,6 +314,11 @@ const ProjectStatisticsTab = () => {
   const [activeTab, setActiveTab] = useState<StatisticsViewTab>("kanban");
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [editingPlanItem, setEditingPlanItem] = useState<StatsBoardItem | null>(null);
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
+  const handleToggleExpand = useCallback((itemId: string) => {
+    setExpandedCardId((current) => (current === itemId ? null : itemId));
+  }, []);
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
   const searchCopy = getStatisticsSearchCopy(activeTab);
@@ -656,6 +667,8 @@ const ProjectStatisticsTab = () => {
                   columns={columns}
                   groupedItems={groupedItems}
                   selectedStatus={filters.selectedStatus}
+                  expandedCardId={expandedCardId}
+                  onToggleExpand={handleToggleExpand}
                   highlightPersonIds={filters.highlightPersonIds}
                   onEditSimulated={handleEditSimulated}
                   onDeleteSimulated={handleDeleteSimulated}
@@ -674,6 +687,8 @@ const ProjectStatisticsTab = () => {
                         key={String(column.key)}
                         column={column}
                         items={groupedItems[column.key] ?? []}
+                        expandedCardId={expandedCardId}
+                        onToggleExpand={handleToggleExpand}
                         highlightPersonIds={filters.highlightPersonIds}
                         onEditSimulated={handleEditSimulated}
                         onDeleteSimulated={handleDeleteSimulated}
