@@ -39,8 +39,15 @@ describe("MobileBoard", () => {
   it("opens the column selected by the status filter", () => {
     const columns = getProjectTypeColumns();
     const groupedItems = createGroupedItems();
+    const handleToggleExpand = vi.fn();
     const { rerender } = render(
-      <MobileBoard columns={columns} groupedItems={groupedItems} selectedStatus="All" />,
+      <MobileBoard
+        columns={columns}
+        groupedItems={groupedItems}
+        selectedStatus="All"
+        expandedCardId={null}
+        onToggleExpand={handleToggleExpand}
+      />,
     );
 
     expect(screen.queryByText("Tamamlanan proje")).not.toBeInTheDocument();
@@ -50,6 +57,8 @@ describe("MobileBoard", () => {
         columns={columns}
         groupedItems={groupedItems}
         selectedStatus={ProjectTypes.NUMBER_5}
+        expandedCardId={null}
+        onToggleExpand={handleToggleExpand}
       />,
     );
 
