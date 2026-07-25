@@ -14,6 +14,7 @@ import {
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Badge } from "components/ui/badge";
 import { Button } from "components/ui/button";
+import AskProjectStatusPanel from "./AskProjectStatusPanel";
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
@@ -87,6 +88,8 @@ type ProjectStatsKanbanCardProps = {
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onAskStatusSuccess?: (message: string) => void;
+  onAskStatusError?: (message: string) => void;
 };
 
 const ProjectStatsKanbanCard = ({
@@ -97,6 +100,8 @@ const ProjectStatsKanbanCard = ({
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onAskStatusSuccess,
+  onAskStatusError,
 }: ProjectStatsKanbanCardProps) => {
   const isSimulated = item.kind === "simulated";
   const customerName = item.customerName?.trim() || "";
@@ -293,6 +298,14 @@ const ProjectStatsKanbanCard = ({
               </>
             )}
           </div>
+
+          {onAskStatusSuccess && onAskStatusError && (
+            <AskProjectStatusPanel
+              item={item}
+              onSuccess={onAskStatusSuccess}
+              onError={onAskStatusError}
+            />
+          )}
         </div>
       )}
     </article>

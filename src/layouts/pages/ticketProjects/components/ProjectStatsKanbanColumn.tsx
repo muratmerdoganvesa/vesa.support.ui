@@ -18,6 +18,8 @@ type ProjectStatsKanbanColumnProps = {
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onAskStatusSuccess?: (message: string) => void;
+  onAskStatusError?: (message: string) => void;
 };
 
 const ProjectStatsKanbanColumn = ({
@@ -28,6 +30,8 @@ const ProjectStatsKanbanColumn = ({
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onAskStatusSuccess,
+  onAskStatusError,
 }: ProjectStatsKanbanColumnProps) => {
   const colors = getProjectTypeColumnColors(column.label);
 
@@ -69,6 +73,8 @@ const ProjectStatsKanbanColumn = ({
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}
+              onAskStatusSuccess={onAskStatusSuccess}
+              onAskStatusError={onAskStatusError}
             />
           ))
         ) : (

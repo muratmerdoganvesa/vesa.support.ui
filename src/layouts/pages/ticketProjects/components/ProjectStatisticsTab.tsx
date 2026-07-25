@@ -133,6 +133,8 @@ type MobileBoardProps = {
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onAskStatusSuccess?: (message: string) => void;
+  onAskStatusError?: (message: string) => void;
 };
 
 export const MobileBoard = ({
@@ -144,6 +146,8 @@ export const MobileBoard = ({
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onAskStatusSuccess,
+  onAskStatusError,
 }: MobileBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
@@ -202,6 +206,8 @@ export const MobileBoard = ({
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}
+              onAskStatusSuccess={onAskStatusSuccess}
+              onAskStatusError={onAskStatusError}
             />
           ))
         )}
@@ -321,6 +327,20 @@ const ProjectStatisticsTab = () => {
   const handleToggleExpand = useCallback((itemId: string) => {
     setExpandedCardId((current) => (current === itemId ? null : itemId));
   }, []);
+
+  const handleAskStatusSuccess = useCallback(
+    (message: string) => {
+      dispatchAlert({ message, type: "Success" });
+    },
+    [dispatchAlert],
+  );
+
+  const handleAskStatusError = useCallback(
+    (message: string) => {
+      dispatchAlert({ message, type: "Error" });
+    },
+    [dispatchAlert],
+  );
 
   const columns = useMemo(() => getProjectTypeColumns(), []);
   const searchCopy = getStatisticsSearchCopy(activeTab);
@@ -674,6 +694,8 @@ const ProjectStatisticsTab = () => {
                   highlightPersonIds={filters.highlightPersonIds}
                   onEditSimulated={handleEditSimulated}
                   onDeleteSimulated={handleDeleteSimulated}
+                  onAskStatusSuccess={handleAskStatusSuccess}
+                  onAskStatusError={handleAskStatusError}
                 />
               ) : (
                 <div className="overflow-x-auto pb-2">
@@ -693,6 +715,8 @@ const ProjectStatisticsTab = () => {
                         highlightPersonIds={filters.highlightPersonIds}
                         onEditSimulated={handleEditSimulated}
                         onDeleteSimulated={handleDeleteSimulated}
+                        onAskStatusSuccess={handleAskStatusSuccess}
+                        onAskStatusError={handleAskStatusError}
                       />
                     ))}
                   </div>
