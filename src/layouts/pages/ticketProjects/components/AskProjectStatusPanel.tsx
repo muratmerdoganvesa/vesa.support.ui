@@ -4,6 +4,7 @@ import { cn } from "lib/utils";
 import type { StatsBoardItem, TicketProjectStatsPersonDto } from "layouts/pages/ticketProjects/types";
 import { askProjectStatus } from "layouts/pages/ticketProjects/api/askProjectStatusApi";
 import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import { useUser } from "layouts/pages/hooks/userName";
 import { Button } from "components/ui/button";
 import { Textarea } from "components/ui/textarea";
 import {
@@ -29,6 +30,7 @@ type MessageTemplate = {
 type TemplateContext = {
   customer: string;
   project: string;
+  /** Müşteri · Ana proje · (adım) — şablonlarda her zaman ana proje adı geçer */
   subject: string;
   step: string | null;
   boardStatus: string;
@@ -80,7 +82,10 @@ const collectRecipients = (item: StatsBoardItem): TicketProjectStatsPersonDto[] 
 
 const buildTemplateContext = (item: StatsBoardItem): TemplateContext => {
   const customer = item.customerName?.trim() || "müşteri";
-  const project = item.projectDescription?.trim() || "proje";
+  const projectParts = [item.projectDescription?.trim(), item.projectSubDescription?.trim()].filter(
+    Boolean,
+  );
+  const project = projectParts.join(" — ") || "proje";
   const step = item.kalemName?.trim() || null;
   const boardStatus =
     item.kind === "project"
@@ -89,12 +94,22 @@ const buildTemplateContext = (item: StatsBoardItem): TemplateContext => {
         ? "Seçilmedi"
         : getProjectStatusLabel(item.projectStatus);
 
-  const subject = step ? `${customer} / ${step}` : `${customer} / ${project}`;
+  // Adım olsa bile ana proje adı her zaman yazılsın
+  const subject = step
+    ? `${customer} · ${project} · ${step}`
+    : `${customer} · ${project}`;
 
   return { customer, project, subject, step, boardStatus };
 };
 
 const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPanelProps) => {
+  const { loginUserNameSurname, userNameAndSurname, username, loginUser } = useUser();
+  const senderDisplayName =
+    (loginUserNameSurname || String(userNameAndSurname || "")).trim() ||
+    username ||
+    loginUser ||
+    "Siz";
+
   const recipients = useMemo(() => collectRecipients(item), [item]);
   const templateCtx = useMemo(() => buildTemplateContext(item), [item]);
   const defaultTemplate = MESSAGE_TEMPLATES[0];
@@ -183,6 +198,19 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
         </button>
       </div>
 
+      <div className="rounded border border-indigo-200/80 bg-white px-2 py-1.5 dark:border-indigo-800 dark:bg-card">
+        <span className="block text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+          Gönderen
+        </span>
+        <span className="block truncate text-[12px] font-bold text-slate-900 dark:text-foreground">
+          {senderDisplayName}
+        </span>
+      </div>
+
+      <div className="space-y-1">
+        <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+          Alıcı
+        </span>
       <ShadcnSelect value={targetUserId} onValueChange={setTargetUserId}>
         <ShadcnSelectTrigger className="h-8 w-full bg-white text-[11px] dark:bg-card">
           <ShadcnSelectValue placeholder="Kişi seç" />
@@ -196,6 +224,7 @@ const AskProjectStatusPanel = ({ item, onSuccess, onError }: AskProjectStatusPan
           ))}
         </ShadcnSelectContent>
       </ShadcnSelect>
+      </div>
 
       <div className="flex flex-wrap gap-1">
         {MESSAGE_TEMPLATES.map((template) => {
