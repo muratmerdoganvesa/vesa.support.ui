@@ -6,11 +6,26 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import { ProjectTypes } from "api/generated";
 import { cn } from "lib/utils";
-import { SIMULATED_PLAN_CARD_COLORS } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import {
+  getProjectTypeColumns,
+  SIMULATED_PLAN_CARD_COLORS,
+  UNASSIGNED_PROJECT_TYPE_KEY,
+} from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Button } from "components/ui/button";
+import { Label } from "components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "components/ui/select";
 import AskProjectStatusPanel from "./AskProjectStatusPanel";
+
+const STATUS_COLUMNS = getProjectTypeColumns();
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "—";
@@ -80,6 +95,10 @@ type ProjectStatsKanbanCardProps = {
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onChangeSimulatedStatus?: (
+    item: StatsBoardItem,
+    projectStatus: ProjectTypes | null,
+  ) => void;
   onAskStatusSuccess?: (message: string) => void;
   onAskStatusError?: (message: string) => void;
 };
@@ -92,6 +111,7 @@ const ProjectStatsKanbanCard = ({
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onChangeSimulatedStatus,
   onAskStatusSuccess,
   onAskStatusError,
 }: ProjectStatsKanbanCardProps) => {
@@ -109,6 +129,8 @@ const ProjectStatsKanbanCard = ({
 
   const canNavigateToGantt = !isSimulated && Boolean(item.workCompanyId && item.projectId);
   const formattedDate = formatDate(item.createdDate);
+  const simulatedStatusValue =
+    item.projectStatus == null ? UNASSIGNED_PROJECT_TYPE_KEY : String(item.projectStatus);
 
   const handleToggle = () => {
     onToggleExpand(item.id);
@@ -236,6 +258,53 @@ const ProjectStatsKanbanCard = ({
               </span>
             </div>
           ) : null}
+
+          {isSimulated && onChangeSimulatedStatus && (
+            <div
+              className="space-y-1"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <Label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Durum (kolon)
+              </Label>
+              <Select
+                value={simulatedStatusValue}
+                onValueChange={(value) => {
+                  if (value == null) return;
+                  const nextStatus =
+                    value === UNASSIGNED_PROJECT_TYPE_KEY
+                      ? null
+                      : (Number(value) as ProjectTypes);
+                  const currentStatus = item.projectStatus ?? null;
+                  if (nextStatus === currentStatus) return;
+                  onChangeSimulatedStatus(item, nextStatus);
+                }}
+              >
+                <SelectTrigger className="h-8 w-full bg-white text-[11px] dark:bg-card">
+                  <SelectValue placeholder="Kolon seçin" />
+                </SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  className="z-[1200] w-(--radix-select-trigger-width)"
+                >
+                  {STATUS_COLUMNS.map((column) => (
+                    <SelectItem
+                      key={String(column.key)}
+                      value={
+                        column.projectType == null
+                          ? UNASSIGNED_PROJECT_TYPE_KEY
+                          : String(column.projectType)
+                      }
+                      className="text-[11px]"
+                    >
+                      {column.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {canNavigateToGantt && (

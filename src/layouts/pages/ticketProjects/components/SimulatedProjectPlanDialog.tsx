@@ -68,7 +68,7 @@ const SimulatedProjectPlanDialog = ({
           : String(editingItem.projectStatus),
       );
       setManagerId(editingItem.projectManager?.id ?? "");
-      setEmployeeIds(editingItem.employees.map((e) => e.id).filter(Boolean));
+      setEmployeeIds((editingItem.employees ?? []).map((e) => e.id).filter(Boolean));
     } else {
       setCustomerName("");
       setProjectDescription("");
