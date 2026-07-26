@@ -8,6 +8,7 @@ import {
   fetchPersonDetailData,
   type PersonDetailInfo,
 } from "layouts/pages/ticketProjects/api/fetchPersonDetailMap";
+import { fetchTicketDepartments } from "layouts/pages/ticketProjects/api/fetchTicketDepartments";
 import {
   createSimulatedProjectPlan,
   deleteSimulatedProjectPlan,
@@ -15,6 +16,7 @@ import {
   updateSimulatedProjectPlan,
   type SimulatedProjectPlanPayload,
 } from "layouts/pages/ticketProjects/api/simulatedProjectPlanApi";
+import type { DepartmentNode } from "layouts/pages/ticketProjects/utils/departmentTree";
 import {
   getProjectTypeColumns,
   getProjectTypeColumnColors,
@@ -321,6 +323,7 @@ const ProjectStatisticsTab = () => {
   const isMobile = useIsMobile();
   const [boardItems, setBoardItems] = useState<StatsBoardItem[]>([]);
   const [userDepartmentById, setUserDepartmentById] = useState<Map<string, string>>(new Map());
+  const [departmentHierarchy, setDepartmentHierarchy] = useState<DepartmentNode[]>([]);
   const [personDetailsById, setPersonDetailsById] = useState<Map<string, PersonDetailInfo>>(
     new Map(),
   );
@@ -360,20 +363,31 @@ const ProjectStatisticsTab = () => {
     return map;
   }, [personDetailsById]);
 
-  const filters = useProjectStatisticsFilters(boardItems, userDepartmentById, userLevelById);
+  const filters = useProjectStatisticsFilters(
+    boardItems,
+    userDepartmentById,
+    userLevelById,
+    departmentHierarchy,
+  );
 
   const loadStatistics = useCallback(async () => {
     try {
       setIsLoading(true);
       setLoadError(null);
 
-      const [statisticsResult, simulatedPlansResult, companyResult, personDetailResult] =
-        await Promise.allSettled([
-          fetchProjectStatistics(),
-          fetchSimulatedProjectPlans(),
-          fetchProjectCompanyMap(),
-          fetchPersonDetailData(),
-        ]);
+      const [
+        statisticsResult,
+        simulatedPlansResult,
+        companyResult,
+        personDetailResult,
+        departmentsResult,
+      ] = await Promise.allSettled([
+        fetchProjectStatistics(),
+        fetchSimulatedProjectPlans(),
+        fetchProjectCompanyMap(),
+        fetchPersonDetailData(),
+        fetchTicketDepartments(),
+      ]);
 
       if (statisticsResult.status === "rejected") {
         throw statisticsResult.reason;
@@ -406,6 +420,9 @@ const ProjectStatisticsTab = () => {
       setBoardItems([...planItems, ...realItems]);
       setUserDepartmentById(departmentMap);
       setPersonDetailsById(personDetailData.detailsById);
+      setDepartmentHierarchy(
+        departmentsResult.status === "fulfilled" ? departmentsResult.value : [],
+      );
 
       const unavailableFeatures: string[] = [];
       if (simulatedPlansResult.status === "rejected") {
@@ -413,6 +430,9 @@ const ProjectStatisticsTab = () => {
       }
       if (companyResult.status === "rejected") {
         unavailableFeatures.push("Gantt bağlantıları");
+      }
+      if (departmentsResult.status === "rejected") {
+        unavailableFeatures.push("departman hiyerarşisi");
       }
       if (personDetailResult.status === "rejected") {
         unavailableFeatures.push("departman, seviye ve kişi detayları");
@@ -490,9 +510,13 @@ const ProjectStatisticsTab = () => {
     }
 
     if (filters.selectedDepartment !== "All") {
-      list = list.filter(
-        (person) => userDepartmentById.get(person.personId) === filters.selectedDepartment,
-      );
+      const matchNames = filters.departmentMatchNames;
+      list = list.filter((person) => {
+        const dept = userDepartmentById.get(person.personId);
+        if (!dept) return false;
+        if (matchNames && matchNames.size > 0) return matchNames.has(dept);
+        return dept === filters.selectedDepartment;
+      });
     }
 
     if (filters.selectedLevel !== "All") {
@@ -509,6 +533,7 @@ const ProjectStatisticsTab = () => {
     personStats,
     filters.selectedPersonId,
     filters.selectedDepartment,
+    filters.departmentMatchNames,
     filters.selectedLevel,
     filters.searchTerm,
     userDepartmentById,
@@ -657,6 +682,7 @@ const ProjectStatisticsTab = () => {
           selectedStatus={filters.selectedStatus}
           onStatusSelect={filters.handleStatusSelect}
           uniqueDepartments={filters.uniqueDepartments}
+          departmentTreeItems={filters.departmentTreeItems}
           selectedDepartment={filters.selectedDepartment}
           onDepartmentSelect={filters.handleDepartmentSelect}
           departmentAllCount={filters.departmentAllCount}
