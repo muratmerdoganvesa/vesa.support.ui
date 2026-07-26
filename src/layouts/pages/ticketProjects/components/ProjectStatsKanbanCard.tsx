@@ -7,10 +7,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "lib/utils";
-import {
-  getProjectStatusLabel,
-  SIMULATED_PLAN_CARD_COLORS,
-} from "layouts/pages/ticketProjects/projectTypeHelpers";
+import { SIMULATED_PLAN_CARD_COLORS } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Button } from "components/ui/button";
 import AskProjectStatusPanel from "./AskProjectStatusPanel";
@@ -26,12 +23,12 @@ const formatDate = (dateStr: string | null | undefined): string => {
 
 const getPersonNameClass = (personId: string, highlightPersonIds?: Set<string> | null) =>
   cn(
-    "text-[11px] leading-snug",
+    "text-[10px] leading-snug",
     highlightPersonIds?.has(personId)
       ? "font-bold text-slate-900 dark:text-foreground"
       : highlightPersonIds
         ? "font-medium text-slate-400 dark:text-muted-foreground"
-        : "font-medium text-slate-700 dark:text-foreground",
+        : "font-medium text-slate-500 dark:text-muted-foreground",
   );
 
 /** "Tibet - SuccessFactors..." gibi proje metninden baştaki müşteri tekrarını düş */
@@ -48,7 +45,7 @@ const stripLeadingCustomerName = (label: string, customerName: string): string =
 type ProjectTitleParts = {
   /** Proje yolu (müşteri öneki temizlenmiş) */
   projectPath: string;
-  /** Kalem / adım adı — ayrı chip olarak gösterilir */
+  /** Kalem / adım adı — açık kartta gösterilir */
   stepName: string;
 };
 
@@ -104,21 +101,14 @@ const ProjectStatsKanbanCard = ({
   const moduleNames = (item.modules ?? []).map((m) => String(m).trim()).filter(Boolean);
   const moduleLabel = moduleNames.join(", ");
   const hasModules = moduleNames.length > 0;
+  const consultants = item.employees ?? [];
   const headline =
     [customerName, projectPath, hasModules ? moduleLabel : stepName]
       .filter(Boolean)
       .join(" · ") || "İsimsiz kart";
 
-  const statusLabel =
-    item.kind === "project"
-      ? "Seçilmedi"
-      : item.projectStatus == null
-        ? "Seçilmedi"
-        : getProjectStatusLabel(item.projectStatus);
-
   const canNavigateToGantt = !isSimulated && Boolean(item.workCompanyId && item.projectId);
   const formattedDate = formatDate(item.createdDate);
-  const showProjectManagerSection = Boolean(item.projectManager || stepName);
 
   const handleToggle = () => {
     onToggleExpand(item.id);
@@ -158,11 +148,22 @@ const ProjectStatsKanbanCard = ({
           <span className="block truncate text-[13px] font-bold leading-5 text-slate-900 dark:text-foreground">
             {customerName || "İsimsiz müşteri"}
           </span>
-          {projectPath ? (
-            <span className="mt-0.5 block line-clamp-2 text-[11px] font-medium leading-4 text-slate-600 dark:text-muted-foreground">
-              {projectPath}
+          {consultants.length > 0 ? (
+            <ul className="mt-0.5 flex flex-col gap-0" aria-label="Danışmanlar">
+              {consultants.map((employee) => (
+                <li
+                  key={employee.id}
+                  className={cn("truncate", getPersonNameClass(employee.id, highlightPersonIds))}
+                >
+                  {employee.fullName}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="mt-0.5 block text-[10px] font-medium text-slate-400 dark:text-muted-foreground">
+              Danışman yok
             </span>
-          ) : null}
+          )}
           {hasModules ? (
             <span
               className="mt-1 inline-flex max-w-full truncate rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
@@ -202,53 +203,39 @@ const ProjectStatsKanbanCard = ({
                 Plan
               </span>
             )}
-            <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-border dark:bg-muted dark:text-muted-foreground">
-              {statusLabel}
-            </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-muted-foreground">
               <CalendarClock className="size-2.5 shrink-0" aria-hidden />
               {formattedDate}
             </span>
           </div>
 
-          {item.employees.length > 0 && (
+          {projectPath ? (
             <div className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Danışmanlar
+                Proje
               </span>
-              <ul className="flex flex-col gap-0.5" aria-label="Danışman listesi">
-                {item.employees.map((employee) => (
-                  <li
-                    key={employee.id}
-                    className={getPersonNameClass(employee.id, highlightPersonIds)}
-                  >
-                    {employee.fullName}
-                  </li>
-                ))}
-              </ul>
+              <span
+                className="block text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
+                title={projectPath}
+              >
+                {projectPath}
+              </span>
             </div>
-          )}
+          ) : null}
 
-          {showProjectManagerSection && (
+          {stepName ? (
             <div className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Proje Yöneticisi
               </span>
-              {stepName ? (
-                <span
-                  className="block text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
-                  title={stepName}
-                >
-                  {stepName}
-                </span>
-              ) : null}
-              {item.projectManager ? (
-                <span className={getPersonNameClass(item.projectManager.id, highlightPersonIds)}>
-                  {item.projectManager.fullName}
-                </span>
-              ) : null}
+              <span
+                className="block text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
+                title={stepName}
+              >
+                {stepName}
+              </span>
             </div>
-          )}
+          ) : null}
 
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {canNavigateToGantt && (
