@@ -95,7 +95,6 @@ import {
 } from "api/generated";
 import {
   getProjectStatusLabel,
-  getProjectTypeColumnColors,
   projectTypeOptions,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -319,26 +318,27 @@ function resolveModuleDisplayName(moduleList: GanttModuleOption[], raw: string):
   return trimmed;
 }
 
-/** Modül chip renkleri — id/ad üzerinden stabil palette seçimi */
-const MODULE_CHIP_PALETTE = [
-  "border-sky-200 bg-sky-50 text-sky-700",
-  "border-teal-200 bg-teal-50 text-teal-700",
-  "border-indigo-200 bg-indigo-50 text-indigo-700",
-  "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
-  "border-amber-200 bg-amber-50 text-amber-800",
-  "border-rose-200 bg-rose-50 text-rose-700",
-  "border-emerald-200 bg-emerald-50 text-emerald-700",
-  "border-cyan-200 bg-cyan-50 text-cyan-800",
-  "border-violet-200 bg-violet-50 text-violet-700",
-  "border-orange-200 bg-orange-50 text-orange-800",
-] as const;
+/** Syncfusion hücre stillerini ezmeyen sabit chip sınıfları (styles.css) */
+const STATUS_CHIP_CLASS: Record<string, string> = {
+  Backlog: "gantt-chip gantt-chip--backlog",
+  Realization: "gantt-chip gantt-chip--realization",
+  UAT: "gantt-chip gantt-chip--uat",
+  Preparation: "gantt-chip gantt-chip--preparation",
+  DONE: "gantt-chip gantt-chip--done",
+  Beklemede: "gantt-chip gantt-chip--pending",
+  "—": "gantt-chip gantt-chip--empty",
+};
+
+function getStatusChipClass(label: string): string {
+  return STATUS_CHIP_CLASS[label] ?? "gantt-chip gantt-chip--empty";
+}
 
 function getModuleChipClass(key: string): string {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
   }
-  return MODULE_CHIP_PALETTE[hash % MODULE_CHIP_PALETTE.length];
+  return `gantt-chip gantt-chip--module gantt-chip--mod-${hash % 10}`;
 }
 
 /** Kök görev mi (Syncfusion / API: null, 0, boş). */
@@ -879,6 +879,12 @@ function ProjectChart() {
    * tearDownAfterDataBoundRef=true ise dataBound'da tearDown çağrılır ve flag sıfırlanır.
    */
   const tearDownAfterDataBoundRef = useRef(false);
+  /**
+   * Expand tıklanınca Syncfusion yeniden dataBound ateşleyebilir.
+   * collapseAll yalnızca ilk yükleme / fetch yenileme / create-update sonrası uygulanır;
+   * aksi halde kullanıcı oku açamaz.
+   */
+  const collapseOnNextDataBoundRef = useRef(true);
   const handleGanttDataBound = () => {
     // İlk yüklemeden sonra ya da explicit olarak işaretlendiyse spinner temizle
     if (tearDownAfterDataBoundRef.current) {
@@ -890,10 +896,15 @@ function ProjectChart() {
 
     const pending = ganttAfterDataBoundRef.current;
     ganttAfterDataBoundRef.current = null;
+    const shouldCollapseTree = collapseOnNextDataBoundRef.current || pending != null;
+    collapseOnNextDataBoundRef.current = false;
+
+    // Kullanıcı expand/collapse yaptığında gelen dataBound'a dokunma
+    if (!shouldCollapseTree) return;
+
     /** Tam veri bağlandıktan sonra ağaç işlemlerini bir sonraki frame'e erteler; UI thread'i kısa keser. */
     requestAnimationFrame(() => {
       try {
-        // Varsayılan: her veri bağlanışında collapse all; create/update sonrası ilgili dal açılır.
         ganttRef.current?.collapseAll();
         if (pending) {
           for (const taskId of pending.expandPathTaskIds) {
@@ -1337,6 +1348,8 @@ function ProjectChart() {
       if (!isMountedRef.current) return undefined;
       // dataBound ateşlendiğinde Syncfusion işini bitirmiş olacak; orada tearDown yap.
       tearDownAfterDataBoundRef.current = true;
+      // Fetch sonrası ağacı kapalı aç (kullanıcı expand'ını bozmamak için yalnızca bu yolda).
+      collapseOnNextDataBoundRef.current = true;
       setProjectData(ascendingData);
       return ascendingData;
     } catch (error) {
@@ -2302,6 +2315,7 @@ function ProjectChart() {
           }}
           dateFormat="dd.MM.yyyy" // Add explicit date format
           splitterSettings={{ position: "48%" }}
+          rowHeight={40}
           workWeek={["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]}
           selectionSettings={{ mode: "Row", type: "Multiple" }}
           durationUnit="Day"
@@ -2377,16 +2391,10 @@ function ProjectChart() {
               edit={projectStatusColumnEdit}
               template={(props: any) => {
                 const status = normalizeProjectStatusFromRow(props);
+                if (status == null) return <span className="gantt-chip-empty">-</span>;
                 const label = getProjectStatusLabel(status);
-                const colors = getProjectTypeColumnColors(label);
                 return (
-                  <span
-                    className={cn(
-                      "inline-flex max-w-full items-center truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
-                      colors.badge,
-                    )}
-                    title={label}
-                  >
+                  <span className={getStatusChipClass(label)} title={label}>
                     {label}
                   </span>
                 );
@@ -2399,19 +2407,16 @@ function ProjectChart() {
               edit={moduleIdsColumnEdit}
               template={(props: any) => {
                 const ids = normalizeModuleIdsFromRow(props);
-                if (ids.length === 0) return <span className="text-slate-400">-</span>;
+                if (ids.length === 0) return <span className="gantt-chip-empty">-</span>;
                 const list = moduleDataRef.current as GanttModuleOption[];
                 return (
-                  <div className="flex flex-wrap items-center gap-1 py-0.5">
+                  <div className="gantt-chip-row">
                     {ids.map((id) => {
                       const name = resolveModuleDisplayName(list, id);
                       return (
                         <span
                           key={id}
-                          className={cn(
-                            "inline-flex max-w-[140px] truncate rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                            getModuleChipClass(id || name),
-                          )}
+                          className={getModuleChipClass(id || name)}
                           title={name}
                         >
                           {name}
