@@ -53,12 +53,8 @@ type ProjectTitleParts = {
 };
 
 const buildProjectTitleParts = (item: StatsBoardItem): ProjectTitleParts => {
-  const rawProject = item.projectSubDescription
-    ? `${item.projectDescription} — ${item.projectSubDescription}`
-    : item.projectDescription;
-
   const projectPath = stripLeadingCustomerName(
-    (rawProject || "").trim(),
+    (item.projectDescription || "").trim(),
     item.customerName ?? "",
   );
   const stepName =
