@@ -29,11 +29,25 @@ const getUniqueItemPersonIds = (item: StatsBoardItem): string[] => {
   return Array.from(personIds);
 };
 
+const matchesDepartment = (
+  personDepartment: string | undefined,
+  selectedDepartment: string,
+  departmentMatchNames: Set<string> | null | undefined,
+): boolean => {
+  if (selectedDepartment === "All") return true;
+  if (!personDepartment) return false;
+  if (departmentMatchNames && departmentMatchNames.size > 0) {
+    return departmentMatchNames.has(personDepartment);
+  }
+  return personDepartment === selectedDepartment;
+};
+
 export const getMatchingItemPersonIds = (
   item: StatsBoardItem,
   criteria: PersonFilterCriteria,
   userDepartmentById: Map<string, string>,
   userLevelById: Map<string, string>,
+  departmentMatchNames?: Set<string> | null,
 ): string[] => {
   const { selectedPersonId, selectedDepartment, selectedLevel } = criteria;
 
@@ -43,8 +57,11 @@ export const getMatchingItemPersonIds = (
     }
 
     if (
-      selectedDepartment !== "All" &&
-      userDepartmentById.get(personId) !== selectedDepartment
+      !matchesDepartment(
+        userDepartmentById.get(personId),
+        selectedDepartment,
+        departmentMatchNames,
+      )
     ) {
       return false;
     }
@@ -62,6 +79,7 @@ export const getHighlightPersonIds = (
   criteria: PersonFilterCriteria,
   userDepartmentById: Map<string, string>,
   userLevelById: Map<string, string>,
+  departmentMatchNames?: Set<string> | null,
 ): Set<string> | null => {
   if (!hasActivePersonCriteria(criteria)) {
     return null;
@@ -75,6 +93,7 @@ export const getHighlightPersonIds = (
       criteria,
       userDepartmentById,
       userLevelById,
+      departmentMatchNames,
     )) {
       matchingPersonIds.add(personId);
     }

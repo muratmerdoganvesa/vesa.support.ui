@@ -49,4 +49,26 @@ describe("useProjectStatisticsFilters option counts", () => {
     expect(result.current.uniqueLevels.find(({ name }) => name === "Senior")?.count).toBe(0);
     expect(result.current.uniqueLevels.find(({ name }) => name === "Junior")?.count).toBe(1);
   });
+
+  it("selecting a parent department includes child department people", () => {
+    const hierarchy = [
+      { id: "1", name: "IT", parentId: null },
+      { id: "2", name: "Engineering", parentId: "1" },
+      { id: "3", name: "Sales", parentId: "1" },
+    ];
+    const { result } = renderHook(() =>
+      useProjectStatisticsFilters([item], departments, levels, hierarchy),
+    );
+
+    act(() => result.current.handleDepartmentSelect("IT"));
+
+    expect(result.current.filteredItems).toHaveLength(1);
+    expect(result.current.departmentMatchNames?.has("Engineering")).toBe(true);
+    expect(result.current.departmentMatchNames?.has("Sales")).toBe(true);
+    expect(result.current.departmentTreeItems.map((d) => d.name)).toEqual([
+      "IT",
+      "Engineering",
+      "Sales",
+    ]);
+  });
 });

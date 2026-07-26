@@ -33,11 +33,13 @@ import {
 import { getProjectTypeColumnColors } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { ProjectTypeColumnKey } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type {
+  DepartmentTreeListItem,
   LabelCountItem,
   PersonItem,
   PlanVisibility,
   StatusItem,
 } from "../hooks/useProjectStatisticsFilters";
+import { searchDepartmentTreeListItems } from "../utils/departmentTree";
 
 type Props = {
   isLoading: boolean;
@@ -49,6 +51,7 @@ type Props = {
   selectedStatus: ProjectTypeColumnKey | "All";
   onStatusSelect: (status: ProjectTypeColumnKey | "All") => void;
   uniqueDepartments: LabelCountItem[];
+  departmentTreeItems: DepartmentTreeListItem[];
   selectedDepartment: string;
   onDepartmentSelect: (department: string) => void;
   departmentAllCount: number;
@@ -96,9 +99,11 @@ type FilterGroupConfig = {
   icon: React.ReactNode;
   activeLabel?: string;
   activeCount?: number;
-  options: FilterOption[];
+  options?: FilterOption[];
   searchSlot?: React.ReactNode;
   emptyMessage?: string;
+  /** Departman ağacı — varsa options yerine tree render edilir */
+  departmentTree?: DepartmentTreeListItem[];
 };
 
 type ActiveFilterChip = {
@@ -228,6 +233,102 @@ const FilterOptionList = ({
   </div>
 );
 
+const DepartmentTreeOptionList = ({
+  items,
+  selectedDepartment,
+  departmentAllCount,
+  onDepartmentSelect,
+  emptyMessage,
+  maxHeightClassName = "max-h-56",
+}: {
+  items: DepartmentTreeListItem[];
+  selectedDepartment: string;
+  departmentAllCount: number;
+  onDepartmentSelect: (department: string) => void;
+  emptyMessage?: string;
+  maxHeightClassName?: string;
+}) => (
+  <div
+    className={cn("space-y-0.5 overflow-y-auto pr-0.5", maxHeightClassName)}
+    role="listbox"
+    aria-label="Departman ağacı"
+  >
+    <button
+      type="button"
+      role="option"
+      aria-selected={selectedDepartment === "All"}
+      onClick={() => onDepartmentSelect("All")}
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
+        selectedDepartment === "All"
+          ? "bg-slate-100 font-semibold text-slate-900 dark:bg-muted dark:text-foreground"
+          : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted/50",
+      )}
+    >
+      <NeutralDot isSelected={selectedDepartment === "All"} />
+      <span className="flex-1 truncate">Tümü</span>
+      <span
+        className={cn(
+          "min-w-5 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums",
+          selectedDepartment === "All" ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-400",
+        )}
+      >
+        {departmentAllCount}
+      </span>
+    </button>
+
+    {items.map((item) => {
+      const isSelected = selectedDepartment === item.name;
+      return (
+        <button
+          key={item.id}
+          type="button"
+          role="option"
+          aria-selected={isSelected}
+          title={
+            item.hasChildren
+              ? `${item.name} (alt departmanlar dahil)`
+              : item.name
+          }
+          onClick={() => onDepartmentSelect(item.name)}
+          className={cn(
+            "flex w-full items-center gap-2 rounded-md py-1.5 pr-2.5 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300",
+            isSelected
+              ? "bg-slate-100 font-semibold text-slate-900 dark:bg-muted dark:text-foreground"
+              : "text-slate-600 hover:bg-slate-50 dark:text-muted-foreground dark:hover:bg-muted/50",
+          )}
+          style={{ paddingLeft: `${10 + item.depth * 14}px` }}
+        >
+          <NeutralDot isSelected={isSelected} />
+          <span className="flex min-w-0 flex-1 items-center gap-1 truncate">
+            {item.depth > 0 && (
+              <span className="shrink-0 text-slate-300 dark:text-muted-foreground/50" aria-hidden>
+                └
+              </span>
+            )}
+            <span className="truncate">{item.name}</span>
+            {item.hasChildren && (
+              <span className="shrink-0 text-[9px] font-medium text-slate-400">+alt</span>
+            )}
+          </span>
+          <span
+            className={cn(
+              "min-w-5 shrink-0 rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums",
+              isSelected ? "bg-slate-200 text-slate-700" : "bg-slate-100 text-slate-400",
+            )}
+          >
+            {item.count}
+          </span>
+        </button>
+      );
+    })}
+
+    {items.length === 0 && emptyMessage && (
+      <p className="px-2.5 py-2 text-center text-xs text-slate-400">{emptyMessage}</p>
+    )}
+  </div>
+);
+
 const FilterLabelContent = ({
   icon,
   label,
@@ -313,6 +414,7 @@ const ProjectStatisticsFilterBar = ({
   selectedStatus,
   onStatusSelect,
   uniqueDepartments,
+  departmentTreeItems,
   selectedDepartment,
   onDepartmentSelect,
   departmentAllCount,
@@ -347,8 +449,9 @@ const ProjectStatisticsFilterBar = ({
   const filteredCustomerList = uniqueCustomers.filter(
     ({ name }) => !customerSearch || name.toLowerCase().includes(customerSearch.toLowerCase()),
   );
-  const filteredDepartmentList = uniqueDepartments.filter(
-    ({ name }) => !departmentSearch || name.toLowerCase().includes(departmentSearch.toLowerCase()),
+  const filteredDepartmentTreeItems = useMemo(
+    () => searchDepartmentTreeListItems(departmentTreeItems, departmentSearch),
+    [departmentTreeItems, departmentSearch],
   );
 
   const statusGroup: FilterGroupConfig | null = useMemo(() => {
@@ -389,25 +492,7 @@ const ProjectStatisticsFilterBar = ({
   }, [uniqueStatuses, selectedStatus, onStatusSelect]);
 
   const departmentGroup: FilterGroupConfig | null = useMemo(() => {
-    if (uniqueDepartments.length === 0) return null;
-    const options: FilterOption[] = [
-      {
-        key: "All",
-        label: "Tümü",
-        count: departmentAllCount,
-        indicator: <NeutralDot isSelected={selectedDepartment === "All"} />,
-        isSelected: selectedDepartment === "All",
-        onSelect: () => onDepartmentSelect("All"),
-      },
-      ...filteredDepartmentList.map(({ name, count }) => ({
-        key: name,
-        label: name,
-        count,
-        indicator: <NeutralDot isSelected={selectedDepartment === name} />,
-        isSelected: selectedDepartment === name,
-        onSelect: () => onDepartmentSelect(name),
-      })),
-    ];
+    if (departmentTreeItems.length === 0 && uniqueDepartments.length === 0) return null;
     return {
       key: "department",
       label: "Departman",
@@ -415,9 +500,9 @@ const ProjectStatisticsFilterBar = ({
       activeLabel: selectedDepartment !== "All" ? selectedDepartment : undefined,
       activeCount:
         selectedDepartment !== "All"
-          ? uniqueDepartments.find((d) => d.name === selectedDepartment)?.count
+          ? departmentTreeItems.find((d) => d.name === selectedDepartment)?.count ??
+            uniqueDepartments.find((d) => d.name === selectedDepartment)?.count
           : undefined,
-      options,
       emptyMessage: "Departman bulunamadı",
       searchSlot: (
         <SearchField
@@ -429,13 +514,13 @@ const ProjectStatisticsFilterBar = ({
           className="mb-2"
         />
       ),
+      departmentTree: filteredDepartmentTreeItems,
     };
   }, [
+    departmentTreeItems,
+    filteredDepartmentTreeItems,
     uniqueDepartments,
-    filteredDepartmentList,
     selectedDepartment,
-    departmentAllCount,
-    onDepartmentSelect,
     departmentSearch,
   ]);
 
@@ -672,9 +757,12 @@ const ProjectStatisticsFilterBar = ({
       });
     }
     if (selectedDepartment !== "All") {
+      const selectedTreeItem = departmentTreeItems.find((d) => d.name === selectedDepartment);
       chips.push({
         key: "department",
-        label: `Departman: ${selectedDepartment}`,
+        label: selectedTreeItem?.hasChildren
+          ? `Departman: ${selectedDepartment} (+alt)`
+          : `Departman: ${selectedDepartment}`,
         onClear: () => onDepartmentSelect("All"),
       });
     }
@@ -726,6 +814,7 @@ const ProjectStatisticsFilterBar = ({
     planVisibility,
     uniqueStatuses,
     uniquePersons,
+    departmentTreeItems,
     onSearchChange,
     onStatusSelect,
     onDepartmentSelect,
@@ -790,10 +879,23 @@ const ProjectStatisticsFilterBar = ({
                 </PopoverTrigger>
                 <PopoverContent
                   align="start"
-                  className="w-64 duration-200 motion-reduce:animate-none motion-reduce:duration-0"
+                  className="w-72 duration-200 motion-reduce:animate-none motion-reduce:duration-0"
                 >
                   {group.searchSlot}
-                  <FilterOptionList options={group.options} emptyMessage={group.emptyMessage} />
+                  {group.departmentTree ? (
+                    <DepartmentTreeOptionList
+                      items={group.departmentTree}
+                      selectedDepartment={selectedDepartment}
+                      departmentAllCount={departmentAllCount}
+                      onDepartmentSelect={onDepartmentSelect}
+                      emptyMessage={group.emptyMessage}
+                    />
+                  ) : (
+                    <FilterOptionList
+                      options={group.options ?? []}
+                      emptyMessage={group.emptyMessage}
+                    />
+                  )}
                 </PopoverContent>
               </Popover>
             ))}
@@ -856,11 +958,22 @@ const ProjectStatisticsFilterBar = ({
                         </AccordionTrigger>
                         <AccordionContent>
                           {group.searchSlot}
-                          <FilterOptionList
-                            options={group.options}
-                            emptyMessage={group.emptyMessage}
-                            maxHeightClassName="max-h-48"
-                          />
+                          {group.departmentTree ? (
+                            <DepartmentTreeOptionList
+                              items={group.departmentTree}
+                              selectedDepartment={selectedDepartment}
+                              departmentAllCount={departmentAllCount}
+                              onDepartmentSelect={onDepartmentSelect}
+                              emptyMessage={group.emptyMessage}
+                              maxHeightClassName="max-h-48"
+                            />
+                          ) : (
+                            <FilterOptionList
+                              options={group.options ?? []}
+                              emptyMessage={group.emptyMessage}
+                              maxHeightClassName="max-h-48"
+                            />
+                          )}
                         </AccordionContent>
                       </AccordionItem>
                     ))}
