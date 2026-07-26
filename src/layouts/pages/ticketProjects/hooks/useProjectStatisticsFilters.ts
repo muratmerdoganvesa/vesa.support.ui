@@ -66,6 +66,7 @@ const applyClientFilters = (
   params: FilterParams,
   userDepartmentById: Map<string, string>,
   userLevelById: Map<string, string>,
+  departmentMatchNames?: Set<string> | null,
 ): StatsBoardItem[] => {
   let filtered = items;
   const {
@@ -127,6 +128,7 @@ const applyClientFilters = (
           { selectedPersonId, selectedDepartment, selectedLevel },
           userDepartmentById,
           userLevelById,
+          departmentMatchNames,
         ).length > 0,
     );
   }
@@ -138,6 +140,7 @@ export const useProjectStatisticsFilters = (
   items: StatsBoardItem[],
   userDepartmentById: Map<string, string>,
   userLevelById: Map<string, string>,
+  departmentHierarchy: DepartmentNode[] = [],
 ) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState("All");
@@ -173,9 +176,37 @@ export const useProjectStatisticsFilters = (
     ],
   );
 
+  const boardDepartmentNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const item of items) {
+      for (const id of getItemPersonIds(item)) {
+        const dept = userDepartmentById.get(id)?.trim();
+        if (dept) names.add(dept);
+      }
+    }
+    return names;
+  }, [items, userDepartmentById]);
+
+  const relevantDepartmentNodes = useMemo(
+    () => buildRelevantDepartmentNodes(departmentHierarchy, boardDepartmentNames),
+    [departmentHierarchy, boardDepartmentNames],
+  );
+
+  const departmentMatchNames = useMemo(() => {
+    if (selectedDepartment === "All") return null;
+    return getSelfAndDescendantNames(relevantDepartmentNodes, selectedDepartment);
+  }, [relevantDepartmentNodes, selectedDepartment]);
+
   const filteredItems = useMemo(
-    () => applyClientFilters(items, filterParams, userDepartmentById, userLevelById),
-    [items, filterParams, userDepartmentById, userLevelById],
+    () =>
+      applyClientFilters(
+        items,
+        filterParams,
+        userDepartmentById,
+        userLevelById,
+        departmentMatchNames,
+      ),
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   const highlightPersonIds = useMemo(
@@ -189,6 +220,7 @@ export const useProjectStatisticsFilters = (
         },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
     [
       filteredItems,
@@ -197,6 +229,7 @@ export const useProjectStatisticsFilters = (
       selectedLevel,
       userDepartmentById,
       userLevelById,
+      departmentMatchNames,
     ],
   );
 
@@ -207,8 +240,9 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, selectedPersonId: "All" },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
-    [items, filterParams, userDepartmentById, userLevelById],
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   const baseForCustomer = useMemo(
@@ -218,8 +252,9 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, selectedCustomer: "All" },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
-    [items, filterParams, userDepartmentById, userLevelById],
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   const baseForModule = useMemo(
@@ -229,8 +264,9 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, selectedModule: "All" },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
-    [items, filterParams, userDepartmentById, userLevelById],
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   const baseForStatus = useMemo(
@@ -240,8 +276,9 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, selectedStatus: "All" },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
-    [items, filterParams, userDepartmentById, userLevelById],
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   const baseForDepartment = useMemo(
@@ -251,6 +288,7 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, selectedDepartment: "All" },
         userDepartmentById,
         userLevelById,
+        null,
       ),
     [items, filterParams, userDepartmentById, userLevelById],
   );
@@ -262,8 +300,9 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, selectedLevel: "All" },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
-    [items, filterParams, userDepartmentById, userLevelById],
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   /** Diğer tüm filtreler uygulanmış ama arama terimi hariç bırakılmış öğeler.
@@ -275,8 +314,9 @@ export const useProjectStatisticsFilters = (
         { ...filterParams, searchTerm: "" },
         userDepartmentById,
         userLevelById,
+        departmentMatchNames,
       ),
-    [items, filterParams, userDepartmentById, userLevelById],
+    [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames],
   );
 
   const allPersons = useMemo((): { id: string; name: string }[] => {
@@ -301,10 +341,18 @@ export const useProjectStatisticsFilters = (
             { ...filterParams, selectedPersonId: id },
             userDepartmentById,
             userLevelById,
+            departmentMatchNames,
           ).includes(id),
         ).length,
       })),
-    [allPersons, baseForPerson, filterParams, userDepartmentById, userLevelById],
+    [
+      allPersons,
+      baseForPerson,
+      filterParams,
+      userDepartmentById,
+      userLevelById,
+      departmentMatchNames,
+    ],
   );
 
   const uniqueCustomers = useMemo(
@@ -340,28 +388,42 @@ export const useProjectStatisticsFilters = (
   }, [baseForStatus]);
 
   const uniqueDepartments = useMemo((): LabelCountItem[] => {
-    const deptSet = new Set<string>();
-    for (const item of baseForDepartment) {
-      for (const id of getItemPersonIds(item)) {
-        const dept = userDepartmentById.get(id)?.trim();
-        if (dept) deptSet.add(dept);
-      }
-    }
-    return Array.from(deptSet)
-      .sort((a, b) => a.localeCompare(b, "tr"))
-      .map((name) => ({
-        name,
+    const tree = flattenDepartmentTree(buildDepartmentTree(relevantDepartmentNodes));
+    return tree.map((node) => {
+      const matchNames = getSelfAndDescendantNames(relevantDepartmentNodes, node.name);
+      return {
+        name: node.name,
         count: baseForDepartment.filter(
           (item) =>
             getMatchingItemPersonIds(
               item,
-              { ...filterParams, selectedDepartment: name },
+              { ...filterParams, selectedDepartment: node.name },
               userDepartmentById,
               userLevelById,
+              matchNames,
             ).length > 0,
         ).length,
-      }));
-  }, [baseForDepartment, filterParams, userDepartmentById, userLevelById]);
+      };
+    });
+  }, [
+    relevantDepartmentNodes,
+    baseForDepartment,
+    filterParams,
+    userDepartmentById,
+    userLevelById,
+  ]);
+
+  const departmentTreeItems = useMemo((): DepartmentTreeListItem[] => {
+    const countByName = new Map(uniqueDepartments.map((d) => [d.name, d.count]));
+    return flattenDepartmentTree(buildDepartmentTree(relevantDepartmentNodes)).map((node) => ({
+      id: node.id,
+      name: node.name,
+      parentId: node.parentId,
+      depth: node.depth,
+      hasChildren: node.children.length > 0,
+      count: countByName.get(node.name) ?? 0,
+    }));
+  }, [relevantDepartmentNodes, uniqueDepartments]);
 
   const uniqueLevels = useMemo((): LabelCountItem[] => {
     const levelSet = new Set<string>();
@@ -382,10 +444,17 @@ export const useProjectStatisticsFilters = (
               { ...filterParams, selectedLevel: name },
               userDepartmentById,
               userLevelById,
+              departmentMatchNames,
             ).length > 0,
         ).length,
       }));
-  }, [baseForLevel, filterParams, userDepartmentById, userLevelById]);
+  }, [
+    baseForLevel,
+    filterParams,
+    userDepartmentById,
+    userLevelById,
+    departmentMatchNames,
+  ]);
 
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
@@ -426,6 +495,7 @@ export const useProjectStatisticsFilters = (
       { ...filterParams, planVisibility: "all" },
       userDepartmentById,
       userLevelById,
+      departmentMatchNames,
     );
     const plans = base.filter((item) => item.kind === "simulated").length;
     return {
@@ -433,7 +503,7 @@ export const useProjectStatisticsFilters = (
       plansOnly: plans,
       hidePlans: base.length - plans,
     };
-  }, [items, filterParams, userDepartmentById, userLevelById]);
+  }, [items, filterParams, userDepartmentById, userLevelById, departmentMatchNames]);
 
   const activeFilterCount = useMemo(
     () =>
@@ -488,6 +558,8 @@ export const useProjectStatisticsFilters = (
     uniqueModules,
     uniqueStatuses,
     uniqueDepartments,
+    departmentTreeItems,
+    departmentMatchNames,
     uniqueLevels,
     planVisibilityCounts,
     departmentAllCount: baseForDepartment.length,

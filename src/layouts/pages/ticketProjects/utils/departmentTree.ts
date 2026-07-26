@@ -183,3 +183,27 @@ export const filterDepartmentTreeForSearch = (
 
   return flattenDepartmentTree(roots).filter((node) => keepIds.has(node.id));
 };
+
+/** Flatten tree list item'larında arama (eşleşen + ataları). */
+export const searchDepartmentTreeListItems = (
+  items: DepartmentTreeListItem[],
+  query: string,
+): DepartmentTreeListItem[] => {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const keepIds = new Set<string>();
+
+  for (const item of items) {
+    if (!item.name.toLowerCase().includes(q)) continue;
+    let current: DepartmentTreeListItem | undefined = item;
+    while (current) {
+      if (keepIds.has(current.id)) break;
+      keepIds.add(current.id);
+      current = current.parentId ? byId.get(current.parentId) : undefined;
+    }
+  }
+
+  return items.filter((item) => keepIds.has(item.id));
+};

@@ -5,6 +5,7 @@ import {
   filterDepartmentTreeForSearch,
   flattenDepartmentTree,
   getSelfAndDescendantNames,
+  searchDepartmentTreeListItems,
 } from "./departmentTree";
 
 const hierarchy = [
@@ -46,5 +47,21 @@ describe("departmentTree", () => {
     const roots = buildDepartmentTree(hierarchy);
     const filtered = filterDepartmentTreeForSearch(roots, "front");
     expect(filtered.map((n) => n.name)).toEqual(["IT", "Gelistirme", "Frontend"]);
+  });
+
+  it("searchDepartmentTreeListItems keeps ancestors", () => {
+    const items = flattenDepartmentTree(buildDepartmentTree(hierarchy)).map((n) => ({
+      id: n.id,
+      name: n.name,
+      parentId: n.parentId,
+      depth: n.depth,
+      hasChildren: n.children.length > 0,
+      count: 1,
+    }));
+    expect(searchDepartmentTreeListItems(items, "front").map((n) => n.name)).toEqual([
+      "IT",
+      "Gelistirme",
+      "Frontend",
+    ]);
   });
 });
