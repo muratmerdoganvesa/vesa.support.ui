@@ -20,16 +20,23 @@ export type DepartmentTreeListItem = {
 
 const orphanId = (name: string) => `orphan:${name}`;
 
+/** Guid karşılaştırma: API id/parentId casing farkı bozmasın. */
+const normalizeId = (value: string | null | undefined): string | null => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.toLowerCase() : null;
+};
+
 /** Flat listeyi parentId ile ağaca çevirir; isimlere göre TR sıralar. */
 export const buildDepartmentTree = (nodes: DepartmentNode[]): DepartmentTreeNode[] => {
   const byId = new Map<string, DepartmentTreeNode>();
 
   for (const node of nodes) {
-    if (!node.id || !node.name.trim()) continue;
-    byId.set(node.id, {
-      id: node.id,
+    const id = normalizeId(node.id);
+    if (!id || !node.name.trim()) continue;
+    byId.set(id, {
+      id,
       name: node.name.trim(),
-      parentId: node.parentId,
+      parentId: normalizeId(node.parentId),
       children: [],
       depth: 0,
     });
@@ -129,10 +136,18 @@ export const buildRelevantDepartmentNodes = (
 
   if (boardNames.size === 0) return [];
 
-  const byId = new Map(hierarchy.map((n) => [n.id, n]));
+  const normalizedHierarchy = hierarchy.map((n) => ({
+    id: normalizeId(n.id) as string,
+    name: n.name.trim(),
+    parentId: normalizeId(n.parentId),
+  }));
+
+  const byId = new Map(
+    normalizedHierarchy.filter((n) => n.id).map((n) => [n.id, n]),
+  );
   const byName = new Map<string, DepartmentNode>();
-  for (const node of hierarchy) {
-    const name = node.name.trim();
+  for (const node of normalizedHierarchy) {
+    const name = node.name;
     if (name && !byName.has(name)) byName.set(name, node);
   }
 
@@ -149,7 +164,9 @@ export const buildRelevantDepartmentNodes = (
     }
   }
 
-  const result: DepartmentNode[] = hierarchy.filter((n) => relevantIds.has(n.id));
+  const result: DepartmentNode[] = normalizedHierarchy.filter((n) =>
+    relevantIds.has(n.id),
+  );
 
   for (const name of boardNames) {
     if (!byName.has(name)) {

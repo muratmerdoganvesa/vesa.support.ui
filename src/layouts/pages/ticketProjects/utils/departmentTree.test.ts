@@ -28,6 +28,28 @@ describe("departmentTree", () => {
     ]);
   });
 
+  it("links parent/child even when guid casing differs", () => {
+    const mixedCase = [
+      { id: "88E80DC3-26F8-42E0-AF7F-5BEC2CDAA93E", name: "Sap Head of AMS", parentId: null },
+      {
+        id: "757639BF-5D72-4E74-BEA4-E9C6738ADC80",
+        name: "SAP HCM Destek Departmanı DG",
+        parentId: "88e80dc3-26f8-42e0-af7f-5bec2cdaa93e",
+      },
+      {
+        id: "6AD800A2-5D81-431F-A423-B9CAA9F3DBD0",
+        name: "SAP HCM Destek Departmanı ED",
+        parentId: "88e80dc3-26f8-42e0-af7f-5bec2cdaa93e",
+      },
+    ];
+    const flat = flattenDepartmentTree(buildDepartmentTree(mixedCase));
+    expect(flat.map((n) => `${n.depth}:${n.name}`)).toEqual([
+      "0:Sap Head of AMS",
+      "1:SAP HCM Destek Departmanı DG",
+      "1:SAP HCM Destek Departmanı ED",
+    ]);
+  });
+
   it("selecting parent includes all descendant names", () => {
     expect(Array.from(getSelfAndDescendantNames(hierarchy, "IT")).sort()).toEqual([
       "Destek",
