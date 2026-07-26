@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Boxes, LayoutGrid, RefreshCw, Plus, Users } from "lucide-react";
+import { ProjectTypes } from "api/generated";
 import { cn } from "lib/utils";
 import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchProjectCompanyMap } from "layouts/pages/ticketProjects/api/fetchProjectCompanyMap";
@@ -133,6 +134,10 @@ type MobileBoardProps = {
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onChangeSimulatedStatus?: (
+    item: StatsBoardItem,
+    projectStatus: ProjectTypes | null,
+  ) => void;
   onAskStatusSuccess?: (message: string) => void;
   onAskStatusError?: (message: string) => void;
 };
@@ -146,6 +151,7 @@ export const MobileBoard = ({
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onChangeSimulatedStatus,
   onAskStatusSuccess,
   onAskStatusError,
 }: MobileBoardProps) => {
@@ -206,6 +212,7 @@ export const MobileBoard = ({
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}
+              onChangeSimulatedStatus={onChangeSimulatedStatus}
               onAskStatusSuccess={onAskStatusSuccess}
               onAskStatusError={onAskStatusError}
             />
@@ -570,6 +577,41 @@ const ProjectStatisticsTab = () => {
     [dispatchAlert],
   );
 
+  const handleChangeSimulatedStatus = useCallback(
+    async (item: StatsBoardItem, projectStatus: ProjectTypes | null) => {
+      if (item.kind !== "simulated") return;
+
+      const previousStatus = item.projectStatus ?? null;
+      setBoardItems((prev) =>
+        prev.map((x) => (x.id === item.id ? { ...x, projectStatus } : x)),
+      );
+
+      try {
+        const updated = await updateSimulatedProjectPlan({
+          id: item.id,
+          customerName: item.customerName,
+          projectDescription: item.projectDescription,
+          projectSubDescription: item.projectSubDescription ?? null,
+          projectStatus,
+          modules: item.modules ?? [],
+          employeeUserIds: (item.employees ?? []).map((e) => e.id).filter(Boolean),
+          projectManagerId: item.projectManager?.id ?? null,
+          isActive: item.isActive ?? true,
+        });
+        setBoardItems((prev) => prev.map((x) => (x.id === item.id ? updated : x)));
+        dispatchAlert({ message: "Plan durumu güncellendi.", type: "Success" });
+      } catch {
+        setBoardItems((prev) =>
+          prev.map((x) =>
+            x.id === item.id ? { ...x, projectStatus: previousStatus } : x,
+          ),
+        );
+        dispatchAlert({ message: "Plan durumu güncellenirken hata oluştu.", type: "Error" });
+      }
+    },
+    [dispatchAlert],
+  );
+
   const handlePlanSubmit = useCallback(
     async (payload: SimulatedProjectPlanPayload) => {
       try {
@@ -694,6 +736,7 @@ const ProjectStatisticsTab = () => {
                   highlightPersonIds={filters.highlightPersonIds}
                   onEditSimulated={handleEditSimulated}
                   onDeleteSimulated={handleDeleteSimulated}
+                  onChangeSimulatedStatus={handleChangeSimulatedStatus}
                   onAskStatusSuccess={handleAskStatusSuccess}
                   onAskStatusError={handleAskStatusError}
                 />
@@ -715,6 +758,7 @@ const ProjectStatisticsTab = () => {
                         highlightPersonIds={filters.highlightPersonIds}
                         onEditSimulated={handleEditSimulated}
                         onDeleteSimulated={handleDeleteSimulated}
+                        onChangeSimulatedStatus={handleChangeSimulatedStatus}
                         onAskStatusSuccess={handleAskStatusSuccess}
                         onAskStatusError={handleAskStatusError}
                       />
