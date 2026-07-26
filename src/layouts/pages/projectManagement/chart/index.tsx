@@ -318,6 +318,29 @@ function resolveModuleDisplayName(moduleList: GanttModuleOption[], raw: string):
   return trimmed;
 }
 
+/** Syncfusion hücre stillerini ezmeyen sabit chip sınıfları (styles.css) */
+const STATUS_CHIP_CLASS: Record<string, string> = {
+  Backlog: "gantt-chip gantt-chip--backlog",
+  Realization: "gantt-chip gantt-chip--realization",
+  UAT: "gantt-chip gantt-chip--uat",
+  Preparation: "gantt-chip gantt-chip--preparation",
+  DONE: "gantt-chip gantt-chip--done",
+  Beklemede: "gantt-chip gantt-chip--pending",
+  "—": "gantt-chip gantt-chip--empty",
+};
+
+function getStatusChipClass(label: string): string {
+  return STATUS_CHIP_CLASS[label] ?? "gantt-chip gantt-chip--empty";
+}
+
+function getModuleChipClass(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  }
+  return `gantt-chip gantt-chip--module gantt-chip--mod-${hash % 10}`;
+}
+
 /** Kök görev mi (Syncfusion / API: null, 0, boş). */
 function isRootParentId(pid: unknown): boolean {
   if (pid === null || pid === undefined || pid === "") return true;
@@ -856,6 +879,12 @@ function ProjectChart() {
    * tearDownAfterDataBoundRef=true ise dataBound'da tearDown çağrılır ve flag sıfırlanır.
    */
   const tearDownAfterDataBoundRef = useRef(false);
+  /**
+   * Expand tıklanınca Syncfusion yeniden dataBound ateşleyebilir.
+   * collapseAll yalnızca ilk yükleme / fetch yenileme / create-update sonrası uygulanır;
+   * aksi halde kullanıcı oku açamaz.
+   */
+  const collapseOnNextDataBoundRef = useRef(true);
   const handleGanttDataBound = () => {
     // İlk yüklemeden sonra ya da explicit olarak işaretlendiyse spinner temizle
     if (tearDownAfterDataBoundRef.current) {
@@ -866,21 +895,30 @@ function ProjectChart() {
     }
 
     const pending = ganttAfterDataBoundRef.current;
-    if (!pending) return;
     ganttAfterDataBoundRef.current = null;
+    const shouldCollapseTree = collapseOnNextDataBoundRef.current || pending != null;
+    collapseOnNextDataBoundRef.current = false;
+
+    // Kullanıcı expand/collapse yaptığında gelen dataBound'a dokunma
+    if (!shouldCollapseTree) return;
+
     /** Tam veri bağlandıktan sonra ağaç işlemlerini bir sonraki frame'e erteler; UI thread'i kısa keser. */
     requestAnimationFrame(() => {
       try {
         ganttRef.current?.collapseAll();
-        for (const taskId of pending.expandPathTaskIds) {
-          ganttRef.current?.expandByID(taskId);
+        if (pending) {
+          for (const taskId of pending.expandPathTaskIds) {
+            ganttRef.current?.expandByID(taskId);
+          }
         }
       } catch {
         /* veri / tree henüz hazır değilse */
       }
-      requestAnimationFrame(() => {
-        tearDownSyncfusionBlockingUi(ganttRef.current);
-      });
+      if (pending) {
+        requestAnimationFrame(() => {
+          tearDownSyncfusionBlockingUi(ganttRef.current);
+        });
+      }
     });
   };
   /** GetTaskModules sonuçları (liste endpoint'i modül döndürmeyebilir) */
@@ -1310,6 +1348,8 @@ function ProjectChart() {
       if (!isMountedRef.current) return undefined;
       // dataBound ateşlendiğinde Syncfusion işini bitirmiş olacak; orada tearDown yap.
       tearDownAfterDataBoundRef.current = true;
+      // Fetch sonrası ağacı kapalı aç (kullanıcı expand'ını bozmamak için yalnızca bu yolda).
+      collapseOnNextDataBoundRef.current = true;
       setProjectData(ascendingData);
       return ascendingData;
     } catch (error) {
@@ -2254,6 +2294,7 @@ function ProjectChart() {
           dataSource={projectData}
           taskFields={taskFields}
           taskType="FixedDuration"
+          collapseAllParentTasks={true}
           enableContextMenu={true}
           queryTaskbarInfo={handleTaskbarInfo}
           tooltipSettings={{
@@ -2273,7 +2314,8 @@ function ProjectChart() {
             },
           }}
           dateFormat="dd.MM.yyyy" // Add explicit date format
-          splitterSettings={{ position: "31.5%" }}
+          splitterSettings={{ position: "48%" }}
+          rowHeight={40}
           workWeek={["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]}
           selectionSettings={{ mode: "Row", type: "Multiple" }}
           durationUnit="Day"
@@ -2315,10 +2357,11 @@ function ProjectChart() {
             ]}
           />
           <ColumnsDirective>
-            <ColumnDirective field="TaskID" headerText="ID" />
+            <ColumnDirective field="TaskID" headerText="ID" width="55" />
             <ColumnDirective
               field="TaskName"
               headerText="Görev Adı"
+              width="200"
               template={(props: any) => {
                 if (!props.Notes || props.Notes.length === 0) {
                   return <div>{props.TaskName}</div>;
@@ -2342,8 +2385,52 @@ function ProjectChart() {
               }}
             />
             <ColumnDirective
+              field="projectStatus"
+              headerText="Durum"
+              width="120"
+              edit={projectStatusColumnEdit}
+              template={(props: any) => {
+                const status = normalizeProjectStatusFromRow(props);
+                if (status == null) return <span className="gantt-chip-empty">-</span>;
+                const label = getProjectStatusLabel(status);
+                return (
+                  <span className={getStatusChipClass(label)} title={label}>
+                    {label}
+                  </span>
+                );
+              }}
+            />
+            <ColumnDirective
+              field="moduleIds"
+              headerText="Modüller"
+              width="180"
+              edit={moduleIdsColumnEdit}
+              template={(props: any) => {
+                const ids = normalizeModuleIdsFromRow(props);
+                if (ids.length === 0) return <span className="gantt-chip-empty">-</span>;
+                const list = moduleDataRef.current as GanttModuleOption[];
+                return (
+                  <div className="gantt-chip-row">
+                    {ids.map((id) => {
+                      const name = resolveModuleDisplayName(list, id);
+                      return (
+                        <span
+                          key={id}
+                          className={getModuleChipClass(id || name)}
+                          title={name}
+                        >
+                          {name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+            <ColumnDirective
               field="resources"
               headerText="Atananlar"
+              width="130"
               template={(props: any) => {
                 const assignees = getAssigneeDisplayNames(props.resources);
                 if (assignees.length === 0) return <>-</>;
@@ -2368,27 +2455,6 @@ function ProjectChart() {
                   </div>
                 );
               }}
-            />
-            <ColumnDirective
-              field="moduleIds"
-              headerText="Modüller"
-              width="150"
-              edit={moduleIdsColumnEdit}
-              template={(props: any) => {
-                const ids = normalizeModuleIdsFromRow(props);
-                const list = moduleDataRef.current as GanttModuleOption[];
-                const text = ids.map((id) => resolveModuleDisplayName(list, id)).join(", ");
-                return <div>{text}</div>;
-              }}
-            />
-            <ColumnDirective
-              field="projectStatus"
-              headerText="Durum"
-              width="120"
-              edit={projectStatusColumnEdit}
-              template={(props: any) => (
-                <div>{getProjectStatusLabel(normalizeProjectStatusFromRow(props))}</div>
-              )}
             />
 
             <ColumnDirective
