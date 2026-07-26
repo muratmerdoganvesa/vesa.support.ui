@@ -12,7 +12,6 @@ import {
   SIMULATED_PLAN_CARD_COLORS,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
-import { Badge } from "components/ui/badge";
 import { Button } from "components/ui/button";
 import AskProjectStatusPanel from "./AskProjectStatusPanel";
 
@@ -106,7 +105,13 @@ const ProjectStatsKanbanCard = ({
   const isSimulated = item.kind === "simulated";
   const customerName = item.customerName?.trim() || "";
   const { projectPath, stepName } = buildProjectTitleParts(item);
-  const headline = [customerName, projectPath, stepName].filter(Boolean).join(" · ") || "İsimsiz kart";
+  const moduleNames = (item.modules ?? []).map((m) => String(m).trim()).filter(Boolean);
+  const moduleLabel = moduleNames.join(", ");
+  const hasModules = moduleNames.length > 0;
+  const headline =
+    [customerName, projectPath, hasModules ? moduleLabel : stepName]
+      .filter(Boolean)
+      .join(" · ") || "İsimsiz kart";
 
   const statusLabel =
     item.kind === "project"
@@ -117,6 +122,7 @@ const ProjectStatsKanbanCard = ({
 
   const canNavigateToGantt = !isSimulated && Boolean(item.workCompanyId && item.projectId);
   const formattedDate = formatDate(item.createdDate);
+  const showProjectManagerSection = Boolean(item.projectManager || stepName);
 
   const handleToggle = () => {
     onToggleExpand(item.id);
@@ -161,14 +167,21 @@ const ProjectStatsKanbanCard = ({
               {projectPath}
             </span>
           ) : null}
-          {stepName ? (
+          {hasModules ? (
             <span
               className="mt-1 inline-flex max-w-full truncate rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
-              title={`Adım: ${stepName}`}
+              title={`Modül: ${moduleLabel}`}
             >
-              {stepName}
+              {moduleLabel}
             </span>
-          ) : null}
+          ) : (
+            <span
+              className="mt-1 inline-flex max-w-full truncate text-[10px] font-semibold text-red-600 dark:text-red-400"
+              title="Modül girilmemiş"
+            >
+              modul girilmemiş
+            </span>
+          )}
         </div>
 
         <ChevronDown
@@ -202,25 +215,6 @@ const ProjectStatsKanbanCard = ({
             </span>
           </div>
 
-          {item.modules.length > 0 && (
-            <div className="space-y-1">
-              <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Modüller
-              </span>
-              <div className="flex flex-wrap gap-1">
-                {item.modules.map((moduleName) => (
-                  <Badge
-                    key={moduleName}
-                    variant="secondary"
-                    className="rounded-full px-2 py-0 text-[10px] font-medium"
-                  >
-                    {moduleName}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
           {item.employees.length > 0 && (
             <div className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -239,14 +233,24 @@ const ProjectStatsKanbanCard = ({
             </div>
           )}
 
-          {item.projectManager && (
+          {showProjectManagerSection && (
             <div className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Proje Yöneticisi
               </span>
-              <span className={getPersonNameClass(item.projectManager.id, highlightPersonIds)}>
-                {item.projectManager.fullName}
-              </span>
+              {stepName ? (
+                <span
+                  className="block text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
+                  title={stepName}
+                >
+                  {stepName}
+                </span>
+              ) : null}
+              {item.projectManager ? (
+                <span className={getPersonNameClass(item.projectManager.id, highlightPersonIds)}>
+                  {item.projectManager.fullName}
+                </span>
+              ) : null}
             </div>
           )}
 
