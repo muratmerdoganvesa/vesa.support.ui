@@ -757,9 +757,12 @@ const ProjectStatisticsFilterBar = ({
       });
     }
     if (selectedDepartment !== "All") {
+      const selectedTreeItem = departmentTreeItems.find((d) => d.name === selectedDepartment);
       chips.push({
         key: "department",
-        label: `Departman: ${selectedDepartment}`,
+        label: selectedTreeItem?.hasChildren
+          ? `Departman: ${selectedDepartment} (+alt)`
+          : `Departman: ${selectedDepartment}`,
         onClear: () => onDepartmentSelect("All"),
       });
     }
@@ -811,6 +814,7 @@ const ProjectStatisticsFilterBar = ({
     planVisibility,
     uniqueStatuses,
     uniquePersons,
+    departmentTreeItems,
     onSearchChange,
     onStatusSelect,
     onDepartmentSelect,

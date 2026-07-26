@@ -10,8 +10,8 @@ export const fetchTicketDepartments = async (): Promise<DepartmentNode[]> => {
   return (response.data ?? [])
     .filter((d) => d.id && d.departmentText?.trim())
     .map((d) => ({
-      id: d.id as string,
-      name: (d.departmentText as string).trim(),
-      parentId: d.parentDepartmentId?.trim() || null,
+      id: String(d.id),
+      name: String(d.departmentText).trim(),
+      parentId: d.parentDepartmentId ? String(d.parentDepartmentId).trim() : null,
     }));
 };
