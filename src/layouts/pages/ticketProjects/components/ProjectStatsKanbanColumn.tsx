@@ -1,4 +1,5 @@
 import { InboxIcon } from "lucide-react";
+import { ProjectTypes } from "api/generated";
 import { cn } from "lib/utils";
 import {
   getProjectTypeColumnColors,
@@ -18,6 +19,10 @@ type ProjectStatsKanbanColumnProps = {
   highlightPersonIds?: Set<string> | null;
   onEditSimulated?: (item: StatsBoardItem) => void;
   onDeleteSimulated?: (item: StatsBoardItem) => void;
+  onChangeSimulatedStatus?: (
+    item: StatsBoardItem,
+    projectStatus: ProjectTypes | null,
+  ) => void;
   onAskStatusSuccess?: (message: string) => void;
   onAskStatusError?: (message: string) => void;
 };
@@ -30,6 +35,7 @@ const ProjectStatsKanbanColumn = ({
   highlightPersonIds,
   onEditSimulated,
   onDeleteSimulated,
+  onChangeSimulatedStatus,
   onAskStatusSuccess,
   onAskStatusError,
 }: ProjectStatsKanbanColumnProps) => {
@@ -73,6 +79,7 @@ const ProjectStatsKanbanColumn = ({
               highlightPersonIds={highlightPersonIds}
               onEditSimulated={onEditSimulated}
               onDeleteSimulated={onDeleteSimulated}
+              onChangeSimulatedStatus={onChangeSimulatedStatus}
               onAskStatusSuccess={onAskStatusSuccess}
               onAskStatusError={onAskStatusError}
             />
