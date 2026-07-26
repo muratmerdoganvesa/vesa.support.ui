@@ -95,6 +95,7 @@ import {
 } from "api/generated";
 import {
   getProjectStatusLabel,
+  getProjectTypeColumnColors,
   projectTypeOptions,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -316,6 +317,28 @@ function resolveModuleDisplayName(moduleList: GanttModuleOption[], raw: string):
   const byName = moduleList.find((m) => String(m.name).trim().toLowerCase() === lower);
   if (byName) return byName.name;
   return trimmed;
+}
+
+/** Modül chip renkleri — id/ad üzerinden stabil palette seçimi */
+const MODULE_CHIP_PALETTE = [
+  "border-sky-200 bg-sky-50 text-sky-700",
+  "border-teal-200 bg-teal-50 text-teal-700",
+  "border-indigo-200 bg-indigo-50 text-indigo-700",
+  "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
+  "border-amber-200 bg-amber-50 text-amber-800",
+  "border-rose-200 bg-rose-50 text-rose-700",
+  "border-emerald-200 bg-emerald-50 text-emerald-700",
+  "border-cyan-200 bg-cyan-50 text-cyan-800",
+  "border-violet-200 bg-violet-50 text-violet-700",
+  "border-orange-200 bg-orange-50 text-orange-800",
+] as const;
+
+function getModuleChipClass(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  }
+  return MODULE_CHIP_PALETTE[hash % MODULE_CHIP_PALETTE.length];
 }
 
 /** Kök görev mi (Syncfusion / API: null, 0, boş). */
@@ -866,21 +889,25 @@ function ProjectChart() {
     }
 
     const pending = ganttAfterDataBoundRef.current;
-    if (!pending) return;
     ganttAfterDataBoundRef.current = null;
     /** Tam veri bağlandıktan sonra ağaç işlemlerini bir sonraki frame'e erteler; UI thread'i kısa keser. */
     requestAnimationFrame(() => {
       try {
+        // Varsayılan: her veri bağlanışında collapse all; create/update sonrası ilgili dal açılır.
         ganttRef.current?.collapseAll();
-        for (const taskId of pending.expandPathTaskIds) {
-          ganttRef.current?.expandByID(taskId);
+        if (pending) {
+          for (const taskId of pending.expandPathTaskIds) {
+            ganttRef.current?.expandByID(taskId);
+          }
         }
       } catch {
         /* veri / tree henüz hazır değilse */
       }
-      requestAnimationFrame(() => {
-        tearDownSyncfusionBlockingUi(ganttRef.current);
-      });
+      if (pending) {
+        requestAnimationFrame(() => {
+          tearDownSyncfusionBlockingUi(ganttRef.current);
+        });
+      }
     });
   };
   /** GetTaskModules sonuçları (liste endpoint'i modül döndürmeyebilir) */
@@ -2254,6 +2281,7 @@ function ProjectChart() {
           dataSource={projectData}
           taskFields={taskFields}
           taskType="FixedDuration"
+          collapseAllParentTasks={true}
           enableContextMenu={true}
           queryTaskbarInfo={handleTaskbarInfo}
           tooltipSettings={{
@@ -2273,7 +2301,7 @@ function ProjectChart() {
             },
           }}
           dateFormat="dd.MM.yyyy" // Add explicit date format
-          splitterSettings={{ position: "31.5%" }}
+          splitterSettings={{ position: "48%" }}
           workWeek={["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]}
           selectionSettings={{ mode: "Row", type: "Multiple" }}
           durationUnit="Day"
@@ -2315,10 +2343,11 @@ function ProjectChart() {
             ]}
           />
           <ColumnsDirective>
-            <ColumnDirective field="TaskID" headerText="ID" />
+            <ColumnDirective field="TaskID" headerText="ID" width="55" />
             <ColumnDirective
               field="TaskName"
               headerText="Görev Adı"
+              width="200"
               template={(props: any) => {
                 if (!props.Notes || props.Notes.length === 0) {
                   return <div>{props.TaskName}</div>;
@@ -2342,8 +2371,61 @@ function ProjectChart() {
               }}
             />
             <ColumnDirective
+              field="projectStatus"
+              headerText="Durum"
+              width="120"
+              edit={projectStatusColumnEdit}
+              template={(props: any) => {
+                const status = normalizeProjectStatusFromRow(props);
+                const label = getProjectStatusLabel(status);
+                const colors = getProjectTypeColumnColors(label);
+                return (
+                  <span
+                    className={cn(
+                      "inline-flex max-w-full items-center truncate rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
+                      colors.badge,
+                    )}
+                    title={label}
+                  >
+                    {label}
+                  </span>
+                );
+              }}
+            />
+            <ColumnDirective
+              field="moduleIds"
+              headerText="Modüller"
+              width="180"
+              edit={moduleIdsColumnEdit}
+              template={(props: any) => {
+                const ids = normalizeModuleIdsFromRow(props);
+                if (ids.length === 0) return <span className="text-slate-400">-</span>;
+                const list = moduleDataRef.current as GanttModuleOption[];
+                return (
+                  <div className="flex flex-wrap items-center gap-1 py-0.5">
+                    {ids.map((id) => {
+                      const name = resolveModuleDisplayName(list, id);
+                      return (
+                        <span
+                          key={id}
+                          className={cn(
+                            "inline-flex max-w-[140px] truncate rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                            getModuleChipClass(id || name),
+                          )}
+                          title={name}
+                        >
+                          {name}
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+            <ColumnDirective
               field="resources"
               headerText="Atananlar"
+              width="130"
               template={(props: any) => {
                 const assignees = getAssigneeDisplayNames(props.resources);
                 if (assignees.length === 0) return <>-</>;
@@ -2368,27 +2450,6 @@ function ProjectChart() {
                   </div>
                 );
               }}
-            />
-            <ColumnDirective
-              field="moduleIds"
-              headerText="Modüller"
-              width="150"
-              edit={moduleIdsColumnEdit}
-              template={(props: any) => {
-                const ids = normalizeModuleIdsFromRow(props);
-                const list = moduleDataRef.current as GanttModuleOption[];
-                const text = ids.map((id) => resolveModuleDisplayName(list, id)).join(", ");
-                return <div>{text}</div>;
-              }}
-            />
-            <ColumnDirective
-              field="projectStatus"
-              headerText="Durum"
-              width="120"
-              edit={projectStatusColumnEdit}
-              template={(props: any) => (
-                <div>{getProjectStatusLabel(normalizeProjectStatusFromRow(props))}</div>
-              )}
             />
 
             <ColumnDirective

@@ -299,3 +299,8 @@ select.gantt-module-status-select:hover {
     width: 100%;
   }
 }
+
+/* Grid hücrelerinde durum / modül chip'leri dikey ortalansın */
+.gantt-chart-container .e-rowcell {
+  vertical-align: middle;
+}
