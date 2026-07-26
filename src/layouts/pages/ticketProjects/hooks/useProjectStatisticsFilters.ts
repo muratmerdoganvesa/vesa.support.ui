@@ -6,6 +6,14 @@ import {
 } from "../projectTypeHelpers";
 import type { StatsBoardItem } from "../types";
 import {
+  buildDepartmentTree,
+  buildRelevantDepartmentNodes,
+  flattenDepartmentTree,
+  getSelfAndDescendantNames,
+  type DepartmentNode,
+  type DepartmentTreeListItem,
+} from "../utils/departmentTree";
+import {
   getHighlightPersonIds,
   getMatchingItemPersonIds,
 } from "../utils/projectStatisticsPersonFilters";
@@ -13,6 +21,7 @@ import {
 export type PersonItem = { id: string; name: string; count: number };
 export type LabelCountItem = { name: string; count: number };
 export type StatusItem = { key: ProjectTypeColumnKey; label: string; count: number };
+export type { DepartmentTreeListItem };
 /** all: hepsi · plansOnly: sadece simülasyon planları · hidePlans: planları gizle */
 export type PlanVisibility = "all" | "plansOnly" | "hidePlans";
 

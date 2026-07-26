@@ -160,7 +160,7 @@ export const buildRelevantDepartmentNodes = (
   return result;
 };
 
-/** Arama terimine göre düğüm + atalarını koruyarak düz liste üretir. */
+/** Arama terimine göre eşleşen düğüm + atalarını koruyarak düz liste üretir. */
 export const filterDepartmentTreeForSearch = (
   roots: DepartmentTreeNode[],
   query: string,
@@ -168,29 +168,18 @@ export const filterDepartmentTreeForSearch = (
   const q = query.trim().toLowerCase();
   if (!q) return flattenDepartmentTree(roots);
 
-  const result: DepartmentTreeNode[] = [];
+  const keepIds = new Set<string>();
 
-  const walk = (node: DepartmentTreeNode, ancestors: DepartmentTreeNode[]): boolean => {
-    const selfMatch = node.name.toLowerCase().includes(q);
-    let childMatch = false;
+  const mark = (node: DepartmentTreeNode): boolean => {
+    let keep = node.name.toLowerCase().includes(q);
     for (const child of node.children) {
-      if (walk(child, [...ancestors, node])) childMatch = true;
+      if (mark(child)) keep = true;
     }
-    if (selfMatch || childMatch) {
-      if (!result.some((r) => r.id === node.id)) {
-        // Atları önce ekle (sıra korunur)
-        for (const ancestor of ancestors) {
-          if (!result.some((r) => r.id === ancestor.id)) {
-            result.push(ancestor);
-          }
-        }
-        result.push(node);
-      }
-      return true;
-    }
-    return false;
+    if (keep) keepIds.add(node.id);
+    return keep;
   };
 
-  for (const root of roots) walk(root, []);
-  return result;
+  for (const root of roots) mark(root);
+
+  return flattenDepartmentTree(roots).filter((node) => keepIds.has(node.id));
 };
