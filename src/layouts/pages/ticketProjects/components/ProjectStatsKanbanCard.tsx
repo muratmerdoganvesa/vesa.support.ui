@@ -223,6 +223,20 @@ const ProjectStatsKanbanCard = ({
             </div>
           ) : null}
 
+          {stepName ? (
+            <div className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Görev
+              </span>
+              <span
+                className="block text-[11px] font-medium leading-snug text-slate-700 dark:text-foreground"
+                title={stepName}
+              >
+                {stepName}
+              </span>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {canNavigateToGantt && (
               <Button
