@@ -375,8 +375,8 @@ function getAncestorTaskIdsToExpandForTask(taskId: number, taskList: any[]): num
 
 /**
  * Gantt'ın o anki expand durumunu (açık olan parent TaskID'leri) flatData'dan okur.
- * setProjectData ile yapılan her rebind'te isExpanded alanına yazılarak
- * kullanıcının açtığı dalların kapanması engellenir.
+ * Programatik rebind'lerden önce yakalanır; dataBound'da collapseAll + expandByID
+ * ile geri yüklenerek kullanıcının açtığı dalların kapanması engellenir.
  */
 function captureExpandedTaskIds(gantt: GanttComponent | null): Set<number> {
   const set = new Set<number>();
@@ -998,9 +998,6 @@ function ProjectChart() {
   /**
    * create/update sonrası fetch ile veri bağlanana kadar bekleyip dataBound'da
    * ilgili dalı (kök başlıktan itibaren) expandByID ile açıyoruz.
-   * Genel expand/collapse durumu artık isExpanded (expandState mapping) alanıyla
-   * veri üzerinden korunur; ilk açılışta tüm satırlar isExpanded=false gelir,
-   * sonraki yenilemelerde kullanıcının açtığı dallar aynen kalır.
    */
   const ganttAfterDataBoundRef = useRef<{ expandPathTaskIds: number[] } | null>(null);
   /**
@@ -1010,6 +1007,16 @@ function ProjectChart() {
   const tearDownAfterDataBoundRef = useRef(false);
   /** Rebind Syncfusion'da yatay kaydırmayı sıfırlayabilir; setProjectData öncesi yakalanan konum burada geri yüklenir. */
   const restoreChartScrollLeftRef = useRef<number | null>(null);
+  /**
+   * Eski (kanıtlanmış) mekanizma: expand durumu veri üzerinden DEĞİL, Syncfusion'ın
+   * kendi iç durumu üzerinden yönetilir. Her programatik setProjectData öncesi o anki
+   * açık dallar yakalanır; dataBound'da collapseAll + expandByID ile geri yüklenir.
+   * İlk yüklemede set boş olduğundan ağaç kapalı başlar. null = kullanıcı etkileşimi
+   * kaynaklı dataBound, dokunma.
+   */
+  const restoreExpandedTaskIdsRef = useRef<Set<number> | null>(null);
+  /** Restore sırasında expandByID 'expanded' event'i tetikler; otomatik kaydırmayı bastır. */
+  const isRestoringTreeRef = useRef(false);
   const handleGanttDataBound = () => {
     // İlk yüklemeden sonra ya da explicit olarak işaretlendiyse spinner temizle
     if (tearDownAfterDataBoundRef.current) {
@@ -1021,21 +1028,33 @@ function ProjectChart() {
 
     const pending = ganttAfterDataBoundRef.current;
     ganttAfterDataBoundRef.current = null;
+    const restoreExpanded = restoreExpandedTaskIdsRef.current;
+    restoreExpandedTaskIdsRef.current = null;
     const restoreLeft = restoreChartScrollLeftRef.current;
     restoreChartScrollLeftRef.current = null;
-    if (!pending && restoreLeft == null) return;
+    if (!pending && restoreExpanded == null && restoreLeft == null) return;
 
     /** Tam veri bağlandıktan sonra ağaç işlemlerini bir sonraki frame'e erteler; UI thread'i kısa keser. */
     requestAnimationFrame(() => {
-      restoreChartScrollLeft(ganttRef.current, restoreLeft);
-      if (!pending) return;
+      isRestoringTreeRef.current = true;
       try {
-        for (const taskId of pending.expandPathTaskIds) {
-          ganttRef.current?.expandByID(taskId);
+        if (restoreExpanded != null) {
+          ganttRef.current?.collapseAll();
+          for (const taskId of restoreExpanded) {
+            ganttRef.current?.expandByID(taskId);
+          }
+        }
+        if (pending) {
+          for (const taskId of pending.expandPathTaskIds) {
+            ganttRef.current?.expandByID(taskId);
+          }
         }
       } catch {
         /* veri / tree henüz hazır değilse */
+      } finally {
+        isRestoringTreeRef.current = false;
       }
+      restoreChartScrollLeft(ganttRef.current, restoreLeft);
       requestAnimationFrame(() => {
         tearDownSyncfusionBlockingUi(ganttRef.current);
       });
@@ -1149,7 +1168,8 @@ function ProjectChart() {
 
   /** Manuel expand sonrası açılan dalın barı ekran dışındaysa grafiği oraya kaydır. */
   const onRowExpanded = (args: any) => {
-    // Expand all sırasında da tetiklenir; o durumda kaydırma konumu toolbarClick'te korunuyor.
+    // Expand all ve programatik restore sırasında da tetiklenir; o durumlarda kaydırma.
+    if (isRestoringTreeRef.current) return;
     const gantt = ganttRef.current as any;
     if (gantt?.ganttChartModule?.isExpandAll) return;
     scrollChartToTaskIfHidden(ganttRef.current, args?.data);
@@ -1184,15 +1204,13 @@ function ProjectChart() {
         currentIds.length === ids.length && currentIds.every((v) => ids.includes(v));
       if (unchanged) return;
 
-      // Rebind tüm satırları yeniden bağlar; kullanıcının o anki expand durumu veriye işlenir.
-      const expandedNow = captureExpandedTaskIds(ganttRef.current);
+      // Rebind tüm satırları yeniden bağlar; mevcut açık dallar ve kaydırma dataBound'da geri yüklenir.
+      restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
       restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
       setProjectData((prev) =>
-        prev.map((t: any) => {
-          const next =
-            t.Id === taskGuid ? { ...t, moduleIds: ids.slice(), modules: ids.slice() } : t;
-          return { ...next, isExpanded: expandedNow.has(Number(next.TaskID)) };
-        })
+        prev.map((t: any) =>
+          t.Id === taskGuid ? { ...t, moduleIds: ids.slice(), modules: ids.slice() } : t
+        )
       );
     } catch {
       /* sessiz: modüller grid için isteğe bağlı */
@@ -1470,9 +1488,9 @@ function ProjectChart() {
         return undefined;
       }
 
-      // Mevcut expand durumu korunur; ilk açılışta gantt boş olduğundan set boş kalır
-      // ve tüm satırlar kapalı (isExpanded=false) başlar.
-      const expandedTaskIds = captureExpandedTaskIds(ganttRef.current);
+      // Rebind öncesi mevcut açık dallar ve yatay kaydırma yakalanır; dataBound'da
+      // collapseAll + expandByID ile geri yüklenir. İlk yüklemede set boş → ağaç kapalı başlar.
+      restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
       restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
       const transformedData = response.data.map((task: any) => {
         // Ensure users is always defined, even if it comes as null or undefined
@@ -1485,17 +1503,18 @@ function ProjectChart() {
         if (taskGuid) {
           taskModuleIdsCacheRef.current.set(taskGuid, modulesArray.slice());
         }
+        // TaskID/ParentID tip tutarlılığı: ikisi de sayı olmalı, aksi halde Syncfusion
+        // parent-child eşleşmesini kuramaz ve expand oku görünmez. Sayı değilse olduğu
+        // gibi bırak (satır kaybolmasın).
+        const numericTaskId = Number(task.taskId);
         return {
           Id: task.id,
-          // ParentID sayıya normalize edildiği için TaskID de sayı olmalı;
-          // tip uyuşmazlığı Syncfusion'da parent-child eşleşmesini (expand okunu) bozar.
-          TaskID: Number(task.taskId),
+          TaskID: Number.isNaN(numericTaskId) ? task.taskId : numericTaskId,
           TaskName: turkishToLatin(task.name),
           StartDate: task.startDate,
           Duration: task.duration,
           Progress: task.progress,
           Predecessor: task.predecessor,
-          // API string dönebilir; Syncfusion parentID-TaskID eşleşmesi için sayıya normalize et.
           ParentID: isRootParentId(task.parentId) ? null : Number(task.parentId),
           Notes: task.notes,
           IsManual: task.isManual,
@@ -1503,7 +1522,6 @@ function ProjectChart() {
           modules: modulesArray,
           moduleIds: modulesArray.slice(),
           projectStatus: extractProjectStatusFromApiTask(task),
-          isExpanded: expandedTaskIds.has(Number(task.taskId)),
         };
       });
       const ascendingData = orderTasksParentsFirst(transformedData);
@@ -1562,8 +1580,6 @@ function ProjectChart() {
     notes: "Notes",
     manual: "IsManual",
     resourceInfo: "resources",
-    // Expand/collapse durumu veri üzerinden yönetilir; rebind'lerde kullanıcı durumu korunur.
-    expandState: "isExpanded",
 
     // taskId: "TaskID",
   };
@@ -2000,15 +2016,12 @@ function ProjectChart() {
         patch.moduleIds = moduleIdsPayload.slice();
         patch.modules = moduleIdsPayload.slice();
         patch.projectStatus = normalizeProjectStatusFromRow(taskData);
-        // Rebind sonrası ağacın kullanıcının bıraktığı gibi kalması için
-        // güncel expand durumu tüm satırların isExpanded alanına yazılır.
-        const expandedNow = captureExpandedTaskIds(ganttRef.current);
+        // Rebind sonrası ağacın kullanıcının bıraktığı gibi kalması için mevcut açık
+        // dallar yakalanır; dataBound'da collapseAll + expandByID ile geri yüklenir.
+        restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
         restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
         setProjectData((prev) =>
-          prev.map((t: any) => {
-            const next = t.Id === taskData.Id ? { ...t, ...patch } : t;
-            return { ...next, isExpanded: expandedNow.has(Number(next.TaskID)) };
-          })
+          prev.map((t: any) => (t.Id === taskData.Id ? { ...t, ...patch } : t))
         );
         const guid = taskData.Id;
         if (guid) {
