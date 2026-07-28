@@ -301,15 +301,21 @@ select.gantt-module-status-select:hover {
 }
 
 /* ─── Durum / Modül chip (Syncfusion satır yüksekliğini ezmesin) ─── */
+/* overflow: visible KULLANMA — uzun görev adları komşu sütunların üzerine taşıyor. */
 .gantt-chart-container .e-rowcell {
   vertical-align: middle !important;
   line-height: normal !important;
-  overflow: visible !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
 }
 
 .gantt-chart-container .e-rowcell .e-treecell,
 .gantt-chart-container .e-rowcell > div {
   line-height: normal !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .gantt-chip-row {
