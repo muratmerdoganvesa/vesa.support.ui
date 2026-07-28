@@ -390,50 +390,6 @@ function captureExpandedTaskIds(gantt: GanttComponent | null): Set<number> {
   return set;
 }
 
-/**
- * Syncfusion self-referential veride üst kaydın alt kayıttan önce gelmesini bekler;
- * aksi halde parent'ta hasChildRecords oluşmaz ve expand oku görünmez
- * (örn. TaskID=3 olan görev TaskID=10'un altına taşındığında).
- * Kökten itibaren DFS ile "önce üst, sonra altları" sırası üretir;
- * kardeşler TaskID'ye göre artan sıralanır. Ulaşılamayan kayıtlar (bozuk/döngüsel
- * parent referansı) sona eklenir ki satır kaybolmasın.
- */
-function orderTasksParentsFirst(tasks: any[]): any[] {
-  const byTaskId = new Map<number, any>();
-  for (const t of tasks) {
-    const tid = Number(t.TaskID);
-    if (!Number.isNaN(tid)) byTaskId.set(tid, t);
-  }
-  const childrenOf = new Map<number, any[]>();
-  const roots: any[] = [];
-  for (const t of tasks) {
-    const pid = t.ParentID;
-    if (isRootParentId(pid) || !byTaskId.has(Number(pid))) {
-      roots.push(t);
-    } else {
-      const key = Number(pid);
-      const list = childrenOf.get(key);
-      if (list) list.push(t);
-      else childrenOf.set(key, [t]);
-    }
-  }
-  const byTaskIdAsc = (a: any, b: any) => Number(a.TaskID) - Number(b.TaskID);
-  const out: any[] = [];
-  const visited = new Set<any>();
-  const visit = (node: any) => {
-    if (visited.has(node)) return;
-    visited.add(node);
-    out.push(node);
-    const kids = childrenOf.get(Number(node.TaskID));
-    if (kids) kids.sort(byTaskIdAsc).forEach(visit);
-  };
-  roots.sort(byTaskIdAsc).forEach(visit);
-  for (const t of tasks) {
-    if (!visited.has(t)) out.push(t);
-  }
-  return out;
-}
-
 function getChartScrollObject(gantt: GanttComponent | null): any | undefined {
   return (gantt as any)?.ganttChartModule?.scrollObject;
 }
@@ -1503,19 +1459,18 @@ function ProjectChart() {
         if (taskGuid) {
           taskModuleIdsCacheRef.current.set(taskGuid, modulesArray.slice());
         }
-        // TaskID/ParentID tip tutarlılığı: ikisi de sayı olmalı, aksi halde Syncfusion
-        // parent-child eşleşmesini kuramaz ve expand oku görünmez. Sayı değilse olduğu
-        // gibi bırak (satır kaybolmasın).
-        const numericTaskId = Number(task.taskId);
+        // Eski çalışan kodla birebir aynı dönüşüm: TaskID ve ParentID API'den geldiği
+        // gibi (taskId number, parentId string) aktarılır — Syncfusion bu karışık
+        // tiplerle eşleştirmeyi kendisi yapar; dönüştürmek davranışı değiştiriyor.
         return {
           Id: task.id,
-          TaskID: Number.isNaN(numericTaskId) ? task.taskId : numericTaskId,
+          TaskID: task.taskId,
           TaskName: turkishToLatin(task.name),
           StartDate: task.startDate,
           Duration: task.duration,
           Progress: task.progress,
           Predecessor: task.predecessor,
-          ParentID: isRootParentId(task.parentId) ? null : Number(task.parentId),
+          ParentID: task.parentId,
           Notes: task.notes,
           IsManual: task.isManual,
           resources: users,
@@ -1524,7 +1479,7 @@ function ProjectChart() {
           projectStatus: extractProjectStatusFromApiTask(task),
         };
       });
-      const ascendingData = orderTasksParentsFirst(transformedData);
+      const ascendingData = transformedData.sort((a: any, b: any) => a.TaskID - b.TaskID);
       if (!isMountedRef.current) return undefined;
       // dataBound ateşlendiğinde Syncfusion işini bitirmiş olacak; orada tearDown yap.
       tearDownAfterDataBoundRef.current = true;
