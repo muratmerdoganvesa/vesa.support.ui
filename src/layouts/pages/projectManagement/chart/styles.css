@@ -301,15 +301,29 @@ select.gantt-module-status-select:hover {
 }
 
 /* ─── Durum / Modül chip (Syncfusion satır yüksekliğini ezmesin) ─── */
+/* overflow: visible KULLANMA — uzun görev adları komşu sütunların üzerine taşıyor. */
 .gantt-chart-container .e-rowcell {
   vertical-align: middle !important;
   line-height: normal !important;
-  overflow: visible !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
 }
 
 .gantt-chart-container .e-rowcell .e-treecell,
-.gantt-chart-container .e-rowcell > div {
+.gantt-chart-container .e-rowcell > div:not(.e-treecolumn-container) {
   line-height: normal !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Ağaç sütunu kapsayıcısı (girinti + expand oku + hücre içeriği): kırpma
+   uygulanmaz, aksi halde derin seviyelerde expand oku girintiden dolayı
+   kesilip görünmez oluyor. Satır içinde tek satırda hizalı kalması yeterli. */
+.gantt-chart-container .e-rowcell > div.e-treecolumn-container {
+  line-height: normal !important;
+  white-space: nowrap;
 }
 
 .gantt-chip-row {

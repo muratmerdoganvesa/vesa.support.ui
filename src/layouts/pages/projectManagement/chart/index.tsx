@@ -373,6 +373,88 @@ function getAncestorTaskIdsToExpandForTask(taskId: number, taskList: any[]): num
   return path;
 }
 
+/**
+ * Gantt'ın o anki expand durumunu (açık olan parent TaskID'leri) flatData'dan okur.
+ * Programatik rebind'lerden önce yakalanır; dataBound'da collapseAll + expandByID
+ * ile geri yüklenerek kullanıcının açtığı dalların kapanması engellenir.
+ */
+function captureExpandedTaskIds(gantt: GanttComponent | null): Set<number> {
+  const set = new Set<number>();
+  const flat = (gantt as any)?.flatData;
+  if (!Array.isArray(flat)) return set;
+  for (const rec of flat) {
+    if (!rec?.hasChildRecords || !rec?.expanded) continue;
+    const tid = Number(rec?.ganttProperties?.taskId ?? rec?.TaskID);
+    if (!Number.isNaN(tid)) set.add(tid);
+  }
+  return set;
+}
+
+function getChartScrollObject(gantt: GanttComponent | null): any | undefined {
+  return (gantt as any)?.ganttChartModule?.scrollObject;
+}
+
+/** Grafik tarafının o anki yatay kaydırma konumu (px). */
+function captureChartScrollLeft(gantt: GanttComponent | null): number | null {
+  const scrollObj = getChartScrollObject(gantt);
+  const el: HTMLElement | undefined = scrollObj?.element;
+  if (!el) return null;
+  const left = el.scrollLeft ?? scrollObj?.previousScroll?.left;
+  return typeof left === "number" && Number.isFinite(left) ? left : null;
+}
+
+function restoreChartScrollLeft(gantt: GanttComponent | null, left: number | null) {
+  if (left == null || left <= 0) return;
+  const scrollObj = getChartScrollObject(gantt);
+  if (!scrollObj) return;
+  try {
+    scrollObj.setScrollLeft(left);
+  } catch {
+    /* scroll modülü hazır değilse */
+  }
+}
+
+/**
+ * Satırın taskbar'ı görünür zaman penceresinin dışındaysa grafiği o göreve kaydırır.
+ * Görev tarihleri ekrandaki aralığın dışında kaldığında satır "boş" görünüyor ve
+ * kullanıcı grid ile grafik verisinin farklı olduğunu sanıyordu.
+ * Not: Syncfusion 'expanded' event'i TreeGrid argümanlarını iletir; data tek kayıt
+ * ya da kayıt dizisi olabilir, ganttProperties bulunmayabilir — hepsi ele alınır.
+ */
+function scrollChartToTaskIfHidden(gantt: GanttComponent | null, rowOrRows: any) {
+  if (!gantt || rowOrRows == null) return;
+  const row = Array.isArray(rowOrRows) ? rowOrRows[0] : rowOrRows;
+  if (row == null) return;
+  const taskId =
+    row?.ganttProperties?.taskId ?? row?.TaskID ?? row?.taskData?.TaskID;
+  if (taskId == null) return;
+
+  let gp = row.ganttProperties;
+  if (!gp) {
+    try {
+      gp = (gantt as any).getRecordByID?.(String(taskId))?.ganttProperties;
+    } catch {
+      /* kayıt bulunamazsa scrollToTask kendisi no-op yapar */
+    }
+  }
+
+  const el: HTMLElement | undefined = getChartScrollObject(gantt)?.element;
+  const left = Number(gp?.left);
+  if (el && Number.isFinite(left)) {
+    const viewStart = el.scrollLeft;
+    const viewEnd = viewStart + el.clientWidth;
+    const width = Number(gp?.width);
+    const barEnd = left + (Number.isFinite(width) ? width : 0);
+    if (barEnd > viewStart && left < viewEnd) return; // bar zaten görünür
+  }
+
+  try {
+    (gantt as any).scrollToTask(String(taskId));
+  } catch {
+    /* kayıt henüz render edilmediyse */
+  }
+}
+
 function clearSyncfusionGanttSpinner(gantt: GanttComponent | null) {
   const g = gantt as any;
   if (!g) return;
@@ -870,8 +952,8 @@ function ProjectChart() {
     return () => { isMountedRef.current = false; };
   }, []);
   /**
-   * create/update sonrası fetch ile veri bağlanana kadar bekleyip dataBound'da:
-   * collapseAll, sonra ilgili dalı (kök başlıktan itibaren) expandByID ile açıyoruz.
+   * create/update sonrası fetch ile veri bağlanana kadar bekleyip dataBound'da
+   * ilgili dalı (kök başlıktan itibaren) expandByID ile açıyoruz.
    */
   const ganttAfterDataBoundRef = useRef<{ expandPathTaskIds: number[] } | null>(null);
   /**
@@ -879,12 +961,18 @@ function ProjectChart() {
    * tearDownAfterDataBoundRef=true ise dataBound'da tearDown çağrılır ve flag sıfırlanır.
    */
   const tearDownAfterDataBoundRef = useRef(false);
+  /** Rebind Syncfusion'da yatay kaydırmayı sıfırlayabilir; setProjectData öncesi yakalanan konum burada geri yüklenir. */
+  const restoreChartScrollLeftRef = useRef<number | null>(null);
   /**
-   * Expand tıklanınca Syncfusion yeniden dataBound ateşleyebilir.
-   * collapseAll yalnızca ilk yükleme / fetch yenileme / create-update sonrası uygulanır;
-   * aksi halde kullanıcı oku açamaz.
+   * Eski (kanıtlanmış) mekanizma: expand durumu veri üzerinden DEĞİL, Syncfusion'ın
+   * kendi iç durumu üzerinden yönetilir. Her programatik setProjectData öncesi o anki
+   * açık dallar yakalanır; dataBound'da collapseAll + expandByID ile geri yüklenir.
+   * İlk yüklemede set boş olduğundan ağaç kapalı başlar. null = kullanıcı etkileşimi
+   * kaynaklı dataBound, dokunma.
    */
-  const collapseOnNextDataBoundRef = useRef(true);
+  const restoreExpandedTaskIdsRef = useRef<Set<number> | null>(null);
+  /** Restore sırasında expandByID 'expanded' event'i tetikler; otomatik kaydırmayı bastır. */
+  const isRestoringTreeRef = useRef(false);
   const handleGanttDataBound = () => {
     // İlk yüklemeden sonra ya da explicit olarak işaretlendiyse spinner temizle
     if (tearDownAfterDataBoundRef.current) {
@@ -896,16 +984,22 @@ function ProjectChart() {
 
     const pending = ganttAfterDataBoundRef.current;
     ganttAfterDataBoundRef.current = null;
-    const shouldCollapseTree = collapseOnNextDataBoundRef.current || pending != null;
-    collapseOnNextDataBoundRef.current = false;
-
-    // Kullanıcı expand/collapse yaptığında gelen dataBound'a dokunma
-    if (!shouldCollapseTree) return;
+    const restoreExpanded = restoreExpandedTaskIdsRef.current;
+    restoreExpandedTaskIdsRef.current = null;
+    const restoreLeft = restoreChartScrollLeftRef.current;
+    restoreChartScrollLeftRef.current = null;
+    if (!pending && restoreExpanded == null && restoreLeft == null) return;
 
     /** Tam veri bağlandıktan sonra ağaç işlemlerini bir sonraki frame'e erteler; UI thread'i kısa keser. */
     requestAnimationFrame(() => {
+      isRestoringTreeRef.current = true;
       try {
-        ganttRef.current?.collapseAll();
+        if (restoreExpanded != null) {
+          ganttRef.current?.collapseAll();
+          for (const taskId of restoreExpanded) {
+            ganttRef.current?.expandByID(taskId);
+          }
+        }
         if (pending) {
           for (const taskId of pending.expandPathTaskIds) {
             ganttRef.current?.expandByID(taskId);
@@ -913,12 +1007,13 @@ function ProjectChart() {
         }
       } catch {
         /* veri / tree henüz hazır değilse */
+      } finally {
+        isRestoringTreeRef.current = false;
       }
-      if (pending) {
-        requestAnimationFrame(() => {
-          tearDownSyncfusionBlockingUi(ganttRef.current);
-        });
-      }
+      restoreChartScrollLeft(ganttRef.current, restoreLeft);
+      requestAnimationFrame(() => {
+        tearDownSyncfusionBlockingUi(ganttRef.current);
+      });
     });
   };
   /** GetTaskModules sonuçları (liste endpoint'i modül döndürmeyebilir) */
@@ -1027,8 +1122,18 @@ function ProjectChart() {
 
   const isProcessingTaskRef = useRef(false); // * burada flag-based locking yapıyoruz bu sayede aynı anda birden fazla task oluşturulamaz.
 
+  /** Manuel expand sonrası açılan dalın barı ekran dışındaysa grafiği oraya kaydır. */
+  const onRowExpanded = (args: any) => {
+    // Expand all ve programatik restore sırasında da tetiklenir; o durumlarda kaydırma.
+    if (isRestoringTreeRef.current) return;
+    const gantt = ganttRef.current as any;
+    if (gantt?.ganttChartModule?.isExpandAll) return;
+    scrollChartToTaskIfHidden(ganttRef.current, args?.data);
+  };
+
   const onRowSelected = async (args: any) => {
     const row = args?.data;
+    scrollChartToTaskIfHidden(ganttRef.current, row);
     const taskGuid = row?.taskData?.Id ?? row?.taskData?.id ?? row?.Id ?? row?.id;
     if (!taskGuid) return;
     const cached = taskModuleIdsCacheRef.current.get(taskGuid);
@@ -1045,6 +1150,19 @@ function ProjectChart() {
         moduleDataRef.current as GanttModuleOption[],
       );
       taskModuleIdsCacheRef.current.set(taskGuid, ids);
+
+      // KRİTİK: Modül listesi satırdakiyle aynıysa (çoğunlukla ikisi de boş) rebind YAPMA.
+      // Aksi halde modülü olmayan bir göreve her tıklandığında tüm Gantt yeniden render
+      // ediliyor ve o sırada yapılan expand tıklamaları yutuluyordu.
+      const existingRow = projectDataRef.current.find((t: any) => t.Id === taskGuid);
+      const currentIds = normalizeModuleIdsFromRow(existingRow);
+      const unchanged =
+        currentIds.length === ids.length && currentIds.every((v) => ids.includes(v));
+      if (unchanged) return;
+
+      // Rebind tüm satırları yeniden bağlar; mevcut açık dallar ve kaydırma dataBound'da geri yüklenir.
+      restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
+      restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
       setProjectData((prev) =>
         prev.map((t: any) =>
           t.Id === taskGuid ? { ...t, moduleIds: ids.slice(), modules: ids.slice() } : t
@@ -1161,6 +1279,16 @@ function ProjectChart() {
       } else if (args.item.id === ganttRef.current.element.id + "_excelexport") {
         tearDownSyncfusionBlockingUi(ganttRef.current);
         setExcelDialogOpen(true);
+      } else if (
+        args.item.id === ganttRef.current.element.id + "_expandall" ||
+        args.item.id === ganttRef.current.element.id + "_collapseall"
+      ) {
+        // Expand/Collapse all yatay kaydırmayı en başa sıfırlıyor; konum geri yüklenir.
+        const left = captureChartScrollLeft(ganttRef.current);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => restoreChartScrollLeft(ganttRef.current, left));
+        });
+        window.setTimeout(() => restoreChartScrollLeft(ganttRef.current, left), 150);
       }
     }
   };
@@ -1316,6 +1444,10 @@ function ProjectChart() {
         return undefined;
       }
 
+      // Rebind öncesi mevcut açık dallar ve yatay kaydırma yakalanır; dataBound'da
+      // collapseAll + expandByID ile geri yüklenir. İlk yüklemede set boş → ağaç kapalı başlar.
+      restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
+      restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
       const transformedData = response.data.map((task: any) => {
         // Ensure users is always defined, even if it comes as null or undefined
         const users = task.Users || task.users || [];
@@ -1327,6 +1459,9 @@ function ProjectChart() {
         if (taskGuid) {
           taskModuleIdsCacheRef.current.set(taskGuid, modulesArray.slice());
         }
+        // Eski çalışan kodla birebir aynı dönüşüm: TaskID ve ParentID API'den geldiği
+        // gibi (taskId number, parentId string) aktarılır — Syncfusion bu karışık
+        // tiplerle eşleştirmeyi kendisi yapar; dönüştürmek davranışı değiştiriyor.
         return {
           Id: task.id,
           TaskID: task.taskId,
@@ -1348,8 +1483,6 @@ function ProjectChart() {
       if (!isMountedRef.current) return undefined;
       // dataBound ateşlendiğinde Syncfusion işini bitirmiş olacak; orada tearDown yap.
       tearDownAfterDataBoundRef.current = true;
-      // Fetch sonrası ağacı kapalı aç (kullanıcı expand'ını bozmamak için yalnızca bu yolda).
-      collapseOnNextDataBoundRef.current = true;
       setProjectData(ascendingData);
       return ascendingData;
     } catch (error) {
@@ -1798,7 +1931,8 @@ function ProjectChart() {
         duration: calculatedDuration,
         progress: taskData.Progress,
         predecessor: taskData.Predecessor ?? "",
-        parentId: taskData.ParentID,
+        // API parentId'yi string bekler; ParentID grid tarafında sayıya normalize edildi.
+        parentId: isRootParentId(taskData.ParentID) ? null : String(taskData.ParentID),
         milestone: taskData.Milestone ?? false,
         notes: taskData.Notes,
         isManual: taskData.IsManual,
@@ -1837,6 +1971,10 @@ function ProjectChart() {
         patch.moduleIds = moduleIdsPayload.slice();
         patch.modules = moduleIdsPayload.slice();
         patch.projectStatus = normalizeProjectStatusFromRow(taskData);
+        // Rebind sonrası ağacın kullanıcının bıraktığı gibi kalması için mevcut açık
+        // dallar yakalanır; dataBound'da collapseAll + expandByID ile geri yüklenir.
+        restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
+        restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
         setProjectData((prev) =>
           prev.map((t: any) => (t.Id === taskData.Id ? { ...t, ...patch } : t))
         );
@@ -2271,6 +2409,7 @@ function ProjectChart() {
           ref={ganttRef}
           // created={onGanttCreated}
           rowSelected={onRowSelected}
+          expanded={onRowExpanded}
           dataBound={handleGanttDataBound}
 
           locale="en-US"
@@ -2294,7 +2433,6 @@ function ProjectChart() {
           dataSource={projectData}
           taskFields={taskFields}
           taskType="FixedDuration"
-          collapseAllParentTasks={true}
           enableContextMenu={true}
           queryTaskbarInfo={handleTaskbarInfo}
           tooltipSettings={{
@@ -2357,17 +2495,24 @@ function ProjectChart() {
             ]}
           />
           <ColumnsDirective>
-            <ColumnDirective field="TaskID" headerText="ID" width="55" />
+            {/* Expand oku + seviye girintisi bu sütunda çizilir (treeColumnIndex=0).
+                55px'te alt seviyelerin oku girintiden dolayı kırpılıp görünmüyordu;
+                3 seviye girinti + ok + numara için ~110px gerekir. */}
+            <ColumnDirective field="TaskID" headerText="ID" width="110" />
             <ColumnDirective
               field="TaskName"
               headerText="Görev Adı"
               width="200"
               template={(props: any) => {
                 if (!props.Notes || props.Notes.length === 0) {
-                  return <div>{props.TaskName}</div>;
+                  return (
+                    <div className="truncate" title={props.TaskName}>
+                      {props.TaskName}
+                    </div>
+                  );
                 }
                 return (
-                  <div className="flex items-center gap-1">
+                  <div className="flex min-w-0 items-center gap-1">
                     <ShadcnTooltipProvider>
                       <ShadcnTooltip>
                         <ShadcnTooltipTrigger asChild>
@@ -2379,7 +2524,9 @@ function ProjectChart() {
                         </ShadcnTooltipContent>
                       </ShadcnTooltip>
                     </ShadcnTooltipProvider>
-                    {props.TaskName}
+                    <span className="truncate" title={props.TaskName}>
+                      {props.TaskName}
+                    </span>
                   </div>
                 );
               }}
