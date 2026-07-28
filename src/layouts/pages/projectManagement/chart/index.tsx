@@ -2432,6 +2432,10 @@ function ProjectChart() {
           toolbarClick={toolbarClick}
           dataSource={projectData}
           taskFields={taskFields}
+          // Expand oku + girinti Görev Adı sütununda gösterilir. Varsayılan (0) ID
+          // sütunudur; 55px'lik ID sütununda alt seviyelerin oku girintiden dolayı
+          // sütun dışında kalıp görünmüyordu (örn. Employee Central'ın oku).
+          treeColumnIndex={1}
           taskType="FixedDuration"
           enableContextMenu={true}
           queryTaskbarInfo={handleTaskbarInfo}
@@ -2501,15 +2505,17 @@ function ProjectChart() {
               headerText="Görev Adı"
               width="200"
               template={(props: any) => {
+                // Görev Adı ağaç sütunu (treeColumnIndex=1): şablon, expand okuyla aynı
+                // satırda kalmalı — bu yüzden block div yerine inline sarmalayıcı kullanılır.
                 if (!props.Notes || props.Notes.length === 0) {
                   return (
-                    <div className="truncate" title={props.TaskName}>
+                    <span className="inline-block max-w-full truncate align-middle" title={props.TaskName}>
                       {props.TaskName}
-                    </div>
+                    </span>
                   );
                 }
                 return (
-                  <div className="flex min-w-0 items-center gap-1">
+                  <span className="inline-flex max-w-full min-w-0 items-center gap-1 align-middle">
                     <ShadcnTooltipProvider>
                       <ShadcnTooltip>
                         <ShadcnTooltipTrigger asChild>
@@ -2524,7 +2530,7 @@ function ProjectChart() {
                     <span className="truncate" title={props.TaskName}>
                       {props.TaskName}
                     </span>
-                  </div>
+                  </span>
                 );
               }}
             />
