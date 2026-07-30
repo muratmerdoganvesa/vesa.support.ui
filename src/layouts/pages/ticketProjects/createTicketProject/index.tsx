@@ -91,6 +91,7 @@ function CreateTicketProject() {
     projectPeriod: null,
     projectSupportPeriod: null,
     projectType: null,
+    projectBillingTime: null,
   });
 
   const dispatchBusy = useBusy();
@@ -567,6 +568,27 @@ function CreateTicketProject() {
                   placeholder="Masraf durumu giriniz"
                   value={projectData?.costStatus || ""}
                   onChange={(e) => setProjectData({ ...projectData, costStatus: e.target.value })}
+                />
+              </div>
+
+              {/* Anlaşılan Sözleşme Eforu */}
+              <div className="space-y-1.5">
+                <Label htmlFor="project-billing-time">Anlaşılan Sözleşme Eforu(saat)</Label>
+                <Input
+                  id="project-billing-time"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="Saat giriniz"
+                  value={projectData?.projectBillingTime ?? ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setProjectData({
+                      ...projectData,
+                      projectBillingTime: raw === "" ? null : Number(raw),
+                    });
+                  }}
+                  aria-label="Anlaşılan Sözleşme Eforu(saat)"
                 />
               </div>
             </div>
