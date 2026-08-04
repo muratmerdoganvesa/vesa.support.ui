@@ -17320,6 +17320,12 @@ export interface TicketProjects {
      * @memberof TicketProjects
      */
     'projectType'?: ProjectTypes;
+    /**
+     * 
+     * @type {number}
+     * @memberof TicketProjects
+     */
+    'projectBillingTime'?: number | null;
 }
 
 
@@ -17443,6 +17449,12 @@ export interface TicketProjectsInsertDto {
      * @memberof TicketProjectsInsertDto
      */
     'projectType'?: ProjectTypes;
+    /**
+     * 
+     * @type {number}
+     * @memberof TicketProjectsInsertDto
+     */
+    'projectBillingTime'?: number | null;
 }
 
 
@@ -17608,6 +17620,12 @@ export interface TicketProjectsListDto {
      * @memberof TicketProjectsListDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {number}
+     * @memberof TicketProjectsListDto
+     */
+    'projectBillingTime'?: number | null;
 }
 
 
@@ -17719,6 +17737,12 @@ export interface TicketProjectsUpdateDto {
      * @memberof TicketProjectsUpdateDto
      */
     'projectType'?: ProjectTypes;
+    /**
+     * 
+     * @type {number}
+     * @memberof TicketProjectsUpdateDto
+     */
+    'projectBillingTime'?: number | null;
 }
 
 

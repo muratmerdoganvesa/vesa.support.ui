@@ -287,6 +287,7 @@ const TicketProjectsListTab = () => {
               <TableHead className="font-bold text-foreground">Proje Tanımı</TableHead>
               <TableHead className="font-bold text-foreground">Proje Alt Tanımı</TableHead>
               <TableHead className="font-bold text-foreground">Proje Durumu</TableHead>
+              <TableHead className="font-bold text-foreground">Anlaşılan Sözleşme Eforu(saat)</TableHead>
               <TableHead className="font-bold text-foreground">Aktif/Pasif</TableHead>
               <TableHead className="font-bold text-foreground">Oluşturulma Tarihi</TableHead>
               <TableHead className="font-bold text-foreground">İşlemler</TableHead>
@@ -295,7 +296,7 @@ const TicketProjectsListTab = () => {
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                   {search ? "Aramanızla eşleşen proje bulunamadı." : "Henüz proje eklenmemiş."}
                 </TableCell>
               </TableRow>
@@ -313,6 +314,9 @@ const TicketProjectsListTab = () => {
                   </TableCell>
                   <TableCell className="text-sm">
                     {getProjectStatusLabel(row.projectStatus ?? row.projectType)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {row.projectBillingTime != null ? row.projectBillingTime : "—"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={row.isActive ? "default" : "secondary"}>

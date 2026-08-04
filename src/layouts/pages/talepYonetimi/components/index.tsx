@@ -977,7 +977,8 @@ function FilterTableMethod({
     setLoading(true);
     const conf = getConfiguration();
     const api = new TicketApi(conf);
-    const data = await api.apiTicketSearchTicketGet(pageDesc, searchTalepNo.trim(), skip, 10);
+    // API: (pageDesc, talepNo, searchText, skip, top) — searchText UniqNumber/Title/Comment Body arar
+    const data = await api.apiTicketSearchTicketGet(pageDesc, undefined, searchTalepNo.trim(), 0, 10);
     setSearchedData(data.data.ticketList);
     setSearchMsj(data.data.ticketList.length === 0 ? t("ns1:TicketPage.TicketTablePage.AramaSonucBulunamadi") : "");
     setLoading(false);
