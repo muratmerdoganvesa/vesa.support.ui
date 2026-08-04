@@ -2681,7 +2681,7 @@ function ProjectChart() {
                   <ShadcnSelectValue placeholder="Boyut seçin" />
                 </ShadcnSelectTrigger>
                 <ShadcnSelectContent
-                  className="z-[1200]"
+                  className="z-[10060]"
                   position="popper"
                   sideOffset={4}
                 >
@@ -2750,7 +2750,7 @@ function ProjectChart() {
                   <ShadcnSelectValue />
                 </ShadcnSelectTrigger>
                 <ShadcnSelectContent
-                  className="z-[1200] max-h-60"
+                  className="z-[10060] max-h-60"
                   position="popper"
                   sideOffset={4}
                 >
