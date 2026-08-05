@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { STATUS_OPTIONS, PRIORITY_OPTIONS, TYPE_OPTIONS } from "../types/kanban.types";
+import { STATUS_OPTIONS, STATUS_LABELS, PRIORITY_OPTIONS, TYPE_OPTIONS } from "../types/kanban.types";
 import { UserApi, UserAppDtoOnlyNameId, UserAppDtoWithoutPhoto } from "api/generated";
 import getConfiguration from "confiuration";
 import { useBusy } from "layouts/pages/hooks/useBusy";
@@ -443,7 +443,7 @@ const KanbanDialog: React.FC<KanbanDialogProps> = ({ props, assigneeData = [] })
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option} value={option}>
-                {option}
+                {STATUS_LABELS[option]}
               </option>
             ))}
           </select>

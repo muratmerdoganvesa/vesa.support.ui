@@ -320,10 +320,10 @@ function resolveModuleDisplayName(moduleList: GanttModuleOption[], raw: string):
 
 /** Syncfusion hücre stillerini ezmeyen sabit chip sınıfları (styles.css) */
 const STATUS_CHIP_CLASS: Record<string, string> = {
-  Backlog: "gantt-chip gantt-chip--backlog",
+  Analiz: "gantt-chip gantt-chip--backlog",
   Realization: "gantt-chip gantt-chip--realization",
   UAT: "gantt-chip gantt-chip--uat",
-  Preparation: "gantt-chip gantt-chip--preparation",
+  Cutover: "gantt-chip gantt-chip--preparation",
   DONE: "gantt-chip gantt-chip--done",
   Beklemede: "gantt-chip gantt-chip--pending",
   "—": "gantt-chip gantt-chip--empty",

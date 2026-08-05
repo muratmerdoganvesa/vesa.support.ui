@@ -2,7 +2,7 @@
 import { useLocation } from "react-router-dom";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
-import { KANBAN_COLUMNS, TYPE_OPTIONS, STATUS_OPTIONS, PRIORITY_OPTIONS } from "./types/kanban.types";
+import { KANBAN_COLUMNS, TYPE_OPTIONS, STATUS_OPTIONS, PRIORITY_OPTIONS, getStatusLabel } from "./types/kanban.types";
 import KanbanBoard from "./components/KanbanBoard";
 import AllProjectsBoard from "./components/AllProjectsBoard";
 import ProjectFilterDialog from "./components/ProjectFilterDialog";
@@ -287,7 +287,7 @@ const ListView = ({
                     </td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full border border-slate-200">
-                        {row.Status}
+                        {getStatusLabel(row.Status)}
                       </span>
                     </td>
                     <td className="px-4 py-3">

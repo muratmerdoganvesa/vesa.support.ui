@@ -66,10 +66,10 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const STATUS_CONFIG = [
-  { key: "backlog",     label: "Backlog",     color: "#94a3b8" },
+  { key: "backlog",     label: "Analiz",      color: "#94a3b8" },
   { key: "realization", label: "Realization", color: "#3b82f6" },
   { key: "uat",         label: "UAT",         color: "#8b5cf6" },
-  { key: "preparation", label: "Preparation", color: "#f59e0b" },
+  { key: "preparation", label: "Cutover",     color: "#f59e0b" },
   { key: "done",        label: "Done",        color: "#10b981" },
 ] as const;
 

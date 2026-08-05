@@ -37,7 +37,7 @@ const KanbanColumn = ({
 
   const { setNodeRef, isOver } = useDroppable({ id });
 
-  const color = COLUMN_COLORS[title] ?? {
+  const color = COLUMN_COLORS[id.replace(/^col__/, "")] ?? {
     header: "border-t-slate-300",
     badge: "bg-slate-100 text-slate-600",
     dot: "bg-slate-400",

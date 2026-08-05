@@ -10,7 +10,7 @@ const STATUS_CONFIG: Record<
   { label: string; color: string; bar: string; textColor: string; bg: string }
 > = {
   Backlog: {
-    label: "Backlog",
+    label: "Analiz",
     color: "bg-slate-400",
     bar: "bg-slate-400",
     textColor: "text-slate-600",
@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<
     bg: "bg-violet-50",
   },
   Preparation: {
-    label: "Prep",
+    label: "Cutover",
     color: "bg-amber-400",
     bar: "bg-amber-400",
     textColor: "text-amber-600",
