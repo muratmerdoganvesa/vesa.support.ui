@@ -50,8 +50,10 @@ function WorkCompanyCE() {
     userAppId: "",
     workFlowDefinationId: null,
     isActive: null,
+    isMsp: null,
   });
   const [status, setStatus] = useState(null);
+  const [mspStatus, setMspStatus] = useState(null);
   const { id } = useParams();
 
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
@@ -67,6 +69,11 @@ function WorkCompanyCE() {
   const statusOptions = [
     { label: "Aktif", value: true },
     { label: "Pasif", value: false },
+  ];
+
+  const mspOptions = [
+    { label: "Evet", value: true },
+    { label: "Hayır", value: false },
   ];
 
   useEffect(() => {
@@ -95,6 +102,13 @@ function WorkCompanyCE() {
         console.log("null");
         // null gelirse setStatus çağrılmaz, ya da:
         setStatus(null); // Eğer combobox'ı boş göstermek istiyorsan
+      }
+
+      if (response.data.isMsp !== null && response.data.isMsp !== undefined) {
+        const matchedMsp = mspOptions.find((opt) => opt.value === response.data.isMsp);
+        setMspStatus(matchedMsp);
+      } else {
+        setMspStatus(null);
       }
     };
 
@@ -170,6 +184,7 @@ function WorkCompanyCE() {
           userAppId: null,
           workFlowDefinationId: sanitizedWorkFlowId,
           isActive: companyData.isActive,
+          isMsp: companyData.isMsp,
         });
       }
 
@@ -280,6 +295,26 @@ function WorkCompanyCE() {
     });
   };
 
+  const handleMspChange = (value: string) => {
+    if (value === NONE_VALUE) {
+      setMspStatus(null);
+      setCompanyData({
+        ...companyData,
+        isMsp: null,
+      });
+      return;
+    }
+    const opt = mspOptions.find((o) => String(o.value) === value);
+    if (!opt) {
+      return;
+    }
+    setMspStatus(opt);
+    setCompanyData({
+      ...companyData,
+      isMsp: opt.value,
+    });
+  };
+
   const approveSelectValue =
     selectedAprDesign != null && selectedAprDesign.id != null && String(selectedAprDesign.id) !== ""
       ? String(selectedAprDesign.id)
@@ -292,6 +327,9 @@ function WorkCompanyCE() {
 
   const statusSelectValue =
     status != null ? String(status.value) : NONE_VALUE;
+
+  const mspSelectValue =
+    mspStatus != null ? String(mspStatus.value) : NONE_VALUE;
 
   const fieldShell = "space-y-2";
 
@@ -389,6 +427,30 @@ function WorkCompanyCE() {
                       <span className="text-muted-foreground">Seçin</span>
                     </SelectItem>
                     {statusOptions.map((opt) => (
+                      <SelectItem key={String(opt.value)} value={String(opt.value)}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className={fieldShell}>
+                <Label htmlFor="work-company-msp">MSP</Label>
+                <Select value={mspSelectValue} onValueChange={handleMspChange}>
+                  <SelectTrigger
+                    id="work-company-msp"
+                    className="h-9 w-full min-w-0"
+                    size="default"
+                    aria-label="MSP seçimi"
+                  >
+                    <SelectValue placeholder="MSP" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="w-(--radix-select-trigger-width)">
+                    <SelectItem value={NONE_VALUE}>
+                      <span className="text-muted-foreground">Seçin</span>
+                    </SelectItem>
+                    {mspOptions.map((opt) => (
                       <SelectItem key={String(opt.value)} value={String(opt.value)}>
                         {opt.label}
                       </SelectItem>
