@@ -21,13 +21,29 @@ export interface KanbanColumn {
 }
 
 export const KANBAN_COLUMNS: KanbanColumn[] = [
-    { headerText: 'Backlog', keyField: 'Backlog', allowToggle: true },
+    { headerText: 'Analiz', keyField: 'Backlog', allowToggle: true },
     { headerText: 'Realization', keyField: 'Realization', allowToggle: true },
     { headerText: 'UAT', keyField: 'UAT', allowToggle: true },
-    { headerText: 'Preparation', keyField: 'Preparation', allowToggle: true },
+    { headerText: 'Cutover', keyField: 'Preparation', allowToggle: true },
     { headerText: 'Done', keyField: 'Done', allowToggle: true,isExpanded: true }
 ];
 
-export const STATUS_OPTIONS = ['Backlog', 'Realization', 'UAT', 'Preparation', 'Done'];
+/** API / keyField değerleri — değiştirmeyin */
+export const STATUS_OPTIONS = ['Backlog', 'Realization', 'UAT', 'Preparation', 'Done'] as const;
+
+/** Kullanıcıya gösterilen etiketler */
+export const STATUS_LABELS: Record<(typeof STATUS_OPTIONS)[number], string> = {
+    Backlog: 'Analiz',
+    Realization: 'Realization',
+    UAT: 'UAT',
+    Preparation: 'Cutover',
+    Done: 'Done',
+};
+
+export const getStatusLabel = (status?: string | null): string => {
+    if (!status) return STATUS_LABELS.Backlog;
+    return STATUS_LABELS[status as keyof typeof STATUS_LABELS] ?? status;
+};
+
 export const PRIORITY_OPTIONS = ['Low', 'Normal', 'High', 'Critical', 'Release Breaker'];
 export const TYPE_OPTIONS = ['Task', 'Proje Planlama', 'Ticket'];

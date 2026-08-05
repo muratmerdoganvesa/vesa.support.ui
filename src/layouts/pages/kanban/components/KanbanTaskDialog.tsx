@@ -45,6 +45,8 @@ import {
 import { UserAppDtoWithoutPhoto, TicketProjectsListDto } from "api/generated";
 import {
   STATUS_OPTIONS,
+  STATUS_LABELS,
+  getStatusLabel,
   TYPE_OPTIONS,
   PRIORITY_OPTIONS,
 } from "../types/kanban.types";
@@ -469,7 +471,7 @@ const KanbanTaskDialog = ({
               )}
             >
               <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", statusBadge.dot)} />
-              {form.Status || "Backlog"}
+              {getStatusLabel(form.Status)}
             </span>
             <span
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -567,7 +569,7 @@ const KanbanTaskDialog = ({
                         )}
                       >
                         <span className={cn("w-1.5 h-1.5 rounded-full", badge.dot)} />
-                        {opt}
+                        {STATUS_LABELS[opt]}
                       </button>
                     );
                   })}

@@ -6,10 +6,10 @@ export const UNASSIGNED_PROJECT_TYPE_KEY = "__unassigned__" as const;
 export type ProjectTypeColumnKey = typeof UNASSIGNED_PROJECT_TYPE_KEY | ProjectTypes;
 
 const PROJECT_TYPE_LABEL_BY_VALUE: Record<ProjectTypes, string> = {
-  [ProjectTypes.NUMBER_1]: "Backlog",
+  [ProjectTypes.NUMBER_1]: "Analiz",
   [ProjectTypes.NUMBER_2]: "Realization",
   [ProjectTypes.NUMBER_3]: "UAT",
-  [ProjectTypes.NUMBER_4]: "Preparation",
+  [ProjectTypes.NUMBER_4]: "Cutover",
   [ProjectTypes.NUMBER_5]: "DONE",
   [ProjectTypes.NUMBER_6]: "Beklemede",
 };
@@ -81,7 +81,7 @@ export const PROJECT_TYPE_COLUMN_COLORS: Record<
     cardBorder: "border-l-slate-300",
     tab: "text-slate-600 border-slate-400",
   },
-  Backlog: {
+  Analiz: {
     header: "border-t-slate-400",
     badge: "bg-slate-100 text-slate-600",
     dot: "bg-slate-400",
@@ -102,7 +102,7 @@ export const PROJECT_TYPE_COLUMN_COLORS: Record<
     cardBorder: "border-l-violet-500",
     tab: "text-violet-600 border-violet-500",
   },
-  Preparation: {
+  Cutover: {
     header: "border-t-amber-500",
     badge: "bg-amber-50 text-amber-700",
     dot: "bg-amber-500",

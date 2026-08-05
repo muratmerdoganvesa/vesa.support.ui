@@ -16,7 +16,7 @@ import {
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { ChevronLeft, ChevronRight, Folder, InboxIcon } from "lucide-react";
 import { KanbanTasksListDtoFixed } from "../utils/fetchKanbanData";
-import { KanbanColumn as KanbanColumnType } from "../types/kanban.types";
+import { KanbanColumn as KanbanColumnType, getStatusLabel } from "../types/kanban.types";
 import KanbanSortableCard from "./KanbanSortableCard";
 import KanbanCard from "./KanbanCard";
 import { cn } from "lib/utils";
@@ -222,10 +222,10 @@ const MobileAllProjectsBoard = ({ data, columns, projects, onCardClick, onMove }
                         )}
                       >
                         <ChevronLeft className="w-3 h-3" />
-                        {prev ?? "—"}
+                        {prev ? getStatusLabel(prev) : "—"}
                       </button>
                       <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                        {card.Status}
+                        {getStatusLabel(card.Status)}
                       </span>
                       <button
                         type="button"
@@ -236,7 +236,7 @@ const MobileAllProjectsBoard = ({ data, columns, projects, onCardClick, onMove }
                           next ? "text-slate-600 hover:bg-slate-200" : "text-slate-300 cursor-not-allowed"
                         )}
                       >
-                        {next ?? "—"}
+                        {next ? getStatusLabel(next) : "—"}
                         <ChevronRight className="w-3 h-3" />
                       </button>
                     </div>
