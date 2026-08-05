@@ -64,7 +64,7 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
 function EmptyStateCompany({ query }: { query: string }) {
   return (
     <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={4} className="py-20 text-center">
+      <TableCell colSpan={5} className="py-20 text-center">
         <div className="flex flex-col items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
             <LayoutList className="h-5 w-5 text-slate-400" />
@@ -238,6 +238,9 @@ function WorkCompany() {
                   <TableHead className={tableHeadClass} scope="col">
                     {t("ns1:CompanyPage.CompanyList.OnayAkisi")}
                   </TableHead>
+                  <TableHead className={tableHeadClass} scope="col">
+                    MSP
+                  </TableHead>
                   <TableHead className={cn(tableHeadClass, "w-[72px] text-right")} scope="col">
                     {t("ns1:CompanyPage.CompanyList.Islemler")}
                   </TableHead>
@@ -280,6 +283,24 @@ function WorkCompany() {
                             columnName="workFlowDefination"
                             testRow={rowOriginal as any}
                           />
+                        </TableCell>
+                        <TableCell className={cn(tableCellClass, "text-slate-700")}>
+                          <span
+                            className={cn(
+                              "inline-flex rounded-md px-2 py-0.5 text-xs font-medium",
+                              rowOriginal.isMsp === true
+                                ? "bg-emerald-50 text-emerald-700"
+                                : rowOriginal.isMsp === false
+                                  ? "bg-slate-100 text-slate-600"
+                                  : "bg-slate-50 text-slate-400"
+                            )}
+                          >
+                            {rowOriginal.isMsp === true
+                              ? "Evet"
+                              : rowOriginal.isMsp === false
+                                ? "Hayır"
+                                : "—"}
+                          </span>
                         </TableCell>
                         <TableCell className={cn(tableCellClass, "text-right")}>
                           <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">

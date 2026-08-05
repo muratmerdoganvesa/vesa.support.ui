@@ -15,7 +15,7 @@ import {
 import { arrayMove } from "@dnd-kit/sortable";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { KanbanTasksListDtoFixed } from "../utils/fetchKanbanData";
-import { KanbanColumn as KanbanColumnType } from "../types/kanban.types";
+import { KanbanColumn as KanbanColumnType, getStatusLabel } from "../types/kanban.types";
 import KanbanColumn from "./KanbanColumn";
 import KanbanCard from "./KanbanCard";
 import { cn } from "lib/utils";
@@ -119,13 +119,13 @@ const MobileBoard = ({ data, columns, onCardClick, onMove }: MobileBoardProps) =
                       "flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors",
                       prev ? "text-slate-600 hover:bg-slate-200" : "text-slate-300 cursor-not-allowed"
                     )}
-                    aria-label={prev ? `${prev} kolonuna taşı` : "Önceki kolon yok"}
+                    aria-label={prev ? `${getStatusLabel(prev)} kolonuna taşı` : "Önceki kolon yok"}
                   >
                     <ChevronLeft className="w-3 h-3" />
-                    {prev ?? "—"}
+                    {prev ? getStatusLabel(prev) : "—"}
                   </button>
                   <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                    {card.Status}
+                    {getStatusLabel(card.Status)}
                   </span>
                   <button
                     type="button"
@@ -135,9 +135,9 @@ const MobileBoard = ({ data, columns, onCardClick, onMove }: MobileBoardProps) =
                       "flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors",
                       next ? "text-slate-600 hover:bg-slate-200" : "text-slate-300 cursor-not-allowed"
                     )}
-                    aria-label={next ? `${next} kolonuna taşı` : "Sonraki kolon yok"}
+                    aria-label={next ? `${getStatusLabel(next)} kolonuna taşı` : "Sonraki kolon yok"}
                   >
-                    {next ?? "—"}
+                    {next ? getStatusLabel(next) : "—"}
                     <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>

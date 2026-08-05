@@ -22237,6 +22237,12 @@ export interface WorkCompany {
      * @memberof WorkCompany
      */
     'isActive'?: boolean | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WorkCompany
+     */
+    'isMsp'?: boolean | null;
 }
 
 
@@ -22294,6 +22300,12 @@ export interface WorkCompanyDto {
      * @memberof WorkCompanyDto
      */
     'isActive'?: boolean | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WorkCompanyDto
+     */
+    'isMsp'?: boolean | null;
 }
 
 
@@ -22333,6 +22345,12 @@ export interface WorkCompanyInsertDto {
      * @memberof WorkCompanyInsertDto
      */
     'isActive'?: boolean | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WorkCompanyInsertDto
+     */
+    'isMsp'?: boolean | null;
 }
 
 
@@ -22631,6 +22649,12 @@ export interface WorkCompanyUpdateDto {
      * @memberof WorkCompanyUpdateDto
      */
     'isActive'?: boolean | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof WorkCompanyUpdateDto
+     */
+    'isMsp'?: boolean | null;
 }
 
 
