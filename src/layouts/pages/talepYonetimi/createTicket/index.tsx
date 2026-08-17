@@ -175,26 +175,47 @@ const SectionCard = ({
   </div>
 );
 
-const MspStatusBadge = () => (
-  <div
-    className="flex items-center gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/80 px-3 py-2.5"
-    role="status"
-    aria-label="MSP durumu: MSP Şirketi"
-  >
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
-      <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+const MspStatusBadge = ({ mspClientId }: { mspClientId?: string | null }) => {
+  const trimmedClientId = mspClientId?.trim() ?? "";
+
+  return (
+    <div
+      className="flex items-start gap-2.5 rounded-xl border border-orange-200/80 bg-orange-50/80 px-3 py-2.5"
+      role="status"
+      aria-label={
+        trimmedClientId
+          ? `MSP durumu: MSP Şirketi, Client ID: ${trimmedClientId}`
+          : "MSP durumu: MSP Şirketi"
+      }
+    >
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+        <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="text-[10px] font-bold tracking-widest uppercase text-orange-600/80 leading-none">
+          MSP Durumu
+        </span>
+        <span className="text-xs font-semibold text-orange-700 leading-none">
+          <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-orange-500 align-middle" aria-hidden />
+          MSP Şirketi
+        </span>
+        {trimmedClientId && (
+          <div className="mt-0.5 flex min-w-0 flex-col gap-0.5 border-t border-orange-200/70 pt-1.5">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-orange-600/70 leading-none">
+              Client ID
+            </span>
+            <span
+              className="truncate font-mono text-sm font-bold text-orange-950"
+              title={trimmedClientId}
+            >
+              {trimmedClientId}
+            </span>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-600/80 leading-none">
-        MSP Durumu
-      </span>
-      <span className="text-xs font-semibold text-emerald-700 leading-none">
-        <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle" aria-hidden />
-        MSP Şirketi
-      </span>
-    </div>
-  </div>
-);
+  );
+};
 
 // Generic single-select combobox
 interface ComboboxOption {
@@ -1500,7 +1521,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       />
                     </FormField>
 
-                    {selectedCompany?.isMsp === true && <MspStatusBadge />}
+                    {selectedCompany?.isMsp === true && (
+                      <MspStatusBadge mspClientId={selectedCompany.mspClientId} />
+                    )}
 
                     <FormField label={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailInputProps.Kullanici")}>
                       <UserSearchCombobox
