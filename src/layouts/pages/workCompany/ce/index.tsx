@@ -51,6 +51,7 @@ function WorkCompanyCE() {
     workFlowDefinationId: null,
     isActive: null,
     isMsp: null,
+    mspClientId: "",
   });
   const [status, setStatus] = useState(null);
   const [mspStatus, setMspStatus] = useState(null);
@@ -171,11 +172,15 @@ function WorkCompanyCE() {
       // }
       const sanitizedWorkFlowId =
         companyData.workFlowDefinationId == "" ? null : companyData.workFlowDefinationId;
-      console.log("sercan", sanitizedWorkFlowId);
+      const sanitizedMspClientId =
+        companyData.mspClientId && companyData.mspClientId.trim() !== ""
+          ? companyData.mspClientId.trim()
+          : null;
       if (id) {
         await api.apiWorkCompanyPut({
           ...companyData,
           workFlowDefinationId: sanitizedWorkFlowId,
+          mspClientId: sanitizedMspClientId,
         });
       } else {
         await api.apiWorkCompanyPost({
@@ -185,6 +190,7 @@ function WorkCompanyCE() {
           workFlowDefinationId: sanitizedWorkFlowId,
           isActive: companyData.isActive,
           isMsp: companyData.isMsp,
+          mspClientId: sanitizedMspClientId,
         });
       }
 
@@ -457,6 +463,20 @@ function WorkCompanyCE() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className={fieldShell}>
+                <Label htmlFor="work-company-msp-client-id">MSP Client ID</Label>
+                <Input
+                  id="work-company-msp-client-id"
+                  value={companyData.mspClientId ?? ""}
+                  onChange={(e) =>
+                    setCompanyData({ ...companyData, mspClientId: e.target.value })
+                  }
+                  className="h-9 text-sm"
+                  autoComplete="off"
+                  aria-label="MSP Client ID"
+                />
               </div>
             </div>
             {/* Onaycı (kullanıcı arama) alanı önceki sürümde yorum satırındaydı; iş mantığı state/handler dosyada duruyor. */}

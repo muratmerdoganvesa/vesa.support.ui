@@ -64,7 +64,7 @@ function StatCard({ label, value, accent }: { label: string; value: number; acce
 function EmptyStateCompany({ query }: { query: string }) {
   return (
     <TableRow className="hover:bg-transparent">
-      <TableCell colSpan={5} className="py-20 text-center">
+      <TableCell colSpan={6} className="py-20 text-center">
         <div className="flex flex-col items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
             <LayoutList className="h-5 w-5 text-slate-400" />
@@ -171,7 +171,11 @@ function WorkCompany() {
     if (!q) {
       return dataTableData;
     }
-    return dataTableData.filter((row) => (row.name ?? "").toLowerCase().includes(q));
+    return dataTableData.filter(
+      (row) =>
+        (row.name ?? "").toLowerCase().includes(q) ||
+        (row.mspClientId ?? "").toLowerCase().includes(q)
+    );
   }, [dataTableData, tableSearchQuery]);
 
   const tableHeadClass =
@@ -241,6 +245,9 @@ function WorkCompany() {
                   <TableHead className={tableHeadClass} scope="col">
                     MSP
                   </TableHead>
+                  <TableHead className={tableHeadClass} scope="col">
+                    MSP Client ID
+                  </TableHead>
                   <TableHead className={cn(tableHeadClass, "w-[72px] text-right")} scope="col">
                     {t("ns1:CompanyPage.CompanyList.Islemler")}
                   </TableHead>
@@ -301,6 +308,13 @@ function WorkCompany() {
                                 ? "Hayır"
                                 : "—"}
                           </span>
+                        </TableCell>
+                        <TableCell className={cn(tableCellClass, "text-slate-700")}>
+                          <GlobalCell
+                            value={rowOriginal.mspClientId ?? "—"}
+                            columnName="mspClientId"
+                            testRow={rowOriginal as any}
+                          />
                         </TableCell>
                         <TableCell className={cn(tableCellClass, "text-right")}>
                           <div className="flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
