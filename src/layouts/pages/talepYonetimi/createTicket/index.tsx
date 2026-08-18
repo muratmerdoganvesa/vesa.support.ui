@@ -143,11 +143,13 @@ const FormField = ({
 const SectionCard = ({
   title,
   icon,
+  headerRight,
   children,
   className,
 }: {
   title?: string;
   icon?: React.ReactNode;
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) => (
@@ -157,10 +159,10 @@ const SectionCard = ({
       className
     )}
   >
-    {(title || icon) && (
+    {(title || icon || headerRight) && (
       <div className="flex items-center gap-2.5 mb-4 pb-3.5 border-b border-slate-50">
         {icon && (
-          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#3e5d8f]/8 text-[#3e5d8f]/70">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#3e5d8f]/8 text-[#3e5d8f]/70">
             {icon}
           </div>
         )}
@@ -168,6 +170,9 @@ const SectionCard = ({
           <h3 className="text-[10px] font-bold tracking-widest uppercase text-slate-400">
             {title}
           </h3>
+        )}
+        {headerRight && (
+          <div className="ml-auto min-w-0">{headerRight}</div>
         )}
       </div>
     )}
@@ -180,7 +185,7 @@ const MspStatusBadge = ({ mspClientId }: { mspClientId?: string | null }) => {
 
   return (
     <div
-      className="flex items-start gap-2.5 rounded-xl border border-orange-200/80 bg-orange-50/80 px-3 py-2.5"
+      className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 px-3 py-1.5 text-white shadow-md shadow-orange-500/30"
       role="status"
       aria-label={
         trimmedClientId
@@ -188,31 +193,25 @@ const MspStatusBadge = ({ mspClientId }: { mspClientId?: string | null }) => {
           : "MSP durumu: MSP Şirketi"
       }
     >
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
-        <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
-      </div>
-      <div className="flex min-w-0 flex-col gap-1">
-        <span className="text-[10px] font-bold tracking-widest uppercase text-orange-600/80 leading-none">
-          MSP Durumu
-        </span>
-        <span className="text-xs font-semibold text-orange-700 leading-none">
-          <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-orange-500 align-middle" aria-hidden />
-          MSP Şirketi
-        </span>
-        {trimmedClientId && (
-          <div className="mt-0.5 flex min-w-0 flex-col gap-0.5 border-t border-orange-200/70 pt-1.5">
-            <span className="text-[10px] font-bold tracking-widest uppercase text-orange-600/70 leading-none">
+      <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span className="text-[10px] font-bold tracking-widest uppercase leading-none">
+        MSP Durumu
+      </span>
+      <span className="hidden h-3 w-px bg-white/40 sm:block" aria-hidden />
+      <span className="text-xs font-semibold leading-none">MSP Şirketi</span>
+      {trimmedClientId && (
+        <>
+          <span className="hidden h-3 w-px bg-white/40 sm:block" aria-hidden />
+          <span className="flex items-baseline gap-1.5 leading-none">
+            <span className="text-[10px] font-bold tracking-widest uppercase text-white/85">
               Client ID
             </span>
-            <span
-              className="truncate font-mono text-sm font-bold text-orange-950"
-              title={trimmedClientId}
-            >
+            <span className="font-mono text-sm font-bold" title={trimmedClientId}>
               {trimmedClientId}
             </span>
-          </div>
-        )}
-      </div>
+          </span>
+        </>
+      )}
     </div>
   );
 };
@@ -909,8 +908,18 @@ function CreateRequest({ ...rest }: createTicketProps) {
         setSelectedIlgiliPerson(relUsers);
 
         if (ticketData.customerRefId) {
-          const selectedCustCompanyData = companyDataRes.data.find((c) => c.id === ticketData.customerRefId);
-          setselectedToCompany({ id: ticketData.customerRefId, name: selectedCustCompanyData?.name });
+          let selectedCustCompanyData = companyDataRes.data.find((c) => c.id === ticketData.customerRefId);
+          if (!selectedCustCompanyData) {
+            try {
+              const customerById = await companyApi.apiWorkCompanyIdGet(ticketData.customerRefId);
+              selectedCustCompanyData = customerById.data;
+            } catch {
+              selectedCustCompanyData = undefined;
+            }
+          }
+          setselectedToCompany(
+            selectedCustCompanyData ?? { id: ticketData.customerRefId, name: undefined }
+          );
 
           const api = new TicketProjectsApi(conf);
           const data = await api.apiTicketProjectsGetActiveProjectsGet(ticketData.customerRefId);
@@ -1521,10 +1530,6 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       />
                     </FormField>
 
-                    {selectedCompany?.isMsp === true && (
-                      <MspStatusBadge mspClientId={selectedCompany.mspClientId} />
-                    )}
-
                     <FormField label={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailInputProps.Kullanici")}>
                       <UserSearchCombobox
                         value={selectedKullanici}
@@ -1593,6 +1598,11 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   <SectionCard
                     title={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailHeaderProps.KayitVeBilgiSecenekleri")}
                     icon={<Tag className="w-3.5 h-3.5" />}
+                    headerRight={
+                      selectedToCompany?.isMsp === true ? (
+                        <MspStatusBadge mspClientId={selectedToCompany.mspClientId} />
+                      ) : null
+                    }
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
