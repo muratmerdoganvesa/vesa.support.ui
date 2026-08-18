@@ -348,6 +348,96 @@ function isRootParentId(pid: unknown): boolean {
   return n === 0 || Number.isNaN(n);
 }
 
+function pickGuidString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return MODULE_GUID_RE.test(trimmed) ? trimmed : undefined;
+}
+
+/** Syncfusion kaydı TaskID kullanır; DB Guid'i özel `Id` alanında kalır ve diyalogda yoktur. */
+function resolveGanttTaskGuid(row: any, projectRows: any[]): string | undefined {
+  if (!row || typeof row !== "object") return undefined;
+  const nested = row.taskData && typeof row.taskData === "object" ? row.taskData : null;
+  const fromRow =
+    pickGuidString(row.Id) ??
+    pickGuidString(row.id) ??
+    pickGuidString(nested?.Id) ??
+    pickGuidString(nested?.id);
+  if (fromRow) return fromRow;
+
+  const taskId = row.TaskID ?? row.taskId ?? nested?.TaskID ?? nested?.taskId;
+  if (taskId == null || taskId === "") return undefined;
+  const existing = projectRows.find((t) => Number(t.TaskID) === Number(taskId));
+  return pickGuidString(existing?.Id) ?? pickGuidString(existing?.id);
+}
+
+type GanttResourcePoolItem = {
+  id?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  userName?: string | null;
+  fullName?: string | null;
+};
+
+/** Gantt resources bazen nesne, bazen id dizisi, bazen virgüllü string verir. API TaskUsersDto[] bekler. */
+function normalizeGanttTaskUsers(
+  resourcesValue: unknown,
+  resourcePool: GanttResourcePoolItem[] = [],
+): ProjectTasksUpdateDto["users"] {
+  if (resourcesValue == null) return undefined;
+
+  let items: unknown[] = [];
+  if (typeof resourcesValue === "string") {
+    items = resourcesValue
+      .split(/[;,]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } else if (Array.isArray(resourcesValue)) {
+    items = resourcesValue;
+  } else {
+    return undefined;
+  }
+
+  const result: NonNullable<ProjectTasksUpdateDto["users"]> = [];
+  const seen = new Set<string>();
+
+  const resolvePoolId = (raw: string): string | undefined => {
+    const guid = pickGuidString(raw);
+    if (guid) return guid;
+    const lower = raw.trim().toLowerCase();
+    if (!lower) return undefined;
+    const match = resourcePool.find((r) => {
+      const full = `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim().toLowerCase();
+      return (
+        String(r.id ?? "").toLowerCase() === lower ||
+        String(r.fullName ?? "").trim().toLowerCase() === lower ||
+        full === lower ||
+        String(r.userName ?? "").toLowerCase() === lower
+      );
+    });
+    return pickGuidString(match?.id ?? undefined);
+  };
+
+  for (const item of items) {
+    let rawId = "";
+    if (typeof item === "string" || typeof item === "number") {
+      rawId = String(item).trim();
+    } else if (item && typeof item === "object") {
+      const o = item as Record<string, unknown>;
+      rawId = String(o.id ?? o.Id ?? o.resourceId ?? "").trim();
+      if (!rawId) {
+        rawId = String(o.fullName ?? o.resourceName ?? o.userName ?? "").trim();
+      }
+    }
+    const id = resolvePoolId(rawId);
+    if (!id || seen.has(id.toLowerCase())) continue;
+    seen.add(id.toLowerCase());
+    result.push({ id });
+  }
+
+  return result.length > 0 ? result : undefined;
+}
+
 /**
  * Veri yenilendikten sonra ağacı kapatıp sadece bu TaskID satırının görünmesi için
  * kökten üst üste expand edilmesi gereken TaskID listesi (kök → ... → doğrudan üst).
@@ -1665,14 +1755,8 @@ function ProjectChart() {
   };
 
   /** Gantt bazen resources'u dizi, bazen virgüllü string verir; API TaskUsersDto[] bekler. */
-  const usersForInsert = (resources: unknown): ProjectTasksInsertDto["users"] => {
-    if (resources == null) return undefined;
-    if (typeof resources === "string") return undefined;
-    if (!Array.isArray(resources) || resources.length === 0) return undefined;
-    const first = resources[0];
-    if (typeof first !== "object" || first === null || !("id" in first)) return undefined;
-    return resources as ProjectTasksInsertDto["users"];
-  };
+  const usersForInsert = (rawResources: unknown): ProjectTasksInsertDto["users"] =>
+    normalizeGanttTaskUsers(rawResources, resources);
 
   type CreateTaskOptions = { silent?: boolean; skipFetch?: boolean };
 
@@ -1881,7 +1965,8 @@ function ProjectChart() {
   };
 
   const updateTask = async (args: any) => {
-    const taskData = args.taskData ?? args;
+    const nested = args?.taskData && typeof args.taskData === "object" ? args.taskData : null;
+    const taskData = nested ? { ...nested, ...args } : args;
     if (!projectId) {
       dispatchAlert({
         message: "Proje ID'si bulunamadı. Görev güncellenemedi.",
@@ -1890,7 +1975,8 @@ function ProjectChart() {
       return;
     }
 
-    if (!taskData?.Id) {
+    const taskGuid = resolveGanttTaskGuid(args, projectDataRef.current);
+    if (!taskGuid) {
       dispatchAlert({
         message: "Görev verileri eksik. Görev güncellenemedi.",
         type: "error",
@@ -1916,12 +2002,19 @@ function ProjectChart() {
         normalizeModuleIdsFromRow(taskData),
         moduleDataRef.current as GanttModuleOption[],
       );
-      const existing = projectDataRef.current.find((t: any) => t.Id === taskData.Id) as any;
+      const existing = projectDataRef.current.find(
+        (t: any) => String(t.Id).toLowerCase() === taskGuid.toLowerCase(),
+      ) as any;
 
       const config = getConfiguration();
+      const hasResourcePayload =
+        taskData.resources !== undefined && taskData.resources !== null;
+      const usersPayload = hasResourcePayload
+        ? normalizeGanttTaskUsers(taskData.resources, resources)
+        : normalizeGanttTaskUsers(existing?.resources, resources);
 
       const body: ProjectTasksUpdateDto = {
-        id: taskData.Id,
+        id: taskGuid,
         name:
           taskData.TaskName != null && String(taskData.TaskName).trim().length > 0
             ? taskData.TaskName
@@ -1937,7 +2030,7 @@ function ProjectChart() {
         notes: taskData.Notes,
         isManual: taskData.IsManual,
         taskId: taskData.TaskID,
-        users: taskData.resources,
+        users: usersPayload,
         moduleIds: moduleIdsPayload,
         projectStatus: normalizeProjectStatusFromRow(taskData),
       };
@@ -1955,6 +2048,7 @@ function ProjectChart() {
 
       if (existing && parentUnchanged && taskIdUnchanged) {
         const patch = buildLocalRowPatchFromTaskData(taskData, calculatedDuration, existing);
+        patch.Id = taskGuid;
         /** API'ye giden değerler anlık UI için tek doğruluk kaynağı; Syncfusion save sonrası taskData boşalabiliyor. */
         if (body.name != null && String(body.name).trim().length > 0) {
           patch.TaskName = body.name;
@@ -1976,13 +2070,11 @@ function ProjectChart() {
         restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
         restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
         setProjectData((prev) =>
-          prev.map((t: any) => (t.Id === taskData.Id ? { ...t, ...patch } : t))
+          prev.map((t: any) =>
+            String(t.Id).toLowerCase() === taskGuid.toLowerCase() ? { ...t, ...patch } : t
+          )
         );
-        const guid = taskData.Id;
-        if (guid) {
-          const mids = (patch.moduleIds as string[]) ?? [];
-          taskModuleIdsCacheRef.current.set(String(guid), mids.slice());
-        }
+        taskModuleIdsCacheRef.current.set(taskGuid, ((patch.moduleIds as string[]) ?? []).slice());
       } else {
         const data = await fetchProjectData({ clearModuleCache: false, showBusy: false });
         const tid = taskData?.TaskID;
