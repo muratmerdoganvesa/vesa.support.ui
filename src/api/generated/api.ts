@@ -22243,6 +22243,12 @@ export interface WorkCompany {
      * @memberof WorkCompany
      */
     'isMsp'?: boolean | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WorkCompany
+     */
+    'mspClientId'?: string | null;
 }
 
 
@@ -22306,6 +22312,12 @@ export interface WorkCompanyDto {
      * @memberof WorkCompanyDto
      */
     'isMsp'?: boolean | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WorkCompanyDto
+     */
+    'mspClientId'?: string | null;
 }
 
 
@@ -22351,6 +22363,12 @@ export interface WorkCompanyInsertDto {
      * @memberof WorkCompanyInsertDto
      */
     'isMsp'?: boolean | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WorkCompanyInsertDto
+     */
+    'mspClientId'?: string | null;
 }
 
 
@@ -22655,6 +22673,12 @@ export interface WorkCompanyUpdateDto {
      * @memberof WorkCompanyUpdateDto
      */
     'isMsp'?: boolean | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof WorkCompanyUpdateDto
+     */
+    'mspClientId'?: string | null;
 }
 
 

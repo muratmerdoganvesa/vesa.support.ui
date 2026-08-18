@@ -254,6 +254,22 @@ const TicketClientData = async () => {
   }
 };
 
+const TicketMspData = (): Field => {
+  return {
+    name: "IsMsp",
+    label: "Msp mi?",
+    valueEditorType: "select",
+    values: [
+      { label: "Evet", value: "true" },
+      { label: "Hayır", value: "false" },
+    ],
+    operators: [
+      { name: "=", label: "Equal to" },
+      { name: "!=", label: "Not equal to" },
+    ],
+  };
+};
+
 const TicketCompanyData = async () => {
   try {
     let response = (await (await fetchCompanyData()).apiWorkCompanyGetAssingListGet()).data;
@@ -351,5 +367,6 @@ export {
   TicketSubjectData,
   TicketClientData,
   TicketCompanyData,
+  TicketMspData,
   WorkCompanyIdSystemData,
 };
