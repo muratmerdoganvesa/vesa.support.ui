@@ -24,6 +24,7 @@ import {
   TicketSubjectData,
   TicketClientData,
   TicketCompanyData,
+  TicketMspData,
   WorkCompanyIdSystemData,
 } from "../controller";
 import {
@@ -700,6 +701,7 @@ function QueryDetail() {
                     </h3>
                     <QueryBuilder
                       fields={[
+                        TicketMspData(),
                         ...clientFields,
                         ...companyFields,
                         ...priorityFields,

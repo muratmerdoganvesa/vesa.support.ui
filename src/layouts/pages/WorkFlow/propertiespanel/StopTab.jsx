@@ -18,6 +18,12 @@ const STOP_TYPES = [
   { name: "Yeniden Başlat", code: "RESTART" },
 ];
 
+const getStopTypeCode = (stoptype) => {
+  if (!stoptype) return "";
+  if (typeof stoptype === "string") return stoptype;
+  return stoptype.code ?? "";
+};
+
 export default function StopTab({ initialValues, node, onButtonClick }) {
   return (
     <div className="w-full">
@@ -56,8 +62,11 @@ export default function StopTab({ initialValues, node, onButtonClick }) {
                   <div className="flex flex-col gap-1.5 flex-1">
                     <Label className="text-xs font-medium text-gray-600">Durma Tipi</Label>
                     <Select
-                      value={values.stoptype ?? ""}
-                      onValueChange={(val) => setFieldValue("stoptype", val)}
+                      value={getStopTypeCode(values.stoptype)}
+                      onValueChange={(val) => {
+                        const selected = STOP_TYPES.find((t) => t.code === val);
+                        setFieldValue("stoptype", selected ?? { name: val, code: val });
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Durma Tipi Seçiniz" />
