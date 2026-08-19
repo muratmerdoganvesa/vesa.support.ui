@@ -117,6 +117,22 @@ function GlobalCell({ value, statusId, ...rest }: Props) {
     );
   }
 
+  if (col === "isMsp") {
+    if (value !== true) return null;
+
+    return (
+      <div className="flex items-center">
+        <span
+          className="inline-flex items-center rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-600"
+          role="status"
+          aria-label="MSP müşterisi"
+        >
+          MSP Müşterisi
+        </span>
+      </div>
+    );
+  }
+
   if (col === "priorityText") {
     const priorityId = rest.testRow?.priority;
     const priorityLabel = getPriorityLabel(priorityId, value);
