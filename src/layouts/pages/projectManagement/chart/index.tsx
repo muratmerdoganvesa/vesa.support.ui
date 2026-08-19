@@ -348,6 +348,21 @@ function isRootParentId(pid: unknown): boolean {
   return n === 0 || Number.isNaN(n);
 }
 
+function parsePositiveDuration(value: unknown): number | undefined {
+  if (value == null || value === "") return undefined;
+  if (typeof value === "object" && value !== null && "value" in (value as object)) {
+    return parsePositiveDuration((value as { value?: unknown }).value);
+  }
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.max(1, Math.round(value));
+  }
+  if (typeof value === "string") {
+    const parsed = parseFloat(value.replace(",", "."));
+    if (Number.isFinite(parsed) && parsed > 0) return Math.max(1, Math.round(parsed));
+  }
+  return undefined;
+}
+
 function pickGuidString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -1745,8 +1760,16 @@ function ProjectChart() {
     return diffDays > 0 ? diffDays : 0;
   };
 
-  /** API: Duration zorunlu ve 0 olamaz (InsertTask doğrulaması). */
+  /** API: Duration zorunlu ve 0 olamaz (InsertTask / UpdateTask doğrulaması). */
   const durationForInsert = (start: Date, end: Date) => Math.max(1, calculateDuration(start, end));
+
+  /** Gantt aynı gün start/end veya milestone'da Duration=0 üretebilir; formdaki/kayıtlı süre tercih edilir. */
+  const resolveDurationForApi = (taskData: any, start: Date, end: Date, existing: any) =>
+    parsePositiveDuration(taskData?.Duration) ??
+    parsePositiveDuration(taskData?.duration) ??
+    parsePositiveDuration(taskData?.ganttProperties?.duration) ??
+    parsePositiveDuration(existing?.Duration) ??
+    durationForInsert(start, end);
 
   /** C# tarafı ParentId string bekliyor (taskId / üst görev kimliği). */
   const parentIdForInsert = (parentID: unknown): string | undefined => {
@@ -1996,15 +2019,15 @@ function ProjectChart() {
       const startDate = new Date(taskData.StartDate);
       const endDate = new Date(taskData.EndDate);
 
-      const calculatedDuration = calculateDuration(startDate, endDate);
+      const existing = projectDataRef.current.find(
+        (t: any) => String(t.Id).toLowerCase() === taskGuid.toLowerCase(),
+      ) as any;
+      const calculatedDuration = resolveDurationForApi(taskData, startDate, endDate, existing);
 
       const moduleIdsPayload = resolveToModuleIds(
         normalizeModuleIdsFromRow(taskData),
         moduleDataRef.current as GanttModuleOption[],
       );
-      const existing = projectDataRef.current.find(
-        (t: any) => String(t.Id).toLowerCase() === taskGuid.toLowerCase(),
-      ) as any;
 
       const config = getConfiguration();
       const hasResourcePayload =
@@ -2032,7 +2055,8 @@ function ProjectChart() {
         taskId: taskData.TaskID,
         users: usersPayload,
         moduleIds: moduleIdsPayload,
-        projectStatus: normalizeProjectStatusFromRow(taskData),
+        projectStatus:
+          normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
       };
 
       const api = new ProjectTasksApi(config);
