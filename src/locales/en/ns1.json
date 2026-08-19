@@ -267,6 +267,7 @@
         "Oncelik": "Priority",
         "Baslik": "Title",
         "Musteri": "Customer",
+        "MspDurumu": "MSP Status",
         "Atanan": "Assigned (Person/Team)",
         "Olusturan": "Created By",
         "Tarih": "Date",

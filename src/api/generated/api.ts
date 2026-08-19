@@ -16956,6 +16956,12 @@ export interface TicketListDto {
      */
     'customerRefName'?: string | null;
     /**
+     * Talebin CustomerRef (müşteri) WorkCompany.IsMsp değeri.
+     * @type {boolean}
+     * @memberof TicketListDto
+     */
+    'isMsp'?: boolean | null;
+    /**
      * 
      * @type {boolean}
      * @memberof TicketListDto

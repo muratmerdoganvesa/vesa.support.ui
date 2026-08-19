@@ -333,6 +333,76 @@ function getStatusChipClass(label: string): string {
   return STATUS_CHIP_CLASS[label] ?? "gantt-chip gantt-chip--empty";
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Durum kolonu React template ile büyük listelerde rebind sonrası boş kalıyor; native HTML kullan. */
+function renderProjectStatusCellHtml(row: any): string {
+  const status = normalizeProjectStatusFromRow(row);
+  if (status == null) return '<span class="gantt-chip-empty">-</span>';
+  const label = getProjectStatusLabel(status);
+  return `<span class="${getStatusChipClass(label)}" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+}
+
+function toGanttDate(value: unknown): Date | undefined {
+  if (value == null || value === "") return undefined;
+  const d = value instanceof Date ? value : new Date(value as string | number);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
+/** updateRecordByID beforeSave döngüsüne girer; kayıt sonrası satırı yerinde boyar. */
+function paintGanttProjectStatusCell(gantt: any, taskId: unknown, rowData: any) {
+  if (!gantt || taskId == null) return;
+  try {
+    const rowEl: HTMLElement | null = gantt.getRowByID?.(taskId) ?? null;
+    if (!rowEl) return;
+    const cols: any[] =
+      gantt.treeGrid?.grid?.getColumns?.() ?? gantt.treeGrid?.columns ?? [];
+    const colIndex = cols.findIndex((c: any) => c.field === "projectStatus");
+    if (colIndex < 0) return;
+    const cell = rowEl.querySelectorAll("td.e-rowcell")[colIndex] as HTMLElement | undefined;
+    if (cell) cell.innerHTML = renderProjectStatusCellHtml(rowData);
+  } catch {
+    /* hücre henüz yok */
+  }
+}
+
+function applyLocalPatchToGanttRecord(gantt: any, nextRow: any, patch: Record<string, unknown>) {
+  const rec = gantt?.getRecordByID?.(String(nextRow.TaskID));
+  if (!rec) return null;
+
+  Object.assign(rec, patch);
+  if (rec.taskData) Object.assign(rec.taskData, patch);
+  applyProjectStatusToRow(rec, nextRow.projectStatus ?? null);
+  if (Array.isArray(nextRow.moduleIds)) {
+    applyModuleIdsToRow(rec, nextRow.moduleIds);
+  }
+
+  const gp = rec.ganttProperties;
+  if (gp) {
+    if (patch.TaskName != null) gp.taskName = patch.TaskName;
+    if (patch.Progress != null) gp.progress = patch.Progress;
+    if (patch.Duration != null) gp.duration = patch.Duration;
+    if (patch.Notes != null) gp.notes = patch.Notes;
+    const start = toGanttDate(patch.StartDate);
+    const end = toGanttDate(patch.EndDate);
+    if (start) gp.startDate = start;
+    if (end) gp.endDate = end;
+  }
+
+  try {
+    gantt.setRecordValue?.("projectStatus", nextRow.projectStatus ?? null, rec, true);
+  } catch {
+    /* setRecordValue bazı kayıtlarda yok */
+  }
+  return rec;
+}
+
 function getModuleChipClass(key: string): string {
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
@@ -1125,9 +1195,60 @@ function ProjectChart() {
   const taskModuleIdsCacheRef = useRef<Map<string, string[]>>(new Map());
   const [projectData, setProjectData] = useState<any[]>([]);
   const projectDataRef = useRef<any[]>([]);
+  /**
+   * Gantt dataSource referansı tam yüklemede değişir; yerel satır yamasında aynı kalır.
+   * Böylece kayıttan sonra tüm ağaç rebind + collapseAll olmaz (çok görevde Durum şablonları
+   * React portal ile yeniden bağlanmıyordu).
+   */
+  const ganttDataSourceRef = useRef<any[]>([]);
+  /** updateRecordByID / satır yenileme actionBegin beforeSave'i tekrar tetiklemesin. */
+  const isApplyingLocalPatchRef = useRef(false);
+  const isUpdatingTaskRef = useRef(false);
   useEffect(() => {
     projectDataRef.current = projectData;
   }, [projectData]);
+
+  const commitLocalGanttRowPatch = (taskGuid: string, patch: Record<string, unknown>) => {
+    const src =
+      ganttDataSourceRef.current.length > 0
+        ? ganttDataSourceRef.current
+        : projectDataRef.current;
+    const idx = src.findIndex(
+      (t: any) => String(t.Id).toLowerCase() === taskGuid.toLowerCase(),
+    );
+    if (idx < 0) return;
+
+    const nextRow = { ...src[idx], ...patch };
+    src[idx] = nextRow;
+    ganttDataSourceRef.current = src;
+
+    const gantt = ganttRef.current as any;
+    isApplyingLocalPatchRef.current = true;
+    try {
+      const rec = applyLocalPatchToGanttRecord(gantt, nextRow, patch);
+      const viewData = gantt?.currentViewData;
+      const viewIndex = Array.isArray(viewData)
+        ? viewData.findIndex(
+            (r: any) => Number(r?.ganttProperties?.taskId ?? r?.TaskID) === Number(nextRow.TaskID),
+          )
+        : -1;
+      if (viewIndex >= 0) {
+        gantt.chartRowsModule?.refreshRow?.(viewIndex);
+        gantt.treeGrid?.grid?.refreshRow?.(viewIndex);
+      }
+      const paintId = rec?.ganttProperties?.taskId ?? nextRow.TaskID;
+      paintGanttProjectStatusCell(gantt, paintId, nextRow);
+      requestAnimationFrame(() => {
+        paintGanttProjectStatusCell(gantt, paintId, nextRow);
+      });
+    } catch {
+      /* Gantt kaydı yoksa React state yeterli */
+    } finally {
+      isApplyingLocalPatchRef.current = false;
+    }
+
+    setProjectData(src.slice());
+  };
 
   useEffect(() => {
     const root = document.getElementById(GANTT_INSTANCE_ID);
@@ -1265,14 +1386,10 @@ function ProjectChart() {
         currentIds.length === ids.length && currentIds.every((v) => ids.includes(v));
       if (unchanged) return;
 
-      // Rebind tüm satırları yeniden bağlar; mevcut açık dallar ve kaydırma dataBound'da geri yüklenir.
-      restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
-      restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
-      setProjectData((prev) =>
-        prev.map((t: any) =>
-          t.Id === taskGuid ? { ...t, moduleIds: ids.slice(), modules: ids.slice() } : t
-        )
-      );
+      commitLocalGanttRowPatch(String(taskGuid), {
+        moduleIds: ids.slice(),
+        modules: ids.slice(),
+      });
     } catch {
       /* sessiz: modüller grid için isteğe bağlı */
     }
@@ -1299,6 +1416,8 @@ function ProjectChart() {
     // Bu sıralama; resources prop'u hazır olmadan setProjectData çağrısının Gantt'a iki ayrı
     // prop güncellemesi göndererek data-binding'i yarıda kesmesini önler.
     const init = async () => {
+      ganttDataSourceRef.current = [];
+      setProjectData([]);
       await Promise.all([fetchModulesData(), fetchProjectUsersData()]);
       if (!isMountedRef.current) return;
       await fetchProjectData({ clearModuleCache: true, showBusy: true });
@@ -1588,6 +1707,7 @@ function ProjectChart() {
       if (!isMountedRef.current) return undefined;
       // dataBound ateşlendiğinde Syncfusion işini bitirmiş olacak; orada tearDown yap.
       tearDownAfterDataBoundRef.current = true;
+      ganttDataSourceRef.current = ascendingData;
       setProjectData(ascendingData);
       return ascendingData;
     } catch (error) {
@@ -1988,6 +2108,7 @@ function ProjectChart() {
   };
 
   const updateTask = async (args: any) => {
+    if (isUpdatingTaskRef.current || isApplyingLocalPatchRef.current) return;
     const nested = args?.taskData && typeof args.taskData === "object" ? args.taskData : null;
     const taskData = nested ? { ...nested, ...args } : args;
     if (!projectId) {
@@ -2014,6 +2135,7 @@ function ProjectChart() {
       return;
     }
 
+    isUpdatingTaskRef.current = true;
     dispatch({ isBusy: true });
     try {
       const startDate = new Date(taskData.StartDate);
@@ -2088,16 +2210,10 @@ function ProjectChart() {
         if (body.users !== undefined) patch.resources = body.users;
         patch.moduleIds = moduleIdsPayload.slice();
         patch.modules = moduleIdsPayload.slice();
-        patch.projectStatus = normalizeProjectStatusFromRow(taskData);
-        // Rebind sonrası ağacın kullanıcının bıraktığı gibi kalması için mevcut açık
-        // dallar yakalanır; dataBound'da collapseAll + expandByID ile geri yüklenir.
-        restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
-        restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
-        setProjectData((prev) =>
-          prev.map((t: any) =>
-            String(t.Id).toLowerCase() === taskGuid.toLowerCase() ? { ...t, ...patch } : t
-          )
-        );
+        patch.projectStatus =
+          normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null;
+        // Tam rebind + collapseAll yapma: çok görevde Durum/Modül React şablonları boş kalıyordu.
+        commitLocalGanttRowPatch(taskGuid, patch);
         taskModuleIdsCacheRef.current.set(taskGuid, ((patch.moduleIds as string[]) ?? []).slice());
       } else {
         const data = await fetchProjectData({ clearModuleCache: false, showBusy: false });
@@ -2115,6 +2231,7 @@ function ProjectChart() {
         type: "error",
       });
     } finally {
+      isUpdatingTaskRef.current = false;
       dispatch({ isBusy: false });
       requestAnimationFrame(() => {
         tearDownSyncfusionBlockingUi(ganttRef.current);
@@ -2191,6 +2308,13 @@ function ProjectChart() {
   };
 
   const actionBegin = async (args: any) => {
+    if (isApplyingLocalPatchRef.current) {
+      if (args.requestType === "beforeSave" || args.requestType === "save") {
+        args.cancel = true;
+      }
+      return;
+    }
+
     // Handle date format for edit dialog
     if (args.requestType === "beginEdit" || args.requestType === "add") {
       handleDateFormat(args);
@@ -2200,20 +2324,6 @@ function ProjectChart() {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
-      try {
-        const editor = document.querySelector<HTMLElement>(
-          ".e-dialog.e-popup-open .gantt-module-status-editor",
-        );
-        const rowFromEditor = (editor as any)?.__ganttEditRowData;
-        if (rowFromEditor && Object.prototype.hasOwnProperty.call(rowFromEditor, "projectStatus")) {
-          applyProjectStatusToRow(
-            args.data,
-            normalizeProjectStatusFromRow(rowFromEditor),
-          );
-        }
-      } catch {
-        /* ignore */
-      }
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
 
@@ -2225,30 +2335,7 @@ function ProjectChart() {
     } else if (args.requestType === "beforeSave") {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
-      // Durum: 1) DOM dropdown 2) composite editörün rowData'sı 3) Syncfusion editedRecord
       mergeDialogProjectStatusIntoSaveData(args.data);
-      try {
-        const editor = document.querySelector<HTMLElement>(
-          ".e-dialog.e-popup-open .gantt-module-status-editor",
-        );
-        const rowFromEditor = (editor as any)?.__ganttEditRowData;
-        if (rowFromEditor && Object.prototype.hasOwnProperty.call(rowFromEditor, "projectStatus")) {
-          applyProjectStatusToRow(
-            args.data,
-            normalizeProjectStatusFromRow(rowFromEditor),
-          );
-        } else {
-          const gantt = ganttRef.current as any;
-          const edited =
-            gantt?.editModule?.dialogModule?.processedRecord ??
-            gantt?.editModule?.editedRecord;
-          if (edited && Object.prototype.hasOwnProperty.call(edited, "projectStatus")) {
-            applyProjectStatusToRow(args.data, normalizeProjectStatusFromRow(edited));
-          }
-        }
-      } catch {
-        /* ignore */
-      }
       await updateTask(args.data);
 
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
@@ -2374,6 +2461,12 @@ function ProjectChart() {
     if (progress >= 50) {
       args.taskbarBgColor = "#BCCCDC";
     }
+  };
+  const handleQueryCellInfo = (args: any) => {
+    if (args?.column?.field !== "projectStatus") return;
+    const cell: HTMLElement | undefined = args.cell;
+    if (!cell) return;
+    cell.innerHTML = renderProjectStatusCellHtml(args.data);
   };
   const handleBackClick = () => {
     const workCompany: WorkCompanyDto = {
@@ -2546,11 +2639,12 @@ function ProjectChart() {
           editSettings={editSettings}
           toolbar={toolbarOptions}
           toolbarClick={toolbarClick}
-          dataSource={projectData}
+          dataSource={ganttDataSourceRef.current}
           taskFields={taskFields}
           taskType="FixedDuration"
           enableContextMenu={true}
           queryTaskbarInfo={handleTaskbarInfo}
+          queryCellInfo={handleQueryCellInfo}
           tooltipSettings={{
             showTooltip: true,
             taskbar: "true",
@@ -2651,17 +2745,8 @@ function ProjectChart() {
               field="projectStatus"
               headerText="Durum"
               width="120"
+              disableHtmlEncode={true}
               edit={projectStatusColumnEdit}
-              template={(props: any) => {
-                const status = normalizeProjectStatusFromRow(props);
-                if (status == null) return <span className="gantt-chip-empty">-</span>;
-                const label = getProjectStatusLabel(status);
-                return (
-                  <span className={getStatusChipClass(label)} title={label}>
-                    {label}
-                  </span>
-                );
-              }}
             />
             <ColumnDirective
               field="moduleIds"
