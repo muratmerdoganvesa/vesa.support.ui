@@ -1137,6 +1137,12 @@ export interface ApproveItemsDto {
     'ticketTitle'?: string | null;
     /**
      * 
+     * @type {number}
+     * @memberof ApproveItemsDto
+     */
+    'ticketNumber'?: number | null;
+    /**
+     * 
      * @type {boolean}
      * @memberof ApproveItemsDto
      */

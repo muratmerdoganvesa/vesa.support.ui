@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   ApproveHeadInfo,
   ApproveItemsApi,
@@ -41,8 +41,12 @@ import {
   Monitor,
   FileText,
   ShieldCheck,
+  Search,
+  Building2,
+  Hash,
 } from "lucide-react";
 import { Button } from "components/ui/button";
+import { Input } from "components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +108,7 @@ function ApproveList() {
   const [pendingCount, setpendingCount] = useState(0);
   const [rejectCount, setrejectCount] = useState(0);
   const [approveCount, setapproveCount] = useState(0);
+  const [sendCount, setsendCount] = useState(0);
   const [selectedStatus, setselectedStatus] = useState<ApproverStatus>();
   const [UserDialogVisible, setUserDialogVisible] = useState(false);
   const [selectedRequestUser, setselectedRequestUser] = useState("");
@@ -147,6 +152,12 @@ function ApproveList() {
   const [selectedIsMsp, setSelectedIsMsp] = useState(false);
   const [selectedMspClientId, setSelectedMspClientId] = useState<string | null>(null);
   const [selectedCustomerRefName, setSelectedCustomerRefName] = useState<string | null>(null);
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [ticketNumberFilter, setTicketNumberFilter] = useState("");
+  const customerFilterRef = useRef("");
+  const ticketNumberFilterRef = useRef("");
+  const skipNextFilterFetchRef = useRef(true);
+  const filterDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Pagination ──────────────────────────────────────────────────────────────
 
@@ -183,6 +194,7 @@ function ApproveList() {
     setpendingCount(data.pendingCount!);
     setapproveCount(data.approveCount!);
     setrejectCount(data.rejectCount!);
+    setsendCount(data.sendCount!);
     return data;
   }
 
@@ -219,7 +231,20 @@ function ApproveList() {
     console.log("status", status);
     console.log("offset:", skip, top);
     console.log("processtype:", processType);
-    var result = await api.apiApproveItemsGetApprovesGet(status, skip, top, processType, reqUserId);
+    const extraParams: Record<string, string> = {};
+    const customer = customerFilterRef.current.trim();
+    const ticketNumber = ticketNumberFilterRef.current.trim();
+    if (customer) extraParams.customer = customer;
+    if (ticketNumber) extraParams.ticketNumber = ticketNumber;
+
+    var result = await api.apiApproveItemsGetApprovesGet(
+      status,
+      skip,
+      top,
+      processType,
+      reqUserId,
+      Object.keys(extraParams).length > 0 ? { params: extraParams } : undefined
+    );
 
     result.data.approveItemsDtoList!.sort((a, b) => {
       let dateA = a.workFlowItem?.workflowHead?.createdDate
@@ -400,6 +425,93 @@ function ApproveList() {
     getLoginUser();
   }, []);
 
+  useEffect(() => {
+    if (skipNextFilterFetchRef.current) {
+      skipNextFilterFetchRef.current = false;
+      return;
+    }
+
+    if (filterDebounceTimeoutRef.current) {
+      window.clearTimeout(filterDebounceTimeoutRef.current);
+    }
+
+    filterDebounceTimeoutRef.current = window.setTimeout(() => {
+      filterDebounceTimeoutRef.current = null;
+      if (selectedStatus === undefined) return;
+      setItemOffset(0);
+      getApproveDetail(
+        selectedStatus,
+        0,
+        itemsPerPage,
+        selectedProcessTypeId,
+        selectedRequestUserId
+      );
+    }, 400);
+
+    return () => {
+      if (filterDebounceTimeoutRef.current) {
+        window.clearTimeout(filterDebounceTimeoutRef.current);
+        filterDebounceTimeoutRef.current = null;
+      }
+    };
+  }, [customerFilter, ticketNumberFilter]);
+
+  const handleCustomerFilterChange = (value: string) => {
+    customerFilterRef.current = value;
+    setCustomerFilter(value);
+  };
+
+  const handleTicketNumberFilterChange = (value: string) => {
+    ticketNumberFilterRef.current = value;
+    setTicketNumberFilter(value);
+  };
+
+  const handleApplyFilters = () => {
+    if (filterDebounceTimeoutRef.current) {
+      window.clearTimeout(filterDebounceTimeoutRef.current);
+      filterDebounceTimeoutRef.current = null;
+    }
+    if (selectedStatus === undefined) return;
+    setItemOffset(0);
+    getApproveDetail(
+      selectedStatus,
+      0,
+      itemsPerPage,
+      selectedProcessTypeId,
+      selectedRequestUserId
+    );
+  };
+
+  const handleClearFilters = () => {
+    if (filterDebounceTimeoutRef.current) {
+      window.clearTimeout(filterDebounceTimeoutRef.current);
+      filterDebounceTimeoutRef.current = null;
+    }
+    skipNextFilterFetchRef.current = true;
+    customerFilterRef.current = "";
+    ticketNumberFilterRef.current = "";
+    setCustomerFilter("");
+    setTicketNumberFilter("");
+    if (selectedStatus === undefined) return;
+    setItemOffset(0);
+    getApproveDetail(
+      selectedStatus,
+      0,
+      itemsPerPage,
+      selectedProcessTypeId,
+      selectedRequestUserId
+    );
+  };
+
+  const handleFilterKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    handleApplyFilters();
+  };
+
+  const hasActiveTextFilters =
+    customerFilter.trim().length > 0 || ticketNumberFilter.trim().length > 0;
+
   async function getLoginUser() {
     var conf = getConfiguration();
     var api = new UserApi(conf);
@@ -578,6 +690,8 @@ function ApproveList() {
       label: "Gönderdiklerim",
       icon: <Send className="w-4 h-4" />,
       status: ApproverStatus.NUMBER_3,
+      badgeCount: sendCount,
+      badgeColor: "bg-violet-100 text-violet-700",
     },
     {
       label: "Bekleyenler",
@@ -717,15 +831,16 @@ function ApproveList() {
                       key={item.label}
                       type="button"
                       aria-pressed={isActive}
-                      onClick={() =>
+                      onClick={() => {
+                        setItemOffset(0);
                         getApproveDetail(
                           item.status,
                           0,
                           itemsPerPage,
                           selectedProcessTypeId!,
                           selectedRequestUserId!
-                        )
-                      }
+                        );
+                      }}
                       className={cn(
                         "inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-all border min-h-[40px] flex-1 basis-[calc(50%-0.25rem)] min-w-0 max-w-full sm:flex-initial sm:basis-auto sm:max-w-none",
                         isActive
@@ -751,6 +866,72 @@ function ApproveList() {
                   );
                 })}
               </nav>
+            </div>
+            <div className="px-3 py-3 sm:px-4 border-b border-slate-100 bg-white flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap w-full min-w-0">
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1 sm:max-w-[280px]">
+                  <label htmlFor="approve-customer-filter" className="text-xs font-medium text-slate-600">
+                    Müşteri
+                  </label>
+                  <div className="relative">
+                    <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" aria-hidden />
+                    <Input
+                      id="approve-customer-filter"
+                      type="text"
+                      value={customerFilter}
+                      onChange={(e) => handleCustomerFilterChange(e.target.value)}
+                      onKeyDown={handleFilterKeyDown}
+                      placeholder="Müşteri adı yazın"
+                      aria-label="Müşteri adına göre filtrele"
+                      className="h-9 pl-8 bg-white border-slate-200"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 min-w-0 flex-1 sm:max-w-[200px]">
+                  <label htmlFor="approve-ticket-number-filter" className="text-xs font-medium text-slate-600">
+                    Talep Numarası
+                  </label>
+                  <div className="relative">
+                    <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" aria-hidden />
+                    <Input
+                      id="approve-ticket-number-filter"
+                      type="text"
+                      inputMode="numeric"
+                      value={ticketNumberFilter}
+                      onChange={(e) => handleTicketNumberFilterChange(e.target.value)}
+                      onKeyDown={handleFilterKeyDown}
+                      placeholder="Talep no yazın"
+                      aria-label="Talep numarasına göre filtrele"
+                      className="h-9 pl-8 bg-white border-slate-200"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleApplyFilters}
+                    className="h-9 gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
+                    aria-label="Filtreleri uygula"
+                  >
+                    <Search className="w-3.5 h-3.5" aria-hidden />
+                    Filtrele
+                  </Button>
+                  {hasActiveTextFilters && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleClearFilters}
+                      className="h-9 gap-1.5 border-slate-200 text-slate-600"
+                      aria-label="Filtreleri temizle"
+                    >
+                      <X className="w-3.5 h-3.5" aria-hidden />
+                      Temizle
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -821,6 +1002,12 @@ function ApproveList() {
                           Onay No
                         </div>
                       </th>
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
+                        <div className="flex items-center gap-1.5">
+                          <Hash className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          Talep No
+                        </div>
+                      </th>
                       <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 align-middle min-w-[14rem]">
                         Talep Başlığı
                       </th>
@@ -866,7 +1053,7 @@ function ApproveList() {
                     {gridData.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={showNoteColumn ? 11 : 10}
+                          colSpan={showNoteColumn ? 12 : 11}
                           className="px-5 py-14 text-center"
                         >
                           <div className="flex flex-col items-center gap-3">
@@ -994,6 +1181,15 @@ function ApproveList() {
                               </span>
                             </td>
 
+                            {/* Talep No */}
+                            <td className="px-3 py-3 align-middle whitespace-nowrap">
+                              <span className="text-xs font-mono font-semibold text-slate-700 bg-slate-50 px-2 py-1 rounded-md border border-slate-200">
+                                {row.ticketNumber != null && row.ticketNumber > 0
+                                  ? row.ticketNumber
+                                  : "-"}
+                              </span>
+                            </td>
+
                             {/* Talep Başlığı + MSP */}
                             <td className="px-3 py-3 align-middle min-w-[14rem] max-w-sm">
                               <div className="flex flex-col gap-1.5">
@@ -1032,6 +1228,14 @@ function ApproveList() {
                                         </span>
                                       </>
                                     ) : null}
+                                  </span>
+                                ) : customerRefName ? (
+                                  <span
+                                    className="inline-flex w-fit max-w-full items-center gap-1 text-[11px] text-slate-500"
+                                    title={customerRefName}
+                                  >
+                                    <Building2 className="h-3 w-3 shrink-0 text-slate-400" aria-hidden />
+                                    <span className="truncate">{customerRefName}</span>
                                   </span>
                                 ) : null}
                               </div>
