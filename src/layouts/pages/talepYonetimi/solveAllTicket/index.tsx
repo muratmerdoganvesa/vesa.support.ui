@@ -451,6 +451,14 @@ function SolveAllTicket() {
       ),
     },
     {
+      accessor: "isMsp",
+      header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.MspDurumu"),
+      className: "w-36",
+      cell: ({ row, value }) => (
+        <GlobalCell value={value} columnName="isMsp" testRow={row.original} />
+      ),
+    },
+    {
       accessor: "ticketAssigneText",
       header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.Atanan"),
       cell: ({ row, value }) => (

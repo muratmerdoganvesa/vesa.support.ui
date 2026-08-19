@@ -485,6 +485,7 @@ const SearchResultsTable = ({
     { key: "statusText", label: "Durum" },
     { key: "title", label: "Başlık" },
     { key: "customerRefName", label: "Müşteri" },
+    { key: "isMsp", label: "Msp Durumu" },
     { key: "ticketAssigneText", label: "Atanan" },
     { key: "userAppName", label: "Oluşturan" },
     { key: "createdDate", label: "Tarih" },
