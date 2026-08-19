@@ -13,7 +13,10 @@ interface MessageBoxProps {
   numberManDay?: number;
   setNumberManDay?: (numberManDay: number) => void;
   canEditManDay?: boolean;
-  lastnumberManDay?: number
+  lastnumberManDay?: number;
+  isMsp?: boolean;
+  mspClientId?: string | null;
+  customerRefName?: string | null;
 }
 
 function MessageBox({
@@ -25,7 +28,10 @@ function MessageBox({
   numberManDay,
   setNumberManDay,
   canEditManDay,
-  lastnumberManDay
+  lastnumberManDay,
+  isMsp,
+  mspClientId,
+  customerRefName,
 }: MessageBoxProps) {
   useEffect(() => {
     if (numberManDay == null || numberManDay == 0) {
@@ -41,7 +47,8 @@ function MessageBox({
         <>
           {type ? (
             <Title style={headerStyle}>
-              Kayıt {type === "approve" ? "Onaylanacaktır" : "Reddedilecektir"}{" "}
+              Kayıt {type === "approve" ? "Onaylanacaktır" : "Reddedilecektir"}
+              {isMsp ? " — MSP Müşterisi" : ""}
             </Title>
           ) : (
             <Title style={headerStyle}>Kayıt Silinecektir</Title>
@@ -55,6 +62,43 @@ function MessageBox({
     >
       {type ? (
         <div className="flex flex-col gap-1">
+          {isMsp ? (
+            <div
+              className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2"
+              role="status"
+              aria-label={
+                [
+                  "MSP müşterisi",
+                  customerRefName?.trim() || null,
+                  mspClientId?.trim() ? `Client ID: ${mspClientId.trim()}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")
+              }
+            >
+              <span className="inline-flex items-center rounded-md bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                MSP
+              </span>
+              <span className="text-sm font-medium text-orange-800">
+                Bu talep bir MSP müşterisine aittir.
+              </span>
+              {customerRefName?.trim() ? (
+                <span className="text-sm font-semibold text-orange-900" title={customerRefName.trim()}>
+                  {customerRefName.trim()}
+                </span>
+              ) : null}
+              {mspClientId?.trim() ? (
+                <span className="inline-flex items-baseline gap-1.5 text-sm text-orange-800">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-orange-600">
+                    Client ID
+                  </span>
+                  <span className="font-mono font-semibold" title={mspClientId.trim()}>
+                    {mspClientId.trim()}
+                  </span>
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           {type === "approve" ? (
             <>
               <span style={contentStyle}>Adam/Gün</span>
