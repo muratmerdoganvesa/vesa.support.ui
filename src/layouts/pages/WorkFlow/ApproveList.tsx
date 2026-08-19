@@ -40,6 +40,7 @@ import {
   Calendar,
   Monitor,
   FileText,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "components/ui/button";
 import {
@@ -143,6 +144,9 @@ function ApproveList() {
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [objectType, setObjectType] = useState<any>(null);
   const [description, setDescription] = useState("");
+  const [selectedIsMsp, setSelectedIsMsp] = useState(false);
+  const [selectedMspClientId, setSelectedMspClientId] = useState<string | null>(null);
+  const [selectedCustomerRefName, setSelectedCustomerRefName] = useState<string | null>(null);
 
   // ── Pagination ──────────────────────────────────────────────────────────────
 
@@ -490,6 +494,9 @@ function ApproveList() {
     setSelectedRow(obj);
     console.log("satır>>", obj);
     setObjectType(type);
+    setSelectedIsMsp(obj?.original?.isMsp === true);
+    setSelectedMspClientId(obj?.original?.mspClientId ?? null);
+    setSelectedCustomerRefName(obj?.original?.customerRefName ?? null);
     setIsQuestionMessageBoxOpen(true);
     setDescription("");
     getLastManDay(obj.original.workFlowItem.workflowHead.id);
@@ -814,6 +821,9 @@ function ApproveList() {
                           Onay No
                         </div>
                       </th>
+                      <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 align-middle min-w-[14rem]">
+                        Talep Başlığı
+                      </th>
                       <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 align-middle min-w-[16rem]">
                         Detay
                       </th>
@@ -856,7 +866,7 @@ function ApproveList() {
                     {gridData.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={showNoteColumn ? 10 : 9}
+                          colSpan={showNoteColumn ? 11 : 10}
                           className="px-5 py-14 text-center"
                         >
                           <div className="flex flex-col items-center gap-3">
@@ -898,6 +908,14 @@ function ApproveList() {
                           noteRaw != null && String(noteRaw).trim() !== ""
                             ? String(noteRaw)
                             : "-";
+                        const ticketTitleRaw = row.ticketTitle;
+                        const ticketTitleStr =
+                          ticketTitleRaw != null && String(ticketTitleRaw).trim() !== ""
+                            ? String(ticketTitleRaw)
+                            : "-";
+                        const isMspCustomer = row.isMsp === true;
+                        const mspClientId = row.mspClientId?.trim() ?? "";
+                        const customerRefName = row.customerRefName?.trim() ?? "";
 
                         return (
                           <tr
@@ -974,6 +992,49 @@ function ApproveList() {
                               <span className="text-xs font-mono font-semibold text-violet-700 bg-violet-50 px-2 py-1 rounded-md border border-violet-100">
                                 {(row as any).workFlowItem?.workflowHead?.uniqNumber ?? "-"}
                               </span>
+                            </td>
+
+                            {/* Talep Başlığı + MSP */}
+                            <td className="px-3 py-3 align-middle min-w-[14rem] max-w-sm">
+                              <div className="flex flex-col gap-1.5">
+                                <p className="text-xs text-slate-700 break-words leading-relaxed whitespace-normal">
+                                  {ticketTitleStr}
+                                </p>
+                                {isMspCustomer ? (
+                                  <span
+                                    className="inline-flex w-fit max-w-full items-center gap-1.5 rounded-md bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm shadow-orange-500/20"
+                                    role="status"
+                                    aria-label={
+                                      [
+                                        "MSP müşterisi",
+                                        customerRefName || null,
+                                        mspClientId ? `Client ID: ${mspClientId}` : null,
+                                      ]
+                                        .filter(Boolean)
+                                        .join(", ")
+                                    }
+                                  >
+                                    <ShieldCheck className="h-3 w-3 shrink-0" aria-hidden />
+                                    MSP Müşterisi
+                                    {customerRefName ? (
+                                      <>
+                                        <span className="h-3 w-px bg-white/40" aria-hidden />
+                                        <span className="normal-case tracking-normal font-semibold truncate" title={customerRefName}>
+                                          {customerRefName}
+                                        </span>
+                                      </>
+                                    ) : null}
+                                    {mspClientId ? (
+                                      <>
+                                        <span className="h-3 w-px bg-white/40" aria-hidden />
+                                        <span className="normal-case tracking-normal font-mono font-bold">
+                                          {mspClientId}
+                                        </span>
+                                      </>
+                                    ) : null}
+                                  </span>
+                                ) : null}
+                              </div>
                             </td>
 
                             {/* Detay — tam metin, satır kırar; tablo genişler, yatay kaydır */}
@@ -1088,6 +1149,9 @@ function ApproveList() {
         setNumberManDay={setNumberManDay}
         canEditManDay={canEditManDay}
         lastnumberManDay={lastnumberManDay}
+        isMsp={selectedIsMsp}
+        mspClientId={selectedMspClientId}
+        customerRefName={selectedCustomerRefName}
       />
     </>
   );

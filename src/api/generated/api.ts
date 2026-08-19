@@ -1129,6 +1129,30 @@ export interface ApproveItemsDto {
      * @memberof ApproveItemsDto
      */
     'workFlowHead'?: WorkFlowHeadDto;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApproveItemsDto
+     */
+    'ticketTitle'?: string | null;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ApproveItemsDto
+     */
+    'isMsp'?: boolean | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApproveItemsDto
+     */
+    'mspClientId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof ApproveItemsDto
+     */
+    'customerRefName'?: string | null;
 }
 
 
