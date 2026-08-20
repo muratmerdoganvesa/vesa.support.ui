@@ -220,6 +220,126 @@ function buildAddMenuWithChildPopup(ganttId: string) {
   };
 }
 
+/** Sağ tık kopyala/yapıştır: yalnızca görev adları ve alt görev hiyerarşisi. */
+const GANTT_COPIED_TASKS_STORAGE_KEY = "pm.gantt.copiedTaskNames";
+const GANTT_COPY_MENU_ID = "copygantttasks";
+const GANTT_PASTE_MENU_ID = "pastegantttasks";
+const GANTT_COPY_MENU_TEXT = "Kopyala";
+const GANTT_PASTE_MENU_TEXT = "Yapıştır";
+
+type CopiedGanttTaskNode = {
+  name: string;
+  children: CopiedGanttTaskNode[];
+};
+
+function resolveGanttRowTaskId(row: any): number | null {
+  const raw =
+    row?.taskData?.TaskID ??
+    row?.TaskID ??
+    row?.ganttProperties?.taskId ??
+    row?.taskId;
+  const tid = Number(raw);
+  return Number.isFinite(tid) ? tid : null;
+}
+
+function getDirectChildTasks(taskId: number, tasks: any[]): any[] {
+  return tasks
+    .filter((t) => !isRootParentId(t.ParentID) && Number(t.ParentID) === taskId)
+    .sort((a, b) => Number(a.TaskID) - Number(b.TaskID));
+}
+
+function buildCopiedGanttTaskTree(rootTaskId: number, tasks: any[]): CopiedGanttTaskNode | null {
+  const root = tasks.find((t) => Number(t.TaskID) === rootTaskId);
+  if (!root) return null;
+
+  const buildNode = (task: any): CopiedGanttTaskNode => {
+    const tid = Number(task.TaskID);
+    const rawName = String(task?.TaskName ?? "").trim();
+    return {
+      name: rawName.length > 0 ? rawName : "New Task",
+      children: getDirectChildTasks(tid, tasks).map(buildNode),
+    };
+  };
+
+  return buildNode(root);
+}
+
+function normalizeCopiedGanttTaskNode(node: unknown): CopiedGanttTaskNode | null {
+  if (!node || typeof node !== "object") return null;
+  const raw = node as { name?: unknown; children?: unknown };
+  const name = typeof raw.name === "string" ? raw.name.trim() : "";
+  if (!name) return null;
+  const children = Array.isArray(raw.children)
+    ? raw.children.map(normalizeCopiedGanttTaskNode).filter((n): n is CopiedGanttTaskNode => n != null)
+    : [];
+  return { name, children };
+}
+
+function readCopiedGanttTasksFromStorage(): CopiedGanttTaskNode[] {
+  try {
+    const raw = localStorage.getItem(GANTT_COPIED_TASKS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed) ? parsed : parsed?.tasks;
+    if (!Array.isArray(list)) return [];
+    return list.map(normalizeCopiedGanttTaskNode).filter((n): n is CopiedGanttTaskNode => n != null);
+  } catch {
+    return [];
+  }
+}
+
+function writeCopiedGanttTasksToStorage(nodes: CopiedGanttTaskNode[]) {
+  localStorage.setItem(GANTT_COPIED_TASKS_STORAGE_KEY, JSON.stringify(nodes));
+}
+
+function countCopiedGanttTaskNodes(nodes: CopiedGanttTaskNode[]): number {
+  return nodes.reduce(
+    (sum, node) => sum + 1 + countCopiedGanttTaskNodes(node.children ?? []),
+    0,
+  );
+}
+
+function getSelectedGanttTaskIds(gantt: any, fallbackRow: any): number[] {
+  const fallbackId = resolveGanttRowTaskId(fallbackRow);
+  let ids: number[] = [];
+  try {
+    const records =
+      gantt?.selectionModule?.getSelectedRecords?.() ??
+      gantt?.treeGrid?.getSelectedRecords?.() ??
+      [];
+    if (Array.isArray(records)) {
+      ids = records
+        .map((r: any) => resolveGanttRowTaskId(r))
+        .filter((n: number | null): n is number => n != null);
+    }
+  } catch {
+    /* selection API hazır değil */
+  }
+  if (ids.length === 0 && fallbackId != null) ids = [fallbackId];
+  if (fallbackId != null && !ids.includes(fallbackId)) ids.push(fallbackId);
+  return ids;
+}
+
+/** Üst görev de seçildiyse alt görevleri ayrı kök olarak kopyalamamak için süz. */
+function filterCopyRootTaskIds(selectedIds: number[], tasks: any[]): number[] {
+  const selected = new Set(selectedIds);
+  const isDescendantOfSelected = (taskId: number): boolean => {
+    let cur = tasks.find((t) => Number(t.TaskID) === taskId);
+    const seen = new Set<number>();
+    while (cur) {
+      const pid = cur.ParentID;
+      if (isRootParentId(pid)) return false;
+      const parentId = Number(pid);
+      if (!Number.isFinite(parentId) || seen.has(parentId)) return false;
+      if (selected.has(parentId)) return true;
+      seen.add(parentId);
+      cur = tasks.find((t) => Number(t.TaskID) === parentId);
+    }
+    return false;
+  };
+  return selectedIds.filter((id) => !isDescendantOfSelected(id));
+}
+
 /** Proje görev listesi: kayıt için Guid id. Modules (ad) yalnızca geriye dönük fallback. */
 function resolveToModuleIds(values: string[], moduleList: GanttModuleOption[]): string[] {
   const out: string[] = [];
@@ -1901,7 +2021,12 @@ function ProjectChart() {
   const usersForInsert = (rawResources: unknown): ProjectTasksInsertDto["users"] =>
     normalizeGanttTaskUsers(rawResources, resources);
 
-  type CreateTaskOptions = { silent?: boolean; skipFetch?: boolean };
+  type CreateTaskOptions = {
+    silent?: boolean;
+    skipFetch?: boolean;
+    /** Batch insert sırasında henüz projectData'da olmayan yeni ebeveyn TaskID'leri. */
+    knownParentTaskIds?: Set<number>;
+  };
 
   const createTask = async (args: any, options?: CreateTaskOptions) => {
     try {
@@ -1929,10 +2054,13 @@ function ProjectChart() {
       }
       if (args.taskData.ParentID) {
         // ! KRİTİK : Eğer Alt Alan eklenmek istiyorsa ve herhangi bir hatadan dolayı parentId null ise, alert ver yoksa proje patlar.
+        const parentIdNum = Number(args.taskData.ParentID);
         const parentTask = projectData.find(
-          (task: any) => task.TaskID === Number(args.taskData.ParentID)
+          (task: any) => Number(task.TaskID) === parentIdNum
         );
-        if (!parentTask) {
+        const parentKnown =
+          Boolean(parentTask) || Boolean(options?.knownParentTaskIds?.has(parentIdNum));
+        if (!parentKnown) {
           dispatchAlert({
             message: "Üst görev bulunamadı. Görev oluşturulamadı.",
             type: "error",
@@ -2097,6 +2225,128 @@ function ProjectChart() {
       setChildBatchParentTaskData(null);
       dispatchAlert({
         message: `${count} alt görev oluşturuldu.`,
+        type: "success",
+      });
+    } finally {
+      dispatch({ isBusy: false });
+      requestAnimationFrame(() => {
+        tearDownSyncfusionBlockingUi(ganttRef.current);
+      });
+    }
+  };
+
+  /** Kopyalanan görev adı ağacını, Add > Child kurallarıyla seçilen görevin altına ekler. */
+  const pasteCopiedTasksAsChildren = async (parentTd: any) => {
+    if (isProcessingTaskRef.current) {
+      dispatchAlert({
+        message: "Bir görev işlemi sürüyor. Lütfen bekleyin.",
+        type: "error",
+      });
+      return;
+    }
+    const copiedTree = readCopiedGanttTasksFromStorage();
+    if (copiedTree.length === 0) {
+      dispatchAlert({
+        message: "Yapıştırılacak kopyalanmış görev bulunamadı.",
+        type: "error",
+      });
+      return;
+    }
+    if (!projectId || parentTd?.TaskID == null) {
+      dispatchAlert({
+        message: "Üst görev veya proje bulunamadı.",
+        type: "error",
+      });
+      return;
+    }
+    const parentTid = Number(parentTd.TaskID);
+    const parentTask = projectDataRef.current.find(
+      (task: any) => Number(task.TaskID) === parentTid,
+    );
+    if (!parentTask) {
+      dispatchAlert({
+        message: "Üst görev bulunamadı. Görev oluşturulamadı.",
+        type: "error",
+      });
+      return;
+    }
+
+    const start = getTodayForGantt();
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    let maxId = projectDataRef.current.reduce(
+      (max: number, t: any) => Math.max(max, Number(t.TaskID) || 0),
+      0,
+    );
+    const knownParentTaskIds = new Set<number>([parentTid]);
+    const totalCount = countCopiedGanttTaskNodes(copiedTree);
+    let createdCount = 0;
+
+    const createCopiedNodes = async (
+      nodes: CopiedGanttTaskNode[],
+      parentTaskId: number,
+    ): Promise<boolean> => {
+      for (const node of nodes) {
+        maxId += 1;
+        const newId = maxId;
+        const taskName =
+          typeof node.name === "string" && node.name.trim().length > 0
+            ? node.name.trim()
+            : "New Task";
+        const taskData: any = {
+          TaskID: newId,
+          TaskName: turkishToLatin(taskName),
+          StartDate: formatLocalDateForApi(start),
+          EndDate: formatLocalDateForApi(end),
+          ParentID: parentTaskId,
+          Progress: 0,
+          Predecessor: undefined,
+          Notes: "",
+          IsManual: parentTd.IsManual ?? false,
+          Milestone: false,
+          resources: undefined,
+          moduleIds: [],
+          modules: [],
+        };
+
+        const ok = await createTask({ taskData }, { silent: true, skipFetch: true, knownParentTaskIds });
+        if (!ok) return false;
+        createdCount += 1;
+        knownParentTaskIds.add(newId);
+        if (node.children.length > 0) {
+          const childOk = await createCopiedNodes(node.children, newId);
+          if (!childOk) return false;
+        }
+      }
+      return true;
+    };
+
+    dispatch({ isBusy: true });
+    try {
+      const ok = await createCopiedNodes(copiedTree, parentTid);
+      if (createdCount > 0) {
+        const data = await fetchProjectData({ clearModuleCache: false, showBusy: false });
+        if (data) {
+          ganttAfterDataBoundRef.current = {
+            expandPathTaskIds: getAncestorTaskIdsToExpandForTask(parentTid, data),
+          };
+        }
+      }
+      if (!ok) {
+        if (createdCount > 0) {
+          dispatchAlert({
+            message: `${createdCount} görev yapıştırıldı, kalanlar oluşturulamadı.`,
+            type: "error",
+          });
+        }
+        return;
+      }
+      dispatchAlert({
+        message:
+          totalCount === 1
+            ? "Görev yapıştırıldı."
+            : `${totalCount} görev yapıştırıldı.`,
         type: "success",
       });
     } finally {
@@ -2406,6 +2656,20 @@ function ProjectChart() {
       "SortAscending",
       "SortDescending",
     ];
+    items.push(
+      {
+        text: GANTT_COPY_MENU_TEXT,
+        target: ".e-content",
+        id: GANTT_COPY_MENU_ID,
+        iconCss: "e-icons e-copy",
+      },
+      {
+        text: GANTT_PASTE_MENU_TEXT,
+        target: ".e-content",
+        id: GANTT_PASTE_MENU_ID,
+        iconCss: "e-icons e-paste",
+      },
+    );
     items.push(buildAddMenuWithChildPopup(GANTT_INSTANCE_ID));
     items.push(
       "DeleteDependency",
@@ -2417,6 +2681,33 @@ function ProjectChart() {
     return items;
   }, []);
 
+  const handleCopyGanttTasks = (row: any) => {
+    const tasks = projectDataRef.current;
+    const selectedIds = getSelectedGanttTaskIds(ganttRef.current, row);
+    const rootIds = filterCopyRootTaskIds(selectedIds, tasks);
+    const tree = rootIds
+      .map((id) => buildCopiedGanttTaskTree(id, tasks))
+      .filter((n): n is CopiedGanttTaskNode => n != null);
+
+    if (tree.length === 0) {
+      dispatchAlert({
+        message: "Kopyalanacak görev bulunamadı.",
+        type: "error",
+      });
+      return;
+    }
+
+    writeCopiedGanttTasksToStorage(tree);
+    const count = countCopiedGanttTaskNodes(tree);
+    dispatchAlert({
+      message:
+        count === 1
+          ? "Görev adı kopyalandı."
+          : `${count} görev adı (alt görevler dahil) kopyalandı.`,
+      type: "success",
+    });
+  };
+
   const contextMenuClick = (args: any) => {
     const gid = ganttRef.current?.element?.id;
     if (gid && args.item?.id === `${gid}_contextMenu_${GANTT_CHILD_POPUP_MENU_KEY}`) {
@@ -2426,6 +2717,17 @@ function ProjectChart() {
         setChildBatchParentTaskData(td);
         setChildBatchCount(1);
         setChildBatchDialogOpen(true);
+      }
+      return;
+    }
+    if (args.item?.id === GANTT_COPY_MENU_ID) {
+      handleCopyGanttTasks(args.rowData);
+      return;
+    }
+    if (args.item?.id === GANTT_PASTE_MENU_ID) {
+      const td = args.rowData?.taskData ?? args.rowData;
+      if (td?.TaskID != null) {
+        void pasteCopiedTasksAsChildren(td);
       }
       return;
     }
@@ -2443,7 +2745,7 @@ function ProjectChart() {
   const contextMenuOpen = (args: any) => {
     let record = args.rowData;
     if (args.type !== "Header") {
-      if (!record.hasChildRecords) {
+      if (!record?.hasChildRecords) {
         args.hideItems.push("Collapse the Row");
         args.hideItems.push("Expand the Row");
       } else {
@@ -2452,6 +2754,9 @@ function ProjectChart() {
         } else {
           args.hideItems.push("Collapse the Row");
         }
+      }
+      if (readCopiedGanttTasksFromStorage().length === 0) {
+        args.hideItems.push(GANTT_PASTE_MENU_TEXT);
       }
     }
   };
