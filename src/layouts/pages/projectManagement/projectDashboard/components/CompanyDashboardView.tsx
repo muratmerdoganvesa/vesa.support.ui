@@ -185,6 +185,8 @@ interface CompanyDashboardViewProps {
   onReturn: () => void;
   onNavigateTickets: (projectId: string) => void;
   onOpenTeam: (projectId: string) => void;
+  chartBasePath?: string;
+  listBadge?: string;
 }
 
 const CompanyDashboardView = ({
@@ -194,6 +196,8 @@ const CompanyDashboardView = ({
   onReturn,
   onNavigateTickets,
   onOpenTeam,
+  chartBasePath = "/projectmanagement/chart",
+  listBadge = "Proje Yönetimi",
 }: CompanyDashboardViewProps) => {
   const navigate = useNavigate();
   const { getPhoto } = useUserPhotos();
@@ -218,7 +222,7 @@ const CompanyDashboardView = ({
   const handleNavigateGantt = () => {
     if (!selectedProject) return;
     navigate(
-      `/projectmanagement/chart?cid=${encodeURIComponent(workCompany.id)}&pid=${encodeURIComponent(selectedProject.projectId)}`,
+      `${chartBasePath}?cid=${encodeURIComponent(workCompany.id ?? "")}&pid=${encodeURIComponent(selectedProject.projectId)}`,
       {
         state: {
           workCompanyName: workCompany.name,
@@ -271,7 +275,7 @@ const CompanyDashboardView = ({
             variant="secondary"
             className="hidden bg-indigo-100 text-indigo-700 text-xs sm:inline-flex dark:bg-indigo-950 dark:text-indigo-300 shrink-0"
           >
-            Proje Yönetimi
+            {listBadge}
           </Badge>
         </div>
       </div>
