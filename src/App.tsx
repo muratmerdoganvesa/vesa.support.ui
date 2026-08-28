@@ -322,8 +322,7 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-            <Route path="/myUserProjects" element={<MyUserProjects />} />
-            <Route path="/myUserProjects/chart" element={<ProjectChart />} />
+    
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
@@ -401,7 +400,8 @@ export default function App() {
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
             <Route path="/chat-home" element={<ChatHome />} />
             <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
-          
+            <Route path="/myUserProjects" element={<MyUserProjects />} />
+            <Route path="/myUserProjects/chart" element={<ProjectChart />} />
           </Route> 
 
           {/* <Route path="/mmessages" element={<ChatPage />} /> */}
