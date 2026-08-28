@@ -258,8 +258,8 @@ function MyUserProjects() {
       <PdfDialog
         open={openPdf}
         onClose={handleClosePdf}
-        pdfUrl="/pdf/projectmanagement.pdf"
-        title="Proje Yönetim Klavuzu"
+        pdfUrl="/pdf/projeTasklarim.pdf"
+        title="Projelerim Kılavuzu"
       />
     </DashboardLayout>
   );
