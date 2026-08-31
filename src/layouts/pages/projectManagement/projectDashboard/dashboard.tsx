@@ -15,9 +15,19 @@ interface ProjectDashboardProps {
   selectedWorkCompany: WorkCompanyDto;
   onReturn: () => void;
   showTest: boolean;
+  forCurrentUser?: boolean;
+  chartBasePath?: string;
+  listBadge?: string;
 }
 
-function ProjectDashboard({ selectedWorkCompany, onReturn, showTest }: ProjectDashboardProps) {
+function ProjectDashboard({
+  selectedWorkCompany,
+  onReturn,
+  showTest,
+  forCurrentUser = false,
+  chartBasePath,
+  listBadge,
+}: ProjectDashboardProps) {
   const navigate = useNavigate();
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
@@ -28,6 +38,7 @@ function ProjectDashboard({ selectedWorkCompany, onReturn, showTest }: ProjectDa
 
   const { workload, isLoading } = useCompanyGanttWorkload(
     showTest ? selectedWorkCompany.id : undefined,
+    { forCurrentUser },
   );
 
   const handleNavigateTickets = (projectId: string) => {
@@ -86,6 +97,8 @@ function ProjectDashboard({ selectedWorkCompany, onReturn, showTest }: ProjectDa
         onReturn={onReturn}
         onNavigateTickets={handleNavigateTickets}
         onOpenTeam={handleOpenTeam}
+        chartBasePath={chartBasePath}
+        listBadge={listBadge}
       />
 
       <TeamDialog

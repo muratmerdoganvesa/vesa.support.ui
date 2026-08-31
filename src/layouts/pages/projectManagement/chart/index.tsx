@@ -90,9 +90,13 @@ import {
   ProjectTasksInsertDto,
   ProjectTasksUpdateDto,
   ProjectTypes,
+  UserApi,
   UserAppDtoOnlyNameId,
   WorkCompanyDto,
 } from "api/generated";
+import { fetchMyGanttTasks } from "layouts/pages/myUserProjects/api";
+import { filterAssignedTasksAndDescendants } from "layouts/pages/myUserProjects/filterTasks";
+import { useUser } from "layouts/pages/hooks/userName";
 import {
   getProjectStatusLabel,
   projectTypeOptions,
@@ -1240,6 +1244,7 @@ const RESOURCES_ADDITIONAL_PARAMS = {
 
 function ProjectChart() {
   const ganttRef = useRef<GanttComponent>(null);
+  const { userAppDto } = useUser();
   /** Unmount sonrası stale state update'leri engellemek için mounted bayrağı */
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -1409,6 +1414,7 @@ function ProjectChart() {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const isMyUserProjectsView = location.pathname.startsWith("/myUserProjects");
 
   // Kritik ID'ler URL'de, display bilgileri state'te (F5 sonrası da çalışır);
   // yeni sekmede açılan linkler state taşımadığından wcn/pn/psn query param'ları fallback olarak kullanılır.
@@ -1529,7 +1535,7 @@ function ProjectChart() {
           "Şirket ve proje seçimi yapılmadığı için, dashboard sayfasına yönlendiriliyorsunuz.",
         type: "error",
       });
-      navigate("/projectmanagement");
+      navigate(isMyUserProjectsView ? "/myUserProjects" : "/projectmanagement");
       return;
     }
     // Önce kaynaklar (resources + modules) paralel yüklenir, ardından proje verisi çekilir.
@@ -1779,8 +1785,10 @@ function ProjectChart() {
       }
       const config = getConfiguration();
       const api = new ProjectTasksApi(config);
-      const response = await api.apiProjectTasksGet(projectId);
-      if (!response.data || !Array.isArray(response.data)) {
+      const responseData = isMyUserProjectsView
+        ? await fetchMyGanttTasks(projectId)
+        : (await api.apiProjectTasksGet(projectId)).data;
+      if (!responseData || !Array.isArray(responseData)) {
         dispatchAlert({
           message: "Proje verileri yüklenirken bir hata oluştu.",
           type: "error",
@@ -1788,11 +1796,25 @@ function ProjectChart() {
         return undefined;
       }
 
+      let loginUserId = userAppDto?.id;
+      if (isMyUserProjectsView && !loginUserId) {
+        try {
+          const userRes = await new UserApi(config).apiUserGetLoginUserDetailGet();
+          loginUserId = userRes.data?.id;
+        } catch {
+          /* backend filtresi yeterli */
+        }
+      }
+      const scopedData =
+        isMyUserProjectsView && loginUserId
+          ? filterAssignedTasksAndDescendants(responseData, loginUserId)
+          : responseData;
+
       // Rebind öncesi mevcut açık dallar ve yatay kaydırma yakalanır; dataBound'da
       // collapseAll + expandByID ile geri yüklenir. İlk yüklemede set boş → ağaç kapalı başlar.
       restoreExpandedTaskIdsRef.current = captureExpandedTaskIds(ganttRef.current);
       restoreChartScrollLeftRef.current = captureChartScrollLeft(ganttRef.current);
-      const transformedData = response.data.map((task: any) => {
+      const transformedData = scopedData.map((task: any) => {
         // Ensure users is always defined, even if it comes as null or undefined
         const users = task.Users || task.users || [];
         const modulesArray = extractModuleIdsFromApiTask(
@@ -1951,16 +1973,27 @@ function ProjectChart() {
     [] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const editSettings: EditSettingsModel = {
-    allowAdding: true,
-    allowEditing: true,
-    allowDeleting: true,
-    allowTaskbarEditing: true,
-    showDeleteConfirmDialog: true,
-    allowNextRowEdit: true,
-    mode: "Dialog",
-    newRowPosition: "Child",
-  };
+  const editSettings: EditSettingsModel = isMyUserProjectsView
+    ? {
+        allowAdding: false,
+        allowEditing: false,
+        allowDeleting: false,
+        allowTaskbarEditing: false,
+        showDeleteConfirmDialog: false,
+        allowNextRowEdit: false,
+        mode: "Auto",
+        newRowPosition: "Child",
+      }
+    : {
+        allowAdding: true,
+        allowEditing: true,
+        allowDeleting: true,
+        allowTaskbarEditing: true,
+        showDeleteConfirmDialog: true,
+        allowNextRowEdit: true,
+        mode: "Dialog",
+        newRowPosition: "Child",
+      };
 
   const editDialogFields: EditDialogFieldSettingsModel[] = [
     { type: "General" as DialogFieldType, headerText: "Genel", fields: GANTT_GENERAL_DIALOG_FIELDS },
@@ -1976,23 +2009,36 @@ function ProjectChart() {
     { type: "Notes" as DialogFieldType, headerText: "Notlar" },
     { type: "Custom" as DialogFieldType, headerText: "Modüller", fields: ["moduleIds"] },
   ];
-  const toolbarOptions = [
-    "Add",
-    "Edit",
-    "Delete",
-    "Update",
-    "Cancel",
-    "ExpandAll",
-    "CollapseAll",
-    "Search",
-    "ZoomIn",
-    "ZoomOut",
-    "ZoomToFit",
-    "PrevTimeSpan",
-    "NextTimeSpan",
-    "ExcelExport",
-    "PdfExport",
-  ];
+  const toolbarOptions = isMyUserProjectsView
+    ? [
+        "ExpandAll",
+        "CollapseAll",
+        "Search",
+        "ZoomIn",
+        "ZoomOut",
+        "ZoomToFit",
+        "PrevTimeSpan",
+        "NextTimeSpan",
+        "ExcelExport",
+        "PdfExport",
+      ]
+    : [
+        "Add",
+        "Edit",
+        "Delete",
+        "Update",
+        "Cancel",
+        "ExpandAll",
+        "CollapseAll",
+        "Search",
+        "ZoomIn",
+        "ZoomOut",
+        "ZoomToFit",
+        "PrevTimeSpan",
+        "NextTimeSpan",
+        "ExcelExport",
+        "PdfExport",
+      ];
 
   const calculateDuration = (start: Date, end: Date) => {
     const diffTime = end.getTime() - start.getTime();
@@ -2029,6 +2075,7 @@ function ProjectChart() {
   };
 
   const createTask = async (args: any, options?: CreateTaskOptions) => {
+    if (isMyUserProjectsView) return;
     try {
       if (isProcessingTaskRef.current) {
         dispatchAlert({
@@ -2237,6 +2284,7 @@ function ProjectChart() {
 
   /** Kopyalanan görev adı ağacını, Add > Child kurallarıyla seçilen görevin altına ekler. */
   const pasteCopiedTasksAsChildren = async (parentTd: any) => {
+    if (isMyUserProjectsView) return;
     if (isProcessingTaskRef.current) {
       dispatchAlert({
         message: "Bir görev işlemi sürüyor. Lütfen bekleyin.",
@@ -2358,6 +2406,7 @@ function ProjectChart() {
   };
 
   const updateTask = async (args: any) => {
+    if (isMyUserProjectsView) return;
     if (isUpdatingTaskRef.current || isApplyingLocalPatchRef.current) return;
     const nested = args?.taskData && typeof args.taskData === "object" ? args.taskData : null;
     const taskData = nested ? { ...nested, ...args } : args;
@@ -2490,6 +2539,7 @@ function ProjectChart() {
   };
 
   const deleteTask = async (args: any) => {
+    if (isMyUserProjectsView) return;
     if (!Array.isArray(args) || args.length === 0) {
       dispatchAlert({
         message: "Silinecek görev bulunamadı.",
@@ -2558,6 +2608,21 @@ function ProjectChart() {
   };
 
   const actionBegin = async (args: any) => {
+    if (isMyUserProjectsView) {
+      if (
+        args.requestType === "beforeAdd" ||
+        args.requestType === "beforeDelete" ||
+        args.requestType === "beforeSave" ||
+        args.requestType === "beginEdit" ||
+        args.requestType === "add" ||
+        args.requestType === "save" ||
+        args.requestType === "delete"
+      ) {
+        args.cancel = true;
+      }
+      return;
+    }
+
     if (isApplyingLocalPatchRef.current) {
       if (args.requestType === "beforeSave" || args.requestType === "save") {
         args.cancel = true;
@@ -2646,6 +2711,17 @@ function ProjectChart() {
   };
 
   const contextMenuItems = useMemo(() => {
+    if (isMyUserProjectsView) {
+      return [
+        "AutoFitAll",
+        "AutoFit",
+        "SortAscending",
+        "SortDescending",
+        { text: "Collapse the Row", target: ".e-content", id: "collapserow" },
+        { text: "Expand the Row", target: ".e-content", id: "expandrow" },
+        { text: "Hide Column", target: ".e-gridheader", id: "hidecols" },
+      ];
+    }
     const items: any[] = [
       "AutoFitAll",
       "AutoFit",
@@ -2679,7 +2755,7 @@ function ProjectChart() {
       { text: "Hide Column", target: ".e-gridheader", id: "hidecols" }
     );
     return items;
-  }, []);
+  }, [isMyUserProjectsView]);
 
   const handleCopyGanttTasks = (row: any) => {
     const tasks = projectDataRef.current;
@@ -2778,7 +2854,7 @@ function ProjectChart() {
       id: workCompanyId ?? undefined,
       name: workCompanyName,
     };
-    navigate("/projectmanagement", {
+    navigate(isMyUserProjectsView ? "/myUserProjects" : "/projectmanagement", {
       state: {
         showTest: true,
         workCompany,
@@ -2821,7 +2897,7 @@ function ProjectChart() {
 
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                Proje Gantt Grafiği
+                {isMyUserProjectsView ? "Görevlerim — Salt Okunur" : "Proje Gantt Grafiği"}
               </span>
               <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
                 <span>{workCompanyName || "—"}</span>
@@ -2933,8 +3009,8 @@ function ProjectChart() {
           actionComplete={actionComplete}
           allowFiltering={true}
           allowSorting={true}
-          allowParentDependency
-          allowReordering
+          allowParentDependency={!isMyUserProjectsView}
+          allowReordering={!isMyUserProjectsView}
           allowResizing
           allowPdfExport={true}
           resources={resources}

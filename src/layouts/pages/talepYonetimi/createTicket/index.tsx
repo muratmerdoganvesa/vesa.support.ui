@@ -102,6 +102,7 @@ import {
 
 import TaskList from "./components/TaskList";
 import UserSearchCombobox, { getUserDisplayName } from "./components/UserSearchCombobox";
+import { filterTicketSubjectsForCompany } from "./utils/filterTicketSubjectsForCompany";
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -1032,13 +1033,18 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const fetchDetail = async () => {
     const conf = getConfiguration();
     const api = new TicketApi(conf);
-    const subjectData = await api.apiTicketTicketSubjectGet();
-    setsubjectHelp(subjectData.data as any);
-    const slaData = await api.apiTicketTicketSLAGet();
+    const userApi = new UserApi(conf);
+    const [subjectData, slaData, typeData, priorityData, userCompany] = await Promise.all([
+      api.apiTicketTicketSubjectGet(),
+      api.apiTicketTicketSLAGet(),
+      api.apiTicketTicketTypeGet(),
+      api.apiTicketTicketPrioritiesGet(),
+      userApi.apiUserUserCompanyGet(),
+    ]);
+    const subjects = (subjectData.data as subjectHelp[]) ?? [];
+    setsubjectHelp(filterTicketSubjectsForCompany(subjects, userCompany.data?.workCompanyId));
     setSlaPlan(slaData.data as any);
-    const typeData = await api.apiTicketTicketTypeGet();
     setTicketType(typeData.data as any);
-    const priorityData = await api.apiTicketTicketPrioritiesGet();
     setTicketPriority(priorityData.data as any);
   };
 

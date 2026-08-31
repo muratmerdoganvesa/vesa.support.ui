@@ -39,6 +39,7 @@ import ProjectStatsPeopleView from "./ProjectStatsPeopleView";
 import ProjectStatsModulesView from "./ProjectStatsModulesView";
 import SimulatedProjectPlanDialog from "./SimulatedProjectPlanDialog";
 import { useProjectStatisticsFilters } from "../hooks/useProjectStatisticsFilters";
+import { isHiddenKanbanStatisticsCustomer } from "../utils/hiddenKanbanStatisticsCustomers";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 
@@ -363,8 +364,13 @@ const ProjectStatisticsTab = () => {
     return map;
   }, [personDetailsById]);
 
+  const visibleBoardItems = useMemo(
+    () => boardItems.filter((item) => !isHiddenKanbanStatisticsCustomer(item)),
+    [boardItems],
+  );
+
   const filters = useProjectStatisticsFilters(
-    boardItems,
+    visibleBoardItems,
     userDepartmentById,
     userLevelById,
     departmentHierarchy,
