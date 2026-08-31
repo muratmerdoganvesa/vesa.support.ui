@@ -8,6 +8,7 @@ import {
   TicketProjectsListDto,
 } from "api/generated";
 import getConfiguration from "confiuration";
+import { fetchMyCompanyGanttWorkload } from "layouts/pages/myUserProjects/api";
 import { CompanyGanttWorkload, PersonGanttWorkload, PersonProjectBreakdown, ProjectWorkloadSummary } from "../types";
 
 const EMPTY_WORKLOAD: CompanyGanttWorkload = { projects: [], personnel: [] };
@@ -61,19 +62,28 @@ const mapPersonnel = (dto: CompanyGanttPersonnelWorkloadDto): PersonGanttWorkloa
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export const useCompanyGanttWorkload = (workCompanyId: string | undefined) => {
+export const useCompanyGanttWorkload = (
+  workCompanyId: string | undefined,
+  options?: { forCurrentUser?: boolean },
+) => {
+  const forCurrentUser = options?.forCurrentUser === true;
+  const cacheKey = workCompanyId
+    ? forCurrentUser
+      ? `${workCompanyId}:me`
+      : workCompanyId
+    : undefined;
   const [workload, setWorkload] = useState<CompanyGanttWorkload>(EMPTY_WORKLOAD);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!workCompanyId) {
+    if (!workCompanyId || !cacheKey) {
       setWorkload(EMPTY_WORKLOAD);
       return;
     }
 
     // Return cached data if still fresh
-    const cached = cache.get(workCompanyId);
+    const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
       setWorkload(cached.data);
       return;
@@ -92,7 +102,9 @@ export const useCompanyGanttWorkload = (workCompanyId: string | undefined) => {
 
         // Parallel: workload aggregation + active projects (for manager info)
         const [workloadRes, activeProjectsRes] = await Promise.all([
-          tasksApi.apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId),
+          forCurrentUser
+            ? fetchMyCompanyGanttWorkload(workCompanyId).then((data) => ({ data }))
+            : tasksApi.apiProjectTasksGetCompanyGanttWorkloadGet(workCompanyId),
           projectApi.apiTicketProjectsGetActiveProjectsWithManagerGet(workCompanyId),
         ]);
 
@@ -126,7 +138,7 @@ export const useCompanyGanttWorkload = (workCompanyId: string | undefined) => {
         }
 
         const built: CompanyGanttWorkload = { projects, personnel };
-        cache.set(workCompanyId, { data: built, ts: Date.now() });
+        cache.set(cacheKey, { data: built, ts: Date.now() });
         setWorkload(built);
       } catch (err: any) {
         if (err?.name === "AbortError" || err?.code === "ERR_CANCELED") return;
@@ -143,11 +155,11 @@ export const useCompanyGanttWorkload = (workCompanyId: string | undefined) => {
     return () => {
       controller.abort();
     };
-  }, [workCompanyId]);
+  }, [workCompanyId, cacheKey, forCurrentUser]);
 
   /** Invalidates cache for this company so next render triggers a fresh fetch. */
   const invalidate = () => {
-    if (workCompanyId) cache.delete(workCompanyId);
+    if (cacheKey) cache.delete(cacheKey);
   };
 
   return { workload, isLoading, invalidate };
