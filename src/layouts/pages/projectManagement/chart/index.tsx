@@ -90,13 +90,10 @@ import {
   ProjectTasksInsertDto,
   ProjectTasksUpdateDto,
   ProjectTypes,
-  UserApi,
   UserAppDtoOnlyNameId,
   WorkCompanyDto,
 } from "api/generated";
 import { fetchMyGanttTasks } from "layouts/pages/myUserProjects/api";
-import { filterAssignedTasksAndDescendants } from "layouts/pages/myUserProjects/filterTasks";
-import { useUser } from "layouts/pages/hooks/userName";
 import {
   getProjectStatusLabel,
   projectTypeOptions,
@@ -1244,7 +1241,6 @@ const RESOURCES_ADDITIONAL_PARAMS = {
 
 function ProjectChart() {
   const ganttRef = useRef<GanttComponent>(null);
-  const { userAppDto } = useUser();
   /** Unmount sonrası stale state update'leri engellemek için mounted bayrağı */
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -1796,19 +1792,9 @@ function ProjectChart() {
         return undefined;
       }
 
-      let loginUserId = userAppDto?.id;
-      if (isMyUserProjectsView && !loginUserId) {
-        try {
-          const userRes = await new UserApi(config).apiUserGetLoginUserDetailGet();
-          loginUserId = userRes.data?.id;
-        } catch {
-          /* backend filtresi yeterli */
-        }
-      }
-      const scopedData =
-        isMyUserProjectsView && loginUserId
-          ? filterAssignedTasksAndDescendants(responseData, loginUserId)
-          : responseData;
+      // /myUserProjects: backend GetMyGanttTasks already scopes to accessible users
+      // (login user + department hierarchy). Client-side login-user filter would hide team tasks.
+      const scopedData = responseData;
 
       // Rebind öncesi mevcut açık dallar ve yatay kaydırma yakalanır; dataBound'da
       // collapseAll + expandByID ile geri yüklenir. İlk yüklemede set boş → ağaç kapalı başlar.

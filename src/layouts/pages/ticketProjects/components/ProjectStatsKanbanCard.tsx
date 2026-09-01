@@ -75,7 +75,9 @@ const buildProjectTitleParts = (item: StatsBoardItem): ProjectTitleParts => {
   return { projectPath, stepName };
 };
 
-const openGanttChart = (item: StatsBoardItem) => {
+const DEFAULT_GANTT_CHART_PATH = "/projectmanagement/chart";
+
+const openGanttChart = (item: StatsBoardItem, chartPath = DEFAULT_GANTT_CHART_PATH) => {
   const params = new URLSearchParams({
     cid: item.workCompanyId as string,
     pid: item.projectId,
@@ -84,7 +86,7 @@ const openGanttChart = (item: StatsBoardItem) => {
   if (item.projectDescription) params.set("pn", item.projectDescription);
   if (item.projectSubDescription) params.set("psn", item.projectSubDescription);
 
-  window.open(`/projectmanagement/chart?${params.toString()}`, "_blank", "noopener,noreferrer");
+  window.open(`${chartPath}?${params.toString()}`, "_blank", "noopener,noreferrer");
 };
 
 type ProjectStatsKanbanCardProps = {
@@ -101,6 +103,7 @@ type ProjectStatsKanbanCardProps = {
   ) => void;
   onAskStatusSuccess?: (message: string) => void;
   onAskStatusError?: (message: string) => void;
+  ganttChartPath?: string;
 };
 
 const ProjectStatsKanbanCard = ({
@@ -114,6 +117,7 @@ const ProjectStatsKanbanCard = ({
   onChangeSimulatedStatus,
   onAskStatusSuccess,
   onAskStatusError,
+  ganttChartPath = DEFAULT_GANTT_CHART_PATH,
 }: ProjectStatsKanbanCardProps) => {
   const isSimulated = item.kind === "simulated";
   const customerName = item.customerName?.trim() || "";
@@ -315,7 +319,7 @@ const ProjectStatsKanbanCard = ({
                 className="h-7 gap-1 text-[11px]"
                 onClick={(e) => {
                   e.stopPropagation();
-                  openGanttChart(item);
+                  openGanttChart(item, ganttChartPath);
                 }}
               >
                 <ExternalLink className="size-3" aria-hidden />

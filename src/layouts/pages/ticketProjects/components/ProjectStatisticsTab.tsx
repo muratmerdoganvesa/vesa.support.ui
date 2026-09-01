@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Boxes, LayoutGrid, RefreshCw, Plus, Users } from "lucide-react";
 import { ProjectTypes } from "api/generated";
 import { cn } from "lib/utils";
-import { fetchProjectStatistics } from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
+import {
+  fetchMyProjectStatistics,
+  fetchProjectStatistics,
+} from "layouts/pages/ticketProjects/api/fetchProjectStatistics";
 import { fetchProjectCompanyMap } from "layouts/pages/ticketProjects/api/fetchProjectCompanyMap";
 import {
   fetchPersonDetailData,
@@ -42,6 +45,10 @@ import { useProjectStatisticsFilters } from "../hooks/useProjectStatisticsFilter
 import { isHiddenKanbanStatisticsCustomer } from "../utils/hiddenKanbanStatisticsCustomers";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import { useLocation } from "react-router-dom";
+
+const MY_PROJECTS_STATISTICS_PATH = "/myProjectsKanbanStatistics";
+const MY_PROJECTS_GANTT_PATH = "/myUserProjects/chart";
 
 type StatisticsViewTab = "kanban" | "people" | "modules";
 
@@ -143,6 +150,7 @@ type MobileBoardProps = {
   ) => void;
   onAskStatusSuccess?: (message: string) => void;
   onAskStatusError?: (message: string) => void;
+  ganttChartPath?: string;
 };
 
 export const MobileBoard = ({
@@ -157,6 +165,7 @@ export const MobileBoard = ({
   onChangeSimulatedStatus,
   onAskStatusSuccess,
   onAskStatusError,
+  ganttChartPath,
 }: MobileBoardProps) => {
   const [activeCol, setActiveCol] = useState<ProjectTypeColumnKey>(columns[0]?.key);
 
@@ -218,6 +227,7 @@ export const MobileBoard = ({
               onChangeSimulatedStatus={onChangeSimulatedStatus}
               onAskStatusSuccess={onAskStatusSuccess}
               onAskStatusError={onAskStatusError}
+              ganttChartPath={ganttChartPath}
             />
           ))
         )}
@@ -321,6 +331,9 @@ const sortBoardItems = (a: StatsBoardItem, b: StatsBoardItem): number => {
 
 const ProjectStatisticsTab = () => {
   const dispatchAlert = useAlert();
+  const location = useLocation();
+  const isMyProjectsView = location.pathname.startsWith(MY_PROJECTS_STATISTICS_PATH);
+  const ganttChartPath = isMyProjectsView ? MY_PROJECTS_GANTT_PATH : undefined;
   const isMobile = useIsMobile();
   const [boardItems, setBoardItems] = useState<StatsBoardItem[]>([]);
   const [userDepartmentById, setUserDepartmentById] = useState<Map<string, string>>(new Map());
@@ -365,8 +378,11 @@ const ProjectStatisticsTab = () => {
   }, [personDetailsById]);
 
   const visibleBoardItems = useMemo(
-    () => boardItems.filter((item) => !isHiddenKanbanStatisticsCustomer(item)),
-    [boardItems],
+    () =>
+      isMyProjectsView
+        ? boardItems
+        : boardItems.filter((item) => !isHiddenKanbanStatisticsCustomer(item)),
+    [boardItems, isMyProjectsView],
   );
 
   const filters = useProjectStatisticsFilters(
@@ -388,8 +404,8 @@ const ProjectStatisticsTab = () => {
         personDetailResult,
         departmentsResult,
       ] = await Promise.allSettled([
-        fetchProjectStatistics(),
-        fetchSimulatedProjectPlans(),
+        isMyProjectsView ? fetchMyProjectStatistics() : fetchProjectStatistics(),
+        isMyProjectsView ? Promise.resolve([]) : fetchSimulatedProjectPlans(),
         fetchProjectCompanyMap(),
         fetchPersonDetailData(),
         fetchTicketDepartments(),
@@ -431,7 +447,7 @@ const ProjectStatisticsTab = () => {
       );
 
       const unavailableFeatures: string[] = [];
-      if (simulatedPlansResult.status === "rejected") {
+      if (!isMyProjectsView && simulatedPlansResult.status === "rejected") {
         unavailableFeatures.push("simülasyon planları");
       }
       if (companyResult.status === "rejected") {
@@ -464,7 +480,7 @@ const ProjectStatisticsTab = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [dispatchAlert]);
+  }, [dispatchAlert, isMyProjectsView]);
 
   useEffect(() => {
     void loadStatistics();
@@ -709,6 +725,7 @@ const ProjectStatisticsTab = () => {
           planVisibility={filters.planVisibility}
           onPlanVisibilitySelect={filters.handlePlanVisibilitySelect}
           planVisibilityCounts={filters.planVisibilityCounts}
+          showPlanControls={!isMyProjectsView}
           totalCount={filters.totalCount}
           filteredCount={filters.filteredCount}
           isMobileFilterOpen={filters.isMobileFilterOpen}
@@ -731,15 +748,17 @@ const ProjectStatisticsTab = () => {
 
                 {!isLoading && (
                   <div className="flex shrink-0 items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleOpenCreatePlan}
-                      className="bg-rose-600 text-white hover:bg-rose-700"
-                    >
-                      <Plus className="size-3.5" aria-hidden />
-                      Plan Ekle
-                    </Button>
+                    {!isMyProjectsView && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleOpenCreatePlan}
+                        className="bg-rose-600 text-white hover:bg-rose-700"
+                      >
+                        <Plus className="size-3.5" aria-hidden />
+                        Plan Ekle
+                      </Button>
+                    )}
                     <ViewTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
                   </div>
                 )}
@@ -766,11 +785,14 @@ const ProjectStatisticsTab = () => {
                   expandedCardId={expandedCardId}
                   onToggleExpand={handleToggleExpand}
                   highlightPersonIds={filters.highlightPersonIds}
-                  onEditSimulated={handleEditSimulated}
-                  onDeleteSimulated={handleDeleteSimulated}
-                  onChangeSimulatedStatus={handleChangeSimulatedStatus}
+                  onEditSimulated={isMyProjectsView ? undefined : handleEditSimulated}
+                  onDeleteSimulated={isMyProjectsView ? undefined : handleDeleteSimulated}
+                  onChangeSimulatedStatus={
+                    isMyProjectsView ? undefined : handleChangeSimulatedStatus
+                  }
                   onAskStatusSuccess={handleAskStatusSuccess}
                   onAskStatusError={handleAskStatusError}
+                  ganttChartPath={ganttChartPath}
                 />
               ) : (
                 <div className="overflow-x-auto pb-2">
@@ -788,11 +810,14 @@ const ProjectStatisticsTab = () => {
                         expandedCardId={expandedCardId}
                         onToggleExpand={handleToggleExpand}
                         highlightPersonIds={filters.highlightPersonIds}
-                        onEditSimulated={handleEditSimulated}
-                        onDeleteSimulated={handleDeleteSimulated}
-                        onChangeSimulatedStatus={handleChangeSimulatedStatus}
+                        onEditSimulated={isMyProjectsView ? undefined : handleEditSimulated}
+                        onDeleteSimulated={isMyProjectsView ? undefined : handleDeleteSimulated}
+                        onChangeSimulatedStatus={
+                          isMyProjectsView ? undefined : handleChangeSimulatedStatus
+                        }
                         onAskStatusSuccess={handleAskStatusSuccess}
                         onAskStatusError={handleAskStatusError}
+                        ganttChartPath={ganttChartPath}
                       />
                     ))}
                   </div>
@@ -803,12 +828,14 @@ const ProjectStatisticsTab = () => {
         </div>
       </div>
 
-      <SimulatedProjectPlanDialog
-        open={isPlanDialogOpen}
-        onOpenChange={setIsPlanDialogOpen}
-        editingItem={editingPlanItem}
-        onSubmit={handlePlanSubmit}
-      />
+      {!isMyProjectsView && (
+        <SimulatedProjectPlanDialog
+          open={isPlanDialogOpen}
+          onOpenChange={setIsPlanDialogOpen}
+          editingItem={editingPlanItem}
+          onSubmit={handlePlanSubmit}
+        />
+      )}
     </DashboardLayout>
   );
 };

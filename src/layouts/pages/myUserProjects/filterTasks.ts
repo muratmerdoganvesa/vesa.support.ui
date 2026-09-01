@@ -25,16 +25,19 @@ const taskAssignedToUser = (task: GanttTaskLike, userId: string): boolean => {
 };
 
 /**
- * Login kullanıcısına atanan görevler + bu görevlere bağlı tüm alt görevler.
+ * Kapsamdaki kullanıcılara atanan görevler + bu görevlere bağlı tüm alt görevler.
  * Görünmeyen ebeveyne bağlı kayıtların ParentId'si temizlenir (kök olarak gösterilir).
  */
 export const filterAssignedTasksAndDescendants = <T extends GanttTaskLike>(
   tasks: T[],
-  userId: string,
+  userId: string | string[],
 ): T[] => {
-  if (!userId || tasks.length === 0) return [];
+  const userIds = (Array.isArray(userId) ? userId : [userId])
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (userIds.length === 0 || tasks.length === 0) return [];
 
-  const assigned = tasks.filter((t) => taskAssignedToUser(t, userId));
+  const assigned = tasks.filter((t) => userIds.some((id) => taskAssignedToUser(t, id)));
   if (assigned.length === 0) return [];
 
   const childrenByParent = new Map<string, T[]>();

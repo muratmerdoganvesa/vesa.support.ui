@@ -25,6 +25,7 @@ type ProjectStatsKanbanColumnProps = {
   ) => void;
   onAskStatusSuccess?: (message: string) => void;
   onAskStatusError?: (message: string) => void;
+  ganttChartPath?: string;
 };
 
 const ProjectStatsKanbanColumn = ({
@@ -38,6 +39,7 @@ const ProjectStatsKanbanColumn = ({
   onChangeSimulatedStatus,
   onAskStatusSuccess,
   onAskStatusError,
+  ganttChartPath,
 }: ProjectStatsKanbanColumnProps) => {
   const colors = getProjectTypeColumnColors(column.label);
 
@@ -82,6 +84,7 @@ const ProjectStatsKanbanColumn = ({
               onChangeSimulatedStatus={onChangeSimulatedStatus}
               onAskStatusSuccess={onAskStatusSuccess}
               onAskStatusError={onAskStatusError}
+              ganttChartPath={ganttChartPath}
             />
           ))
         ) : (
