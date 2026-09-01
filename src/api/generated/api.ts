@@ -15959,7 +15959,25 @@ export interface TicketCommentDto {
      */
     'createdBy'?: string | null;
     /**
-     * 
+     *
+     * @type {string}
+     * @memberof TicketCommentDto
+     */
+    'createdByName'?: string | null;
+    /**
+     *
+     * @type {string}
+     * @memberof TicketCommentDto
+     */
+    'createdByDepartment'?: string | null;
+    /**
+     *
+     * @type {string}
+     * @memberof TicketCommentDto
+     */
+    'createdByEmail'?: string | null;
+    /**
+     *
      * @type {string}
      * @memberof TicketCommentDto
      */

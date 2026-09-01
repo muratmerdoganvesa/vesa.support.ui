@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { TicketCommentDto } from "api/generated";
 import htmr from "htmr";
 import { Paperclip, Download } from "lucide-react";
@@ -21,16 +20,30 @@ const sanitizeCommentHtml = (htmlString: string): string => {
   return doc.body.innerHTML;
 };
 
-const ChatComponent = ({ ticketFormComment, handleDownload }: Props) => {
-  useEffect(() => {
-    console.log(ticketFormComment);
-  }, [ticketFormComment]);
+const getCommentAuthorEmail = (comment: TicketCommentDto): string | null => {
+  if (comment.createdByEmail?.trim()) return comment.createdByEmail.trim();
+  if (comment.createdBy?.includes("@")) return comment.createdBy.trim();
+  return null;
+};
 
+const getCommentAuthorLabel = (comment: TicketCommentDto): string => {
+  const name = comment.createdByName?.trim();
+  const department = comment.createdByDepartment?.trim();
+
+  if (name && department) return `${name} - ${department}`;
+  if (name) return name;
+  if (department) return department;
+  return comment.createdBy?.trim() || "Bilinmeyen kullanıcı";
+};
+
+const ChatComponent = ({ ticketFormComment, handleDownload }: Props) => {
   return (
     <div className="h-full overflow-y-auto px-4 pt-7 pb-4 scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/10 hover:scrollbar-thumb-black/20">
       <div className="flex flex-col gap-6">
-        {ticketFormComment.map((comment: any, index: number) => {
+        {ticketFormComment.map((comment: TicketCommentDto, index: number) => {
           const isUserMessage = index % 2 === 0;
+          const authorLabel = getCommentAuthorLabel(comment);
+          const authorEmail = getCommentAuthorEmail(comment);
 
           return (
             <div
@@ -56,12 +69,19 @@ const ChatComponent = ({ ticketFormComment, handleDownload }: Props) => {
                 >
                   <div className="flex flex-col gap-3">
                     {/* Header: author + date */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium tracking-tight text-gray-800">
-                        {comment.createdBy}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {formatDate(comment.createdDate)}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium tracking-tight text-gray-800">
+                          {authorLabel}
+                        </span>
+                        {authorEmail && (
+                          <p className="mt-0.5 text-[11px] text-gray-400 break-all">
+                            {authorEmail}
+                          </p>
+                        )}
+                      </div>
+                      <span className="shrink-0 text-xs text-gray-400">
+                        {comment.createdDate ? formatDate(comment.createdDate) : ""}
                       </span>
                     </div>
 
