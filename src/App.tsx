@@ -313,8 +313,8 @@ export default function App() {
           <Route path="/profile/profile-overview" element={<Overview />} />
           <Route path="/profile/all-projects" element={<AllProjects />} />
       
-          <Route path="/" element={<Navigate to="/myProjectsKanbanStatistics" replace />} />
-          <Route path="*" element={<Navigate to="/myProjectsKanbanStatistics" replace />} />
+          <Route path="/" element={<Navigate to="/profile/profile-overview" replace />} />
+          <Route path="*" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
@@ -322,7 +322,7 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-
+            
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
