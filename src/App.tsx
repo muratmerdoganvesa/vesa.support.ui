@@ -313,8 +313,8 @@ export default function App() {
           <Route path="/profile/profile-overview" element={<Overview />} />
           <Route path="/profile/all-projects" element={<AllProjects />} />
       
-          <Route path="/" element={<Navigate to="/profile/profile-overview" replace />} />
-          <Route path="*" element={<Navigate to="/profile/profile-overview" replace />} />
+          <Route path="/" element={<Navigate to="/myProjectsKanbanStatistics" replace />} />
+          <Route path="*" element={<Navigate to="/myProjectsKanbanStatistics" replace />} />
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
@@ -322,7 +322,7 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-       
+
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
@@ -400,8 +400,11 @@ export default function App() {
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
             <Route path="/chat-home" element={<ChatHome />} />
             <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
-         <Route path="/myUserProjects" element={<MyUserProjects />} />
+            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
+            <Route path="/myUserProjects" element={<MyUserProjects />} />
             <Route path="/myUserProjects/chart" element={<ProjectChart />} />
+            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
+            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
           </Route> 
 
           {/* <Route path="/mmessages" element={<ChatPage />} /> */}

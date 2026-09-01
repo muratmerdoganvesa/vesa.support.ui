@@ -72,6 +72,7 @@ type Props = {
   planVisibility: PlanVisibility;
   onPlanVisibilitySelect: (visibility: PlanVisibility) => void;
   planVisibilityCounts: { all: number; plansOnly: number; hidePlans: number };
+  showPlanControls?: boolean;
   totalCount: number;
   filteredCount: number;
   isMobileFilterOpen: boolean;
@@ -435,6 +436,7 @@ const ProjectStatisticsFilterBar = ({
   planVisibility,
   onPlanVisibilitySelect,
   planVisibilityCounts,
+  showPlanControls = true,
   totalCount,
   filteredCount,
   isMobileFilterOpen,
@@ -728,7 +730,7 @@ const ProjectStatisticsFilterBar = ({
   const filterGroups = useMemo(
     () =>
       [
-        planGroup,
+        showPlanControls ? planGroup : null,
         statusGroup,
         departmentGroup,
         personGroup,
@@ -736,7 +738,16 @@ const ProjectStatisticsFilterBar = ({
         moduleGroup,
         levelGroup,
       ].filter((g): g is FilterGroupConfig => g !== null),
-    [planGroup, statusGroup, departmentGroup, personGroup, customerGroup, moduleGroup, levelGroup],
+    [
+      showPlanControls,
+      planGroup,
+      statusGroup,
+      departmentGroup,
+      personGroup,
+      customerGroup,
+      moduleGroup,
+      levelGroup,
+    ],
   );
 
   const activeChips: ActiveFilterChip[] = useMemo(() => {
@@ -795,7 +806,7 @@ const ProjectStatisticsFilterBar = ({
         onClear: () => onLevelSelect("All"),
       });
     }
-    if (planVisibility !== "all") {
+    if (showPlanControls && planVisibility !== "all") {
       chips.push({
         key: "plan",
         label: `Plan: ${PLAN_VISIBILITY_LABELS[planVisibility]}`,
@@ -812,6 +823,7 @@ const ProjectStatisticsFilterBar = ({
     selectedModule,
     selectedLevel,
     planVisibility,
+    showPlanControls,
     uniqueStatuses,
     uniquePersons,
     departmentTreeItems,

@@ -81,15 +81,18 @@ const normalizeStatsItem = (item: Record<string, unknown>): StatsBoardItem | nul
   };
 };
 
-export const fetchProjectStatistics = async (): Promise<StatsBoardItem[]> => {
-  const response = await axiosInstance.get<Record<string, unknown>[]>(
-    '/api/TicketProjects/GetProjectStatistics',
-    {
-      timeout: 90_000,
-    },
-  );
+const fetchStatisticsFromEndpoint = async (url: string): Promise<StatsBoardItem[]> => {
+  const response = await axiosInstance.get<Record<string, unknown>[]>(url, {
+    timeout: 90_000,
+  });
 
   return (response.data ?? [])
     .map(normalizeStatsItem)
     .filter((item): item is StatsBoardItem => item != null);
 };
+
+export const fetchProjectStatistics = (): Promise<StatsBoardItem[]> =>
+  fetchStatisticsFromEndpoint("/api/TicketProjects/GetProjectStatistics");
+
+export const fetchMyProjectStatistics = (): Promise<StatsBoardItem[]> =>
+  fetchStatisticsFromEndpoint("/api/TicketProjects/GetMyProjectStatistics");
