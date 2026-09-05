@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import profile from "../../../assets/images/profile-icon.png";
-import saplogo from "../../../assets/images/small-logos/sap-logo-svg.svg";
+import appLogo from "../../../assets/images/small-logos/vesacons-logo.svg";
 
 
 import {
@@ -457,8 +457,8 @@ const DashboardNavbar = ({
       >
         <div className="flex min-w-0 shrink-0 items-center gap-2.5 md:gap-3">
           <img
-            src={saplogo}
-            alt="SAP Logo"
+            src={appLogo}
+            alt="Vesacons Logo"
             className="h-7 w-auto shrink-0 object-contain"
             loading="eager"
             
@@ -662,8 +662,8 @@ const DashboardNavbar = ({
         <SheetContent side="left" className="w-[300px] gap-0 p-0 sm:max-w-[300px]">
           <SheetHeader className="flex flex-row items-center gap-2.5 border-b border-border/60 bg-slate-50/60 px-4 py-3.5 text-left dark:bg-slate-900/40">
             <img
-              src={saplogo}
-              alt="SAP Logo"
+              src={appLogo}
+              alt="Vesacons Logo"
               className="h-6 w-auto shrink-0 object-contain"
               loading="lazy"
             />
