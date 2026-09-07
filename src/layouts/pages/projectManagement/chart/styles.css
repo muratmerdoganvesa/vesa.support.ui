@@ -285,6 +285,100 @@ select.gantt-module-status-select:hover {
   box-sizing: border-box;
 }
 
+.e-gantt-dialog .e-edit-form-column.gantt-subproject-tab-column {
+  float: none;
+  padding: 16px 18px 18px 18px;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.e-gantt-dialog .e-edit-form-column.gantt-subproject-tab-column .e-float-text,
+.e-gantt-dialog .e-edit-form-column.gantt-subproject-tab-column label.e-float-text {
+  display: none !important;
+}
+
+.gantt-subproject-editor {
+  width: 100%;
+}
+
+.gantt-subproject-empty {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.gantt-subproject-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.gantt-subproject-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.gantt-subproject-item:hover,
+.gantt-subproject-item:focus-visible {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  outline: none;
+}
+
+.gantt-subproject-item.is-selected {
+  border-color: #3e5d8f;
+  background: #f1f5f9;
+  box-shadow: 0 0 0 1px #3e5d8f;
+}
+
+.gantt-subproject-item input[type="radio"] {
+  margin-top: 3px;
+  accent-color: #3e5d8f;
+}
+
+.gantt-subproject-item-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gantt-subproject-item-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: #1e293b;
+}
+
+.gantt-subproject-item-meta {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Dialogda editörün çalışması için kolon visible kalır; gridde gizlenir. */
+.gantt-chart-container .gantt-subproject-hidden-col,
+.gantt-chart-container th.gantt-subproject-hidden-col,
+.gantt-chart-container td.gantt-subproject-hidden-col {
+  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
 .e-gantt-dialog .gantt-module-status-row .e-multiselect,
 .e-gantt-dialog .gantt-module-status-row .e-ddl {
   width: 100% !important;
