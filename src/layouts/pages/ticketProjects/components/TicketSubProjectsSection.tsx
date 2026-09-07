@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
-import { ListModuleDto } from "api/generated";
+import { ListModuleDto, UserAppDto } from "api/generated";
 import { Button } from "components/ui/button";
 import {
   Table,
@@ -38,11 +38,13 @@ import TicketSubProjectDialog, {
 type TicketSubProjectsSectionProps = {
   ticketProjectId: string;
   modules: ListModuleDto[];
+  projectUsers: UserAppDto[];
 };
 
 const TicketSubProjectsSection = ({
   ticketProjectId,
   modules,
+  projectUsers,
 }: TicketSubProjectsSectionProps) => {
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
@@ -253,6 +255,7 @@ const TicketSubProjectsSection = ({
         }}
         editingItem={editingItem}
         modules={modules}
+        projectUsers={projectUsers}
         onSubmit={handleSubmit}
       />
 

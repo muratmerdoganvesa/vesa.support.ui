@@ -594,7 +594,11 @@ function CreateTicketProject() {
               </div>
 
               {id && (
-                <TicketSubProjectsSection ticketProjectId={id} modules={modules} />
+                <TicketSubProjectsSection
+                  ticketProjectId={id}
+                  modules={modules}
+                  projectUsers={selectedUsers ?? []}
+                />
               )}
             </div>
 

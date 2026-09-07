@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, X } from "lucide-react";
 
-import { ListModuleDto, UserApi, UserAppDto } from "api/generated";
-import getConfiguration from "confiuration";
+import { ListModuleDto, UserAppDto } from "api/generated";
 import {
   Dialog,
   DialogContent,
@@ -39,8 +37,12 @@ type TicketSubProjectDialogProps = {
   onOpenChange: (open: boolean) => void;
   editingItem?: TicketSubProjectDto | null;
   modules: ListModuleDto[];
+  projectUsers: UserAppDto[];
   onSubmit: (values: TicketSubProjectFormValues) => Promise<void>;
 };
+
+const getUserSearchText = (user: UserAppDto) =>
+  `${user.firstName ?? ""} ${user.lastName ?? ""} ${user.email ?? ""}`.trim().toLowerCase();
 
 const emptyForm = (): TicketSubProjectFormValues => ({
   name: "",
@@ -55,9 +57,9 @@ const TicketSubProjectDialog = ({
   onOpenChange,
   editingItem,
   modules,
+  projectUsers = [],
   onSubmit,
 }: TicketSubProjectDialogProps) => {
-  const { t } = useTranslation();
   const isEdit = Boolean(editingItem);
 
   const [values, setValues] = useState<TicketSubProjectFormValues>(emptyForm());
@@ -65,18 +67,23 @@ const TicketSubProjectDialog = ({
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [modulesOpen, setModulesOpen] = useState(false);
   const [moduleSearch, setModuleSearch] = useState("");
-  const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
 
     if (editingItem) {
-      const users = editingItem.users ?? [];
+      const existingUsers = editingItem.users ?? [];
       const userIds =
         editingItem.userIds?.length > 0
           ? editingItem.userIds
-          : users.map((user) => user.id).filter(Boolean) as string[];
+          : existingUsers.map((user) => user.id).filter(Boolean) as string[];
+      const users = userIds
+        .map((userId) =>
+          projectUsers.find((user) => user.id === userId)
+          ?? existingUsers.find((user) => user.id === userId)
+        )
+        .filter((user): user is UserAppDto => Boolean(user));
       const moduleIds =
         editingItem.moduleIds?.length > 0
           ? editingItem.moduleIds
@@ -97,37 +104,42 @@ const TicketSubProjectDialog = ({
     setModulesOpen(false);
     setEmployeeSearch("");
     setModuleSearch("");
-    setSearchByName([]);
   }, [open, editingItem]);
 
-  const employeeOptions = useMemo(
-    () => [
-      ...values.users,
-      ...searchByName.filter((user) => !values.users.some((selected) => selected.id === user.id)),
-    ],
-    [values.users, searchByName]
+  const employeeOptions = useMemo(() => {
+    const byId = new Map<string, UserAppDto>();
+
+    for (const user of projectUsers) {
+      if (user.id) byId.set(user.id, user);
+    }
+
+    for (const user of values.users) {
+      if (user.id && !byId.has(user.id)) byId.set(user.id, user);
+    }
+
+    const list = Array.from(byId.values());
+    const query = employeeSearch.trim().toLowerCase();
+    if (!query) return list;
+
+    return list.filter((user) => getUserSearchText(user).includes(query));
+  }, [projectUsers, values.users, employeeSearch]);
+
+  const selectedEmployees = useMemo(
+    () =>
+      values.userIds
+        .map(
+          (userId) =>
+            projectUsers.find((user) => user.id === userId)
+            ?? values.users.find((user) => user.id === userId)
+        )
+        .filter((user): user is UserAppDto => Boolean(user)),
+    [projectUsers, values.userIds, values.users]
   );
 
   const selectedModules = useMemo(
     () => modules.filter((mod) => mod.id && values.moduleIds.includes(mod.id)),
     [modules, values.moduleIds]
   );
-
-  const handleSearchByName = async (value: string) => {
-    if (value === "") {
-      setSearchByName([]);
-      return;
-    }
-
-    try {
-      const conf = getConfiguration();
-      const api = new UserApi(conf);
-      const data = await api.apiUserGetAllUsersAsyncWitNameGet(value);
-      setSearchByName(data.data ?? []);
-    } catch (error) {
-      console.log("error", error);
-    }
-  };
 
   const handleRemoveEmployee = (userId: string) => {
     setValues((prev) => ({
@@ -205,10 +217,7 @@ const TicketSubProjectDialog = ({
               open={employeesOpen}
               onOpenChange={(nextOpen) => {
                 setEmployeesOpen(nextOpen);
-                if (!nextOpen) {
-                  setEmployeeSearch("");
-                  setSearchByName([]);
-                }
+                if (!nextOpen) setEmployeeSearch("");
               }}
             >
               <PopoverTrigger asChild>
@@ -222,12 +231,10 @@ const TicketSubProjectDialog = ({
                     if (e.key === "Enter" || e.key === " ") setEmployeesOpen(true);
                   }}
                 >
-                  {values.users.length === 0 ? (
-                    <span className="text-muted-foreground">
-                      {t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
-                    </span>
+                  {selectedEmployees.length === 0 ? (
+                    <span className="text-muted-foreground">Çalışan seçiniz</span>
                   ) : (
-                    values.users.map((user) => (
+                    selectedEmployees.map((user) => (
                       <span
                         key={user.id}
                         className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium"
@@ -253,36 +260,44 @@ const TicketSubProjectDialog = ({
               <PopoverContent className="z-[10060] w-80 p-0" align="start">
                 <Command shouldFilter={false}>
                   <CommandInput
-                    placeholder={t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
+                    placeholder="Çalışan ara"
                     value={employeeSearch}
-                    onValueChange={(value) => {
-                      setEmployeeSearch(value);
-                      handleSearchByName(value);
-                    }}
+                    onValueChange={setEmployeeSearch}
                   />
                   <CommandList>
-                    <CommandEmpty>Kullanıcı bulunamadı</CommandEmpty>
+                    <CommandEmpty>
+                      {projectUsers.length === 0
+                        ? "Bu projede çalışan bulunamadı"
+                        : "Çalışan bulunamadı"}
+                    </CommandEmpty>
                     <CommandGroup>
-                      {employeeOptions.map((user) => (
-                        <CommandItem
-                          key={user.id}
-                          value={user.id}
-                          data-checked={user.id ? values.userIds.includes(user.id) : false}
-                          onSelect={() => handleToggleEmployee(user)}
-                        >
-                          <img
-                            className="size-8 shrink-0 rounded-full object-cover"
-                            src={`data:image/png;base64,${user.photo}`}
-                            alt={user.firstName}
-                          />
-                          <div className="flex min-w-0 flex-col">
-                            <span className="truncate text-sm font-medium">
-                              {user.firstName} {user.lastName}
-                            </span>
-                            <span className="truncate text-xs text-muted-foreground">{user.email}</span>
-                          </div>
-                        </CommandItem>
-                      ))}
+                      {employeeOptions.map((user) => {
+                        if (!user.id) return null;
+                        const isSelected = values.userIds.includes(user.id);
+                        return (
+                          <CommandItem
+                            key={user.id}
+                            value={`${user.firstName} ${user.lastName} ${user.id}`}
+                            data-checked={isSelected}
+                            onSelect={() => handleToggleEmployee(user)}
+                          >
+                            <Check
+                              className={cn("size-4", isSelected ? "opacity-100" : "opacity-0")}
+                            />
+                            <img
+                              className="size-8 shrink-0 rounded-full object-cover"
+                              src={`data:image/png;base64,${user.photo}`}
+                              alt={`${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Çalışan"}
+                            />
+                            <div className="flex min-w-0 flex-col">
+                              <span className="truncate text-sm font-medium">
+                                {user.firstName} {user.lastName}
+                              </span>
+                              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
