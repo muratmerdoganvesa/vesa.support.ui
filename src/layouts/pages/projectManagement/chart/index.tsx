@@ -634,8 +634,8 @@ function normalizeGanttTaskUsers(
       rawId = String(item).trim();
     } else if (item && typeof item === "object") {
       const o = item as Record<string, unknown>;
-      rawId = String(o.id ?? o.Id ?? o.resourceId ?? "").trim();
-      if (!rawId) {
+      rawId = String(o.id ?? o.Id ?? o.resourceId ?? o.userId ?? o.UserId ?? "").trim();
+      if (!rawId || rawId === "undefined" || rawId === "null") {
         rawId = String(o.fullName ?? o.resourceName ?? o.userName ?? "").trim();
       }
     }
@@ -1249,6 +1249,13 @@ type GanttSubProjectListItem = {
   usersLabel: string;
   modulesLabel: string;
   effortLabel: string;
+  userIds: string[];
+  moduleIds: string[];
+};
+
+type GanttSubProjectEditorContext = {
+  resourcePool: GanttResourcePoolItem[];
+  moduleList: GanttModuleOption[];
 };
 
 const GANTT_SUBPROJECT_RADIO_NAME = "gantt-subproject-id";
@@ -1272,12 +1279,22 @@ const mapTicketSubProjectsForGantt = (
         .map((mod) => mod.name)
         .filter(Boolean)
         .join(", ") || "-";
+    const userIds =
+      (item.userIds?.length
+        ? item.userIds
+        : (item.users ?? []).map((user) => readUserIdFromObject(user))).filter(Boolean);
+    const moduleIds =
+      (item.moduleIds?.length
+        ? item.moduleIds
+        : (item.modules ?? []).map((mod) => mod.id).filter(Boolean)).map(String).filter(Boolean);
     return {
       id: item.id,
       name: item.name?.trim() ? item.name : "Adsız alt proje",
       usersLabel,
       modulesLabel,
       effortLabel: formatGanttSubProjectEffort(item.effortDuration),
+      userIds,
+      moduleIds,
     };
   });
 
@@ -1302,10 +1319,217 @@ const applySubProjectIdToRow = (rowData: any, next: string) => {
   }
 };
 
+const applyTaskNameToRow = (rowData: any, name: string) => {
+  rowData.TaskName = name;
+  if (rowData.taskData) rowData.taskData.TaskName = name;
+  if (rowData.ganttProperties) rowData.ganttProperties.taskName = name;
+};
+
+const applyResourcesToRow = (rowData: any, next: GanttResourcePoolItem[]) => {
+  rowData.resources = next;
+  if (rowData.taskData) rowData.taskData.resources = next;
+  if (rowData.ganttProperties) rowData.ganttProperties.resourceInfo = next;
+};
+
+const readUserIdFromObject = (
+  user: { id?: string | null } | Record<string, unknown> | null | undefined,
+): string => {
+  if (!user || typeof user !== "object") return "";
+  const o = user as Record<string, unknown>;
+  const raw = o.id ?? o.Id ?? o.userId ?? o.UserId;
+  const value = raw == null ? "" : String(raw).trim();
+  return !value || value === "undefined" || value === "null" ? "" : value;
+};
+
+const resolveSubProjectUserIds = (item: {
+  userIds?: string[];
+  users?: { id?: string | null }[];
+}): string[] => {
+  const fromIds = (item.userIds ?? []).map(String).map((id) => id.trim()).filter(Boolean);
+  if (fromIds.length > 0) return fromIds;
+  return (item.users ?? []).map((user) => readUserIdFromObject(user)).filter(Boolean);
+};
+
+/** Syncfusion eklemede taskData.resources çoğu zaman [] gelir; boş dizi gerçek kaynakları ezmesin. */
+const pickNonEmptyResources = (row: any): unknown => {
+  const candidates = [
+    row?.resources,
+    row?.ganttProperties?.resourceInfo,
+    row?.taskData?.resources,
+    row?.taskData?.ganttProperties?.resourceInfo,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) return candidate;
+    if (typeof candidate === "string" && candidate.trim().length > 0) return candidate;
+  }
+  return undefined;
+};
+
+const usersFromSubProject = (
+  subProjectId: string,
+  subProjects: TicketSubProjectDto[],
+): NonNullable<ProjectTasksUpdateDto["users"]> | undefined => {
+  if (!subProjectId) return undefined;
+  const wanted = subProjectId.toLowerCase();
+  const item = subProjects.find((sub) => String(sub.id).toLowerCase() === wanted);
+  if (!item) return undefined;
+  const seen = new Set<string>();
+  const users: NonNullable<ProjectTasksUpdateDto["users"]> = [];
+  for (const raw of resolveSubProjectUserIds(item)) {
+    const id = String(raw).trim();
+    if (!id) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    users.push({ id });
+  }
+  return users.length > 0 ? users : undefined;
+};
+
+const resolveSubProjectModuleIdList = (
+  item: { moduleIds?: string[]; modules?: { id?: string | null; name?: string | null }[] },
+  moduleList: GanttModuleOption[],
+): string[] => {
+  const fromIds = (item.moduleIds ?? []).map(String).filter(Boolean);
+  if (fromIds.length > 0) return resolveToModuleIds(fromIds, moduleList);
+  const fromModules = (item.modules ?? [])
+    .map((mod) => String(mod.id ?? mod.name ?? ""))
+    .filter(Boolean);
+  return resolveToModuleIds(fromModules, moduleList);
+};
+
+const buildResourcesFromUserIds = (
+  userIds: string[],
+  resourcePool: GanttResourcePoolItem[],
+): GanttResourcePoolItem[] => {
+  const seen = new Set<string>();
+  const out: GanttResourcePoolItem[] = [];
+  for (const raw of userIds) {
+    const id = String(raw ?? "").trim();
+    if (!id) continue;
+    const key = id.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const pool = resourcePool.find((r) => String(r.id ?? "").toLowerCase() === key);
+    out.push(pool ? { ...pool } : { id });
+  }
+  return out;
+};
+
+const applySubProjectFieldsToRow = (
+  rowData: any,
+  item: {
+    name?: string;
+    userIds?: string[];
+    users?: { id?: string | null }[];
+    moduleIds?: string[];
+    modules?: { id?: string | null; name?: string | null }[];
+  },
+  resourcePool: GanttResourcePoolItem[],
+  moduleList: GanttModuleOption[],
+) => {
+  const name = item.name?.trim();
+  if (name) applyTaskNameToRow(rowData, name);
+  applyModuleIdsToRow(rowData, resolveSubProjectModuleIdList(item, moduleList));
+  applyResourcesToRow(rowData, buildResourcesFromUserIds(resolveSubProjectUserIds(item), resourcePool));
+};
+
+const getOpenGanttDialogModule = (): any | undefined => {
+  const ganttEl = document.getElementById(GANTT_INSTANCE_ID);
+  return (ganttEl as any)?.ej2_instances?.[0]?.editModule?.dialogModule;
+};
+
+const syncGanttDialogTaskNameInput = (name: string) => {
+  const dialog = document.querySelector<HTMLElement>(".e-dialog.e-popup-open");
+  if (!dialog) return;
+  const input = dialog.querySelector<HTMLInputElement>(
+    `#${GANTT_INSTANCE_ID}TaskName, input[name="TaskName"], input[id$="TaskName"]`,
+  );
+  if (!input) return;
+  const inst = (input as any).ej2_instances?.[0];
+  if (inst) {
+    try {
+      inst.value = name;
+      inst.dataBind?.();
+    } catch {
+      input.value = name;
+    }
+  } else {
+    input.value = name;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+  input.closest(".e-float-input, .e-control-wrapper")?.classList.add("e-valid-input");
+};
+
+const syncGanttDialogResourceSelection = (
+  userIds: string[],
+  resourcePool: GanttResourcePoolItem[],
+) => {
+  const selected = buildResourcesFromUserIds(userIds, resourcePool);
+  const dialogModule = getOpenGanttDialogModule();
+  if (dialogModule) {
+    dialogModule.ganttResources = selected.slice();
+  }
+
+  const gridEl = document.getElementById(`${GANTT_INSTANCE_ID}ResourcesTabContainer`);
+  const grid = (gridEl as any)?.ej2_instances?.[0];
+  if (!grid) return;
+
+  const wanted = new Set(userIds.map((id) => String(id).toLowerCase()));
+  const records: any[] = grid.getCurrentViewRecords?.() ?? [];
+  const indexes: number[] = [];
+  records.forEach((data, index) => {
+    const id = String(data?.taskData?.id ?? data?.id ?? "").toLowerCase();
+    if (id && wanted.has(id)) indexes.push(index);
+  });
+
+  try {
+    grid.clearSelection?.();
+    if (indexes.length === 0) return;
+    if (typeof grid.selectRows === "function") {
+      grid.selectRows(indexes);
+    } else {
+      indexes.forEach((index) => grid.selectRow?.(index));
+    }
+  } catch {
+    /* kaynak ızgarası henüz hazır olmayabilir */
+  }
+
+  if (dialogModule) {
+    dialogModule.ganttResources = selected.slice();
+  }
+};
+
+const syncGanttDialogTabsFromSubProject = (
+  rowData: any,
+  item: GanttSubProjectListItem,
+  context: GanttSubProjectEditorContext,
+) => {
+  const name = item.name?.trim() ?? "";
+  if (name) syncGanttDialogTaskNameInput(name);
+  refreshGanttDialogModuleStatusEditors(rowData, context.moduleList);
+  syncGanttDialogResourceSelection(item.userIds, context.resourcePool);
+};
+
+const applySelectedSubProjectFieldsToRow = (
+  rowData: any,
+  subProjects: TicketSubProjectDto[],
+  resourcePool: GanttResourcePoolItem[],
+  moduleList: GanttModuleOption[],
+) => {
+  const subId = normalizeSubProjectIdFromRow(rowData);
+  if (!subId) return;
+  const item = subProjects.find((sub) => String(sub.id) === subId);
+  if (!item) return;
+  applySubProjectFieldsToRow(rowData, item, resourcePool, moduleList);
+};
+
 const renderSubProjectEditor = (
   host: HTMLElement,
   rowData: any,
   items: GanttSubProjectListItem[],
+  context?: GanttSubProjectEditorContext,
 ) => {
   host.innerHTML = "";
   host.className = "gantt-subproject-editor";
@@ -1348,6 +1572,16 @@ const renderSubProjectEditor = (
     radio.addEventListener("change", () => {
       applySubProjectIdToRow(rowData, id);
       syncSelectedClass();
+      if (!id || !context) return;
+      const selectedItem = items.find((item) => item.id === id);
+      if (!selectedItem) return;
+      applySubProjectFieldsToRow(
+        rowData,
+        selectedItem,
+        context.resourcePool,
+        context.moduleList,
+      );
+      syncGanttDialogTabsFromSubProject(rowData, selectedItem, context);
     });
 
     const body = document.createElement("div");
@@ -1402,26 +1636,33 @@ const readSubProjectIdFromDialogElement = (
   return checked.value ?? "";
 };
 
-const mergeDialogSubProjectIntoSaveData = (data: any) => {
+const mergeDialogSubProjectIntoSaveData = (
+  data: any,
+  subProjects: TicketSubProjectDto[] = [],
+  resourcePool: GanttResourcePoolItem[] = [],
+  moduleList: GanttModuleOption[] = [],
+) => {
   const editor = document.querySelector<HTMLElement>(
     ".e-dialog.e-popup-open .gantt-subproject-editor",
   );
   const fromDom = readSubProjectIdFromDialogElement(editor);
   if (fromDom !== undefined) {
     applySubProjectIdToRow(data, fromDom);
-    return;
+  } else {
+    applySubProjectIdToRow(data, normalizeSubProjectIdFromRow(data));
   }
-  applySubProjectIdToRow(data, normalizeSubProjectIdFromRow(data));
+  applySelectedSubProjectFieldsToRow(data, subProjects, resourcePool, moduleList);
 };
 
 const refreshGanttDialogSubProjectEditor = (
   rowData: any,
   items: GanttSubProjectListItem[],
+  context?: GanttSubProjectEditorContext,
 ) => {
   document
     .querySelectorAll<HTMLElement>(".e-dialog.e-popup-open .gantt-subproject-editor")
     .forEach((host) => {
-      renderSubProjectEditor(host, rowData, items);
+      renderSubProjectEditor(host, rowData, items, context);
     });
 };
 
@@ -1599,6 +1840,10 @@ function ProjectChart() {
           refreshGanttDialogSubProjectEditor(
             row,
             mapTicketSubProjectsForGantt(subProjectsRef.current),
+            {
+              resourcePool: resourcesRef.current as GanttResourcePoolItem[],
+              moduleList: moduleDataRef.current as GanttModuleOption[],
+            },
           );
         });
       }
@@ -1648,6 +1893,8 @@ function ProjectChart() {
    */
   const moduleDataRef = useRef<any[]>([]);
   useEffect(() => { moduleDataRef.current = moduleData; }, [moduleData]);
+  const resourcesRef = useRef<UserAppDtoOnlyNameId[]>(resources);
+  useEffect(() => { resourcesRef.current = resources; }, [resources]);
   const subProjectsRef = useRef<TicketSubProjectDto[]>([]);
   const [excelDialogOpen, setExcelDialogOpen] = useState(false);
   const [excelSettings, setExcelSettings] = useState({
@@ -2174,6 +2421,10 @@ function ProjectChart() {
           args.element,
           args.rowData,
           mapTicketSubProjectsForGantt(subProjectsRef.current),
+          {
+            resourcePool: resourcesRef.current as GanttResourcePoolItem[],
+            moduleList: moduleDataRef.current as GanttModuleOption[],
+          },
         );
       },
       read: (element: HTMLElement) => {
@@ -2378,14 +2629,12 @@ function ProjectChart() {
 
       const config = getConfiguration();
       const moduleIdsPayload = resolveToModuleIds(
-        normalizeModuleIdsFromRow(args.taskData),
+        normalizeModuleIdsFromRow(args),
         moduleDataRef.current as GanttModuleOption[],
       );
 
-      const taskName =
-        typeof args.taskData.TaskName === "string" && args.taskData.TaskName.trim().length > 0
-          ? args.taskData.TaskName
-          : "New Task";
+      const pickedName = pickEditedTaskName(args, args.taskData);
+      const taskName = pickedName.trim().length > 0 ? pickedName : "New Task";
 
       const body: ProjectTasksInsertDto = {
         duration: calculatedDuration,
@@ -2399,9 +2648,12 @@ function ProjectChart() {
         projectId: projectId,
         milestone: args.taskData.Milestone,
         taskId: args.taskData.TaskID,
-        users: usersForInsert(args.taskData.resources),
+        users: usersFromSubProject(
+          normalizeSubProjectIdFromRow(args),
+          subProjectsRef.current,
+        ) ?? usersForInsert(pickNonEmptyResources(args)),
         moduleIds: moduleIdsPayload,
-        projectStatus: normalizeProjectStatusFromRow(args.taskData),
+        projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? normalizeProjectStatusFromRow(args),
       };
 
       const api = new ProjectTasksApi(config);
@@ -2688,11 +2940,17 @@ function ProjectChart() {
       );
 
       const config = getConfiguration();
-      const hasResourcePayload =
-        taskData.resources !== undefined && taskData.resources !== null;
-      const usersPayload = hasResourcePayload
-        ? normalizeGanttTaskUsers(taskData.resources, resources)
-        : normalizeGanttTaskUsers(existing?.resources, resources);
+      const subProjectUsers = usersFromSubProject(
+        normalizeSubProjectIdFromRow(taskData),
+        subProjectsRef.current,
+      );
+      const resourceValue = pickNonEmptyResources(taskData);
+      const hasResourcePayload = resourceValue !== undefined;
+      const usersPayload =
+        subProjectUsers ??
+        (hasResourcePayload
+          ? normalizeGanttTaskUsers(resourceValue, resourcesRef.current as GanttResourcePoolItem[])
+          : normalizeGanttTaskUsers(existing?.resources, resourcesRef.current as GanttResourcePoolItem[]));
 
       const body: ProjectTasksUpdateDto = {
         id: taskGuid,
@@ -2876,7 +3134,12 @@ function ProjectChart() {
       args.cancel = true; // SENKRON OLARAK İLK BURADA İPTAL EDİN
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
-      mergeDialogSubProjectIntoSaveData(args.data);
+      mergeDialogSubProjectIntoSaveData(
+        args.data,
+        subProjectsRef.current,
+        resourcesRef.current as GanttResourcePoolItem[],
+        moduleDataRef.current as GanttModuleOption[],
+      );
       await createTask(args.data);
       releaseGanttAfterAsyncToolbarAction(ganttRef.current);
 
@@ -2889,7 +3152,12 @@ function ProjectChart() {
       args.cancel = true; // ÇOK ÖNEMLİ: await'ten ÖNCE yazılmalı!
       mergeDialogModuleIdsIntoSaveData(args.data, moduleDataRef.current as GanttModuleOption[]);
       mergeDialogProjectStatusIntoSaveData(args.data);
-      mergeDialogSubProjectIntoSaveData(args.data);
+      mergeDialogSubProjectIntoSaveData(
+        args.data,
+        subProjectsRef.current,
+        resourcesRef.current as GanttResourcePoolItem[],
+        moduleDataRef.current as GanttModuleOption[],
+      );
       await updateTask(args.data);
 
       // İşlem bitince diyaloğu manuel kapatın (cancel=true olduğu için açık kalır)
@@ -2910,6 +3178,10 @@ function ProjectChart() {
         refreshGanttDialogSubProjectEditor(
           args.rowData,
           mapTicketSubProjectsForGantt(subProjectsRef.current),
+          {
+            resourcePool: resourcesRef.current as GanttResourcePoolItem[],
+            moduleList: moduleDataRef.current as GanttModuleOption[],
+          },
         );
       requestAnimationFrame(() => {
         requestAnimationFrame(pushSubProjects);
@@ -2924,6 +3196,10 @@ function ProjectChart() {
         refreshGanttDialogSubProjectEditor(
           row,
           mapTicketSubProjectsForGantt(subProjectsRef.current),
+          {
+            resourcePool: resourcesRef.current as GanttResourcePoolItem[],
+            moduleList: moduleDataRef.current as GanttModuleOption[],
+          },
         );
       requestAnimationFrame(() => {
         requestAnimationFrame(pushSubProjects);
