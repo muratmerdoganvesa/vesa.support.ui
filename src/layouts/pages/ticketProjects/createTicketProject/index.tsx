@@ -22,6 +22,7 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { projectTypeOptions } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import TicketSubProjectsSection from "layouts/pages/ticketProjects/components/TicketSubProjectsSection";
 
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
@@ -591,6 +592,10 @@ function CreateTicketProject() {
                   aria-label="Anlaşılan Sözleşme Eforu(saat)"
                 />
               </div>
+
+              {id && (
+                <TicketSubProjectsSection ticketProjectId={id} modules={modules} />
+              )}
             </div>
 
             {/* ── RIGHT COLUMN ────────────────────────────────────────── */}
