@@ -21,6 +21,8 @@ export type TicketSubProjectPayload = {
   effortDuration: number | null;
 };
 
+export type TicketSubProjectDraftPayload = Omit<TicketSubProjectPayload, "ticketProjectId">;
+
 const toStringList = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item)).filter((item) => item.length > 0);

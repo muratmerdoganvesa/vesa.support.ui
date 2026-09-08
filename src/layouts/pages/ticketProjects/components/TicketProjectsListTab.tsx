@@ -10,6 +10,10 @@ import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import MessageBox from "layouts/pages/Components/MessageBox";
 import { getProjectStatusLabel } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import {
+  getProjectSupportTypeBadgeClass,
+  getProjectSupportTypeLabel,
+} from "layouts/pages/ticketProjects/projectSupportTypeHelpers";
 
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
@@ -64,10 +68,12 @@ const TicketProjectsListTab = () => {
     if (!showInactive && !row.isActive) return false;
 
     const q = search.toLowerCase();
+    const typeLabel = getProjectSupportTypeLabel(row.projectSupportType).toLowerCase();
     return (
       row.name?.toLowerCase().includes(q) ||
       row.subProjectName?.toLowerCase().includes(q) ||
-      row.workCompany?.name?.toLowerCase().includes(q)
+      row.workCompany?.name?.toLowerCase().includes(q) ||
+      typeLabel.includes(q)
     );
   });
 
@@ -286,6 +292,7 @@ const TicketProjectsListTab = () => {
               <TableHead className="font-bold text-foreground">Müşteri</TableHead>
               <TableHead className="font-bold text-foreground">Proje Tanımı</TableHead>
               <TableHead className="font-bold text-foreground">Proje Alt Tanımı</TableHead>
+              <TableHead className="font-bold text-foreground">Proje Tipi</TableHead>
               <TableHead className="font-bold text-foreground">Proje Durumu</TableHead>
               <TableHead className="font-bold text-foreground">Anlaşılan Sözleşme Eforu(saat)</TableHead>
               <TableHead className="font-bold text-foreground">Aktif/Pasif</TableHead>
@@ -296,7 +303,7 @@ const TicketProjectsListTab = () => {
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                   {search ? "Aramanızla eşleşen proje bulunamadı." : "Henüz proje eklenmemiş."}
                 </TableCell>
               </TableRow>
@@ -311,6 +318,14 @@ const TicketProjectsListTab = () => {
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                     {row.subProjectName ?? "—"}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={getProjectSupportTypeBadgeClass(row.projectSupportType)}
+                    >
+                      {getProjectSupportTypeLabel(row.projectSupportType)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-sm">
                     {getProjectStatusLabel(row.projectStatus ?? row.projectType)}

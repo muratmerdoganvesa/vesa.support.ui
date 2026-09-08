@@ -13941,6 +13941,21 @@ export type ProjectTypes = typeof ProjectTypes[keyof typeof ProjectTypes];
  * @enum {number}
  */
 
+export const ProjectSupportTypes = {
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3
+} as const;
+
+export type ProjectSupportTypes = typeof ProjectSupportTypes[keyof typeof ProjectSupportTypes];
+
+
+/**
+ * 
+ * @export
+ * @enum {number}
+ */
+
 export const Quarter = {
     NUMBER_1: 1,
     NUMBER_2: 2,
@@ -17380,6 +17395,12 @@ export interface TicketProjects {
      * @memberof TicketProjects
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjects
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
@@ -17509,6 +17530,12 @@ export interface TicketProjectsInsertDto {
      * @memberof TicketProjectsInsertDto
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjectsInsertDto
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
@@ -17680,6 +17707,12 @@ export interface TicketProjectsListDto {
      * @memberof TicketProjectsListDto
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjectsListDto
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
@@ -17797,6 +17830,12 @@ export interface TicketProjectsUpdateDto {
      * @memberof TicketProjectsUpdateDto
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjectsUpdateDto
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 

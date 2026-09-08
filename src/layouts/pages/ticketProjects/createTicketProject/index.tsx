@@ -15,6 +15,7 @@ import {
   ListModuleDto,
   ModuleApi,
   ProjectTypes,
+  ProjectSupportTypes,
 } from "api/generated";
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -22,12 +23,23 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { projectTypeOptions } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import {
+  ProjectSupportType,
+  isStandardProjectSupportType,
+  projectSupportTypeOptions,
+} from "layouts/pages/ticketProjects/projectSupportTypeHelpers";
 import TicketSubProjectsSection from "layouts/pages/ticketProjects/components/TicketSubProjectsSection";
+import {
+  createTicketSubProject,
+  type TicketSubProjectDraftPayload,
+} from "layouts/pages/ticketProjects/api/ticketSubProjectsApi";
 
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
 import { Checkbox } from "components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "components/ui/radio-group";
+import { cn } from "lib/utils";
 import {
   Select,
   SelectContent,
@@ -50,6 +62,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 const searchTriggerCls =
   "flex h-8 w-full items-center justify-between gap-1 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors hover:bg-muted/50 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
+const extractCreatedTicketProjectId = (response: unknown): string | null => {
+  const payload = (response as { data?: unknown })?.data;
+  if (typeof payload === "string" && payload.length > 0) return payload;
+  if (payload && typeof payload === "object") {
+    const nested =
+      (payload as { data?: unknown }).data ?? (payload as { Data?: unknown }).Data;
+    if (typeof nested === "string" && nested.length > 0) return nested;
+  }
+  return null;
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function CreateTicketProject() {
@@ -63,6 +86,7 @@ function CreateTicketProject() {
   const [selectionKullaniciId, setSelectionKullaniciId] = useState<string | undefined>();
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
   const [copyFromAnotherProject, setCopyFromAnotherProject] = useState(false);
+  const [pendingSubProjects, setPendingSubProjects] = useState<TicketSubProjectDraftPayload[]>([]);
 
   // Popover open states
   const [managerOpen, setManagerOpen] = useState(false);
@@ -93,6 +117,7 @@ function CreateTicketProject() {
     projectSupportPeriod: null,
     projectType: null,
     projectBillingTime: null,
+    projectSupportType: ProjectSupportType.Project,
   });
 
   const dispatchBusy = useBusy();
@@ -114,6 +139,14 @@ function CreateTicketProject() {
     ],
     [selectedUsers, searchByName]
   );
+
+  const showSubProjects = isStandardProjectSupportType(projectData.projectSupportType);
+
+  useEffect(() => {
+    if (!showSubProjects) {
+      setPendingSubProjects([]);
+    }
+  }, [showSubProjects]);
 
   // ─── Data fetching ──────────────────────────────────────────────────────────
 
@@ -138,7 +171,11 @@ function CreateTicketProject() {
       const conf = getConfiguration();
       const api = new TicketProjectsApi(conf);
       const data = await api.apiTicketProjectsIdGet(id);
-      setProjectData(data.data as any);
+      const loaded = data.data as TicketProjectsListDto;
+      setProjectData({
+        ...loaded,
+        projectSupportType: loaded.projectSupportType ?? ProjectSupportType.Project,
+      });
       setSelectedKullanici(data.data.manager);
       setSelectionKullaniciId(data.data.managerId);
       setSelectedUsers(data.data.users);
@@ -228,12 +265,39 @@ function CreateTicketProject() {
       dispatchBusy({ isBusy: true });
       const conf = getConfiguration();
       const api = new TicketProjectsApi(conf);
-      await api.apiTicketProjectsPost({
+      const created = await api.apiTicketProjectsPost({
         ...projectData,
+        projectSupportType: projectData.projectSupportType ?? ProjectSupportType.Project,
         manager: selectedKullanici,
         managerId: selectionKullaniciId,
         userIds: selectionUserIds,
       });
+
+      const createdId = extractCreatedTicketProjectId(created);
+      if (
+        isStandardProjectSupportType(projectData.projectSupportType)
+        && pendingSubProjects.length > 0
+      ) {
+        if (!createdId) {
+          dispatchAlert({
+            message: "Proje eklendi ancak alt projeler kaydedilemedi.",
+            type: "Error",
+          });
+          navigate("/ticketProjects");
+          return;
+        }
+
+        for (const item of pendingSubProjects) {
+          await createTicketSubProject({
+            ticketProjectId: createdId,
+            name: item.name,
+            userIds: item.userIds,
+            moduleIds: item.moduleIds,
+            effortDuration: item.effortDuration,
+          });
+        }
+      }
+
       dispatchAlert({ message: "Proje eklendi", type: "Success" });
       navigate("/ticketProjects");
     } catch (error) {
@@ -254,6 +318,7 @@ function CreateTicketProject() {
       const api = new TicketProjectsApi(conf);
       await api.apiTicketProjectsPut({
         ...projectData,
+        projectSupportType: projectData.projectSupportType ?? ProjectSupportType.Project,
         managerId: selectionKullaniciId,
         userIds: selectionUserIds,
         id,
@@ -298,6 +363,45 @@ function CreateTicketProject() {
           <h4 className="mb-6 text-2xl font-bold text-foreground">
             {id ? "Proje Düzenle" : "Proje Oluştur"}
           </h4>
+
+          <div className="mb-6 space-y-2">
+            <Label id="project-support-type-label">Proje Tipi</Label>
+            <RadioGroup
+              value={String(projectData.projectSupportType ?? ProjectSupportType.Project)}
+              onValueChange={(value) =>
+                setProjectData({
+                  ...projectData,
+                  projectSupportType: Number(value) as ProjectSupportTypes,
+                })
+              }
+              className="flex flex-wrap gap-2"
+              aria-labelledby="project-support-type-label"
+            >
+              {projectSupportTypeOptions.map((option) => {
+                const isSelected =
+                  (projectData.projectSupportType ?? ProjectSupportType.Project) === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    htmlFor={`project-support-type-${option.value}`}
+                    className={cn(
+                      "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-input bg-transparent text-foreground hover:bg-muted/50",
+                    )}
+                  >
+                    <RadioGroupItem
+                      value={String(option.value)}
+                      id={`project-support-type-${option.value}`}
+                      aria-label={option.label}
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </RadioGroup>
+          </div>
 
           {/* ── Two-column form grid ─────────────────────────────────── */}
           <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
@@ -414,7 +518,7 @@ function CreateTicketProject() {
                       </span>
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="start">
+                  <PopoverContent className="w-80 p-0" align="start" side="bottom" avoidCollisions={false}>
                     <Command shouldFilter={false}>
                       <CommandInput
                         placeholder={t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
@@ -502,7 +606,7 @@ function CreateTicketProject() {
                       <ChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
                     </div>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="start">
+                  <PopoverContent className="w-80 p-0" align="start" side="bottom" avoidCollisions={false}>
                     <Command shouldFilter={false}>
                       <CommandInput
                         placeholder={t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
@@ -593,11 +697,12 @@ function CreateTicketProject() {
                 />
               </div>
 
-              {id && (
+              {showSubProjects && (
                 <TicketSubProjectsSection
                   ticketProjectId={id}
                   modules={modules}
                   projectUsers={selectedUsers ?? []}
+                  onDraftChange={setPendingSubProjects}
                 />
               )}
             </div>

@@ -29,6 +29,7 @@ import {
   deleteTicketSubProject,
   fetchTicketSubProjectsByProject,
   updateTicketSubProject,
+  type TicketSubProjectDraftPayload,
   type TicketSubProjectDto,
 } from "../api/ticketSubProjectsApi";
 import TicketSubProjectDialog, {
@@ -36,18 +37,28 @@ import TicketSubProjectDialog, {
 } from "./TicketSubProjectDialog";
 
 type TicketSubProjectsSectionProps = {
-  ticketProjectId: string;
+  ticketProjectId?: string;
   modules: ListModuleDto[];
   projectUsers: UserAppDto[];
+  onDraftChange?: (items: TicketSubProjectDraftPayload[]) => void;
 };
+
+const toDraftPayload = (item: TicketSubProjectDto): TicketSubProjectDraftPayload => ({
+  name: item.name,
+  userIds: item.userIds,
+  moduleIds: item.moduleIds,
+  effortDuration: item.effortDuration,
+});
 
 const TicketSubProjectsSection = ({
   ticketProjectId,
   modules,
   projectUsers,
+  onDraftChange,
 }: TicketSubProjectsSectionProps) => {
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
+  const isDraftMode = !ticketProjectId;
 
   const [items, setItems] = useState<TicketSubProjectDto[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,6 +66,7 @@ const TicketSubProjectsSection = ({
   const [deleteTarget, setDeleteTarget] = useState<TicketSubProjectDto | null>(null);
 
   const handleFetchItems = async () => {
+    if (!ticketProjectId) return;
     try {
       dispatchBusy({ isBusy: true });
       const data = await fetchTicketSubProjectsByProject(ticketProjectId);
@@ -67,9 +79,28 @@ const TicketSubProjectsSection = ({
   };
 
   useEffect(() => {
-    if (!ticketProjectId) return;
+    if (!ticketProjectId) {
+      setItems([]);
+      return;
+    }
     handleFetchItems();
   }, [ticketProjectId]);
+
+  useEffect(() => {
+    if (!isDraftMode) return;
+    onDraftChange?.(items.map(toDraftPayload));
+  }, [items, isDraftMode, onDraftChange]);
+
+  const buildLocalItem = (values: TicketSubProjectFormValues, existingId?: string): TicketSubProjectDto => ({
+    id: existingId ?? `draft-${Date.now()}`,
+    ticketProjectId: ticketProjectId ?? "",
+    name: values.name,
+    userIds: values.userIds,
+    users: values.users,
+    moduleIds: values.moduleIds,
+    modules: modules.filter((mod) => Boolean(mod.id) && values.moduleIds.includes(mod.id as string)),
+    effortDuration: values.effortDuration,
+  });
 
   const handleOpenCreate = () => {
     setEditingItem(null);
@@ -82,6 +113,22 @@ const TicketSubProjectsSection = ({
   };
 
   const handleSubmit = async (values: TicketSubProjectFormValues) => {
+    if (isDraftMode) {
+      setItems((prev) => {
+        if (editingItem?.id) {
+          return prev.map((item) =>
+            item.id === editingItem.id ? buildLocalItem(values, editingItem.id) : item,
+          );
+        }
+        return [...prev, buildLocalItem(values)];
+      });
+      dispatchAlert({
+        message: editingItem ? "Alt proje güncellendi." : "Alt proje eklendi.",
+        type: "Success",
+      });
+      return;
+    }
+
     const payload = {
       ticketProjectId,
       name: values.name,
@@ -126,6 +173,13 @@ const TicketSubProjectsSection = ({
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget?.id) return;
+
+    if (isDraftMode) {
+      setItems((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      dispatchAlert({ message: "Alt proje silindi.", type: "Success" });
+      return;
+    }
 
     try {
       dispatchBusy({ isBusy: true });
