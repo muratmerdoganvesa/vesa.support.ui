@@ -1248,7 +1248,6 @@ type GanttSubProjectListItem = {
   name: string;
   usersLabel: string;
   modulesLabel: string;
-  effortLabel: string;
   userIds: string[];
   moduleIds: string[];
 };
@@ -1259,11 +1258,6 @@ type GanttSubProjectEditorContext = {
 };
 
 const GANTT_SUBPROJECT_RADIO_NAME = "gantt-subproject-id";
-
-const formatGanttSubProjectEffort = (value: number | null | undefined): string => {
-  if (value == null || Number.isNaN(Number(value))) return "-";
-  return `${Number(value).toLocaleString("tr-TR", { maximumFractionDigits: 2 })} saat`;
-};
 
 const mapTicketSubProjectsForGantt = (
   items: TicketSubProjectDto[],
@@ -1292,7 +1286,6 @@ const mapTicketSubProjectsForGantt = (
       name: item.name?.trim() ? item.name : "Adsız alt proje",
       usersLabel,
       modulesLabel,
-      effortLabel: formatGanttSubProjectEffort(item.effortDuration),
       userIds,
       moduleIds,
     };
@@ -1614,7 +1607,6 @@ const renderSubProjectEditor = (
     appendOption(item.id, item.name, [
       `Çalışanlar: ${item.usersLabel}`,
       `Modüller: ${item.modulesLabel}`,
-      `Efor: ${item.effortLabel}`,
     ]);
   });
 
