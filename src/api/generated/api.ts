@@ -13710,6 +13710,12 @@ export interface ProjectTasksInsertDto {
      * @memberof ProjectTasksInsertDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectTasksInsertDto
+     */
+    'isSubProject'?: boolean;
 }
 
 
@@ -13815,6 +13821,12 @@ export interface ProjectTasksListDto {
      * @memberof ProjectTasksListDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectTasksListDto
+     */
+    'isSubProject'?: boolean;
 }
 
 
@@ -13914,6 +13926,12 @@ export interface ProjectTasksUpdateDto {
      * @memberof ProjectTasksUpdateDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectTasksUpdateDto
+     */
+    'isSubProject'?: boolean;
 }
 
 

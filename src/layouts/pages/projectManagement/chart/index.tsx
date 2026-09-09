@@ -902,6 +902,9 @@ function buildLocalRowPatchFromTaskData(
     moduleIds: modulesArray.slice(),
     projectStatus:
       normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
+    isSubProject: hasIsSubProjectField(taskData)
+      ? normalizeIsSubProjectFromRow(taskData)
+      : Boolean(existing?.isSubProject),
   };
 }
 
@@ -1258,6 +1261,7 @@ type GanttSubProjectEditorContext = {
 };
 
 const GANTT_SUBPROJECT_RADIO_NAME = "gantt-subproject-id";
+const GANTT_IS_SUBPROJECT_CHECKBOX_NAME = "gantt-is-subproject";
 
 const mapTicketSubProjectsForGantt = (
   items: TicketSubProjectDto[],
@@ -1310,6 +1314,27 @@ const applySubProjectIdToRow = (rowData: any, next: string) => {
     rowData.taskData.subProjectId = value;
     rowData.taskData.ticketSubProjectId = value || null;
   }
+};
+
+const normalizeIsSubProjectFromRow = (row: any): boolean => {
+  const raw =
+    row?.isSubProject ??
+    row?.IsSubProject ??
+    row?.taskData?.isSubProject ??
+    row?.taskData?.IsSubProject;
+  if (raw === undefined || raw === null || raw === "") return false;
+  return raw === true || raw === "true" || raw === 1 || raw === "1";
+};
+
+const hasIsSubProjectField = (row: any): boolean =>
+  row?.isSubProject !== undefined ||
+  row?.IsSubProject !== undefined ||
+  row?.taskData?.isSubProject !== undefined ||
+  row?.taskData?.IsSubProject !== undefined;
+
+const applyIsSubProjectToRow = (rowData: any, next: boolean) => {
+  rowData.isSubProject = next;
+  if (rowData.taskData) rowData.taskData.isSubProject = next;
 };
 
 const applyTaskNameToRow = (rowData: any, name: string) => {
@@ -1529,6 +1554,42 @@ const renderSubProjectEditor = (
   host.style.width = "100%";
   host.closest(".e-edit-form-column")?.classList.add("gantt-subproject-tab-column");
 
+  const selected = normalizeSubProjectIdFromRow(rowData);
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.name = GANTT_IS_SUBPROJECT_CHECKBOX_NAME;
+  checkbox.checked = normalizeIsSubProjectFromRow(rowData) || Boolean(selected);
+  checkbox.setAttribute("aria-label", "Bu madde alt projedir");
+
+  const flagLabel = document.createElement("label");
+  flagLabel.className = "gantt-subproject-flag";
+  flagLabel.tabIndex = 0;
+  flagLabel.classList.toggle("is-checked", checkbox.checked);
+
+  const syncFlagUi = (next: boolean) => {
+    checkbox.checked = next;
+    flagLabel.classList.toggle("is-checked", next);
+    applyIsSubProjectToRow(rowData, next);
+  };
+
+  checkbox.addEventListener("change", () => {
+    syncFlagUi(checkbox.checked);
+  });
+
+  const flagText = document.createElement("span");
+  flagText.className = "gantt-subproject-flag-text";
+  flagText.textContent = "Bu madde alt projedir";
+
+  flagLabel.append(checkbox, flagText);
+  flagLabel.addEventListener("keydown", (event) => {
+    if (event.target !== flagLabel) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    syncFlagUi(!checkbox.checked);
+  });
+  host.appendChild(flagLabel);
+  applyIsSubProjectToRow(rowData, checkbox.checked);
+
   if (items.length === 0) {
     const empty = document.createElement("p");
     empty.className = "gantt-subproject-empty";
@@ -1538,7 +1599,6 @@ const renderSubProjectEditor = (
     return;
   }
 
-  const selected = normalizeSubProjectIdFromRow(rowData);
   const list = document.createElement("div");
   list.className = "gantt-subproject-list";
   list.setAttribute("role", "radiogroup");
@@ -1564,6 +1624,7 @@ const renderSubProjectEditor = (
     radio.setAttribute("aria-label", title);
     radio.addEventListener("change", () => {
       applySubProjectIdToRow(rowData, id);
+      syncFlagUi(Boolean(id));
       syncSelectedClass();
       if (!id || !context) return;
       const selectedItem = items.find((item) => item.id === id);
@@ -1628,6 +1689,17 @@ const readSubProjectIdFromDialogElement = (
   return checked.value ?? "";
 };
 
+const readIsSubProjectFromDialogElement = (
+  root: HTMLElement | null | undefined,
+): boolean | undefined => {
+  if (!root) return undefined;
+  const checkbox = root.querySelector<HTMLInputElement>(
+    `input[name="${GANTT_IS_SUBPROJECT_CHECKBOX_NAME}"]`,
+  );
+  if (!checkbox) return undefined;
+  return checkbox.checked;
+};
+
 const mergeDialogSubProjectIntoSaveData = (
   data: any,
   subProjects: TicketSubProjectDto[] = [],
@@ -1642,6 +1714,15 @@ const mergeDialogSubProjectIntoSaveData = (
     applySubProjectIdToRow(data, fromDom);
   } else {
     applySubProjectIdToRow(data, normalizeSubProjectIdFromRow(data));
+  }
+  const fromFlag = readIsSubProjectFromDialogElement(editor);
+  if (fromFlag !== undefined) {
+    applyIsSubProjectToRow(data, fromFlag);
+  } else {
+    applyIsSubProjectToRow(
+      data,
+      normalizeIsSubProjectFromRow(data) || Boolean(normalizeSubProjectIdFromRow(data)),
+    );
   }
   applySelectedSubProjectFieldsToRow(data, subProjects, resourcePool, moduleList);
 };
@@ -2287,6 +2368,7 @@ function ProjectChart() {
           modules: modulesArray,
           moduleIds: modulesArray.slice(),
           projectStatus: extractProjectStatusFromApiTask(task),
+          isSubProject: Boolean(task.isSubProject ?? task.IsSubProject),
           subProjectId: String(
             task.ticketSubProjectId ?? task.TicketSubProjectId ?? task.subProjectId ?? "",
           ),
@@ -2423,7 +2505,14 @@ function ProjectChart() {
         const fromDom = readSubProjectIdFromDialogElement(element);
         const rowData = (element as any).__ganttEditRowData;
         const next = fromDom !== undefined ? fromDom : normalizeSubProjectIdFromRow(rowData);
-        if (rowData) applySubProjectIdToRow(rowData, next);
+        if (rowData) {
+          applySubProjectIdToRow(rowData, next);
+          const fromFlag = readIsSubProjectFromDialogElement(element);
+          applyIsSubProjectToRow(
+            rowData,
+            fromFlag !== undefined ? fromFlag : Boolean(next) || normalizeIsSubProjectFromRow(rowData),
+          );
+        }
         return next;
       },
     }),
@@ -2646,6 +2735,8 @@ function ProjectChart() {
         ) ?? usersForInsert(pickNonEmptyResources(args)),
         moduleIds: moduleIdsPayload,
         projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? normalizeProjectStatusFromRow(args),
+        isSubProject:
+          normalizeIsSubProjectFromRow(args) || Boolean(normalizeSubProjectIdFromRow(args)),
       };
 
       const api = new ProjectTasksApi(config);
@@ -2965,6 +3056,9 @@ function ProjectChart() {
         moduleIds: moduleIdsPayload,
         projectStatus:
           normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
+        isSubProject: hasIsSubProjectField(taskData)
+          ? normalizeIsSubProjectFromRow(taskData)
+          : Boolean(existing?.isSubProject),
       };
 
       const api = new ProjectTasksApi(config);
@@ -2998,6 +3092,7 @@ function ProjectChart() {
         patch.modules = moduleIdsPayload.slice();
         patch.projectStatus =
           normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null;
+        patch.isSubProject = body.isSubProject ?? false;
         // Tam rebind + collapseAll yapma: çok görevde Durum/Modül React şablonları boş kalıyordu.
         commitLocalGanttRowPatch(taskGuid, patch);
         taskModuleIdsCacheRef.current.set(taskGuid, ((patch.moduleIds as string[]) ?? []).slice());
@@ -3165,6 +3260,7 @@ function ProjectChart() {
     } else if (args.requestType === "beforeOpenAddDialog") {
       applyTodayAsDefaultTaskDates(args.rowData);
       applySubProjectIdToRow(args.rowData, "");
+      applyIsSubProjectToRow(args.rowData, false);
       await fetchSubProjectsData();
       const pushSubProjects = () =>
         refreshGanttDialogSubProjectEditor(
