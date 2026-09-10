@@ -29,6 +29,7 @@ import {
   projectSupportTypeOptions,
 } from "layouts/pages/ticketProjects/projectSupportTypeHelpers";
 import TicketSubProjectsSection from "layouts/pages/ticketProjects/components/TicketSubProjectsSection";
+import ActivityFieldRulesSection from "layouts/pages/ticketProjects/components/ActivityFieldRulesSection";
 import {
   createTicketSubProject,
   type TicketSubProjectDraftPayload,
@@ -879,6 +880,12 @@ function CreateTicketProject() {
               )}
             </div>
           </div>
+
+          {id && (
+            <div className="mt-8 border-t border-border pt-6">
+              <ActivityFieldRulesSection ticketProjectId={id} />
+            </div>
+          )}
 
           {/* ── Action buttons ───────────────────────────────────────── */}
           <div className="mt-8 flex items-center justify-end gap-3 border-t border-border pt-6">
