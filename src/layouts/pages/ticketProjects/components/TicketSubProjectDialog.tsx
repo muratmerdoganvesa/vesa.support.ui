@@ -380,13 +380,13 @@ const TicketSubProjectDialog = ({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sub-project-effort">Efor süresi (saat)</Label>
+            <Label htmlFor="sub-project-effort">Efor süresi (gün)</Label>
             <Input
               id="sub-project-effort"
               type="number"
               min={0}
               step="0.01"
-              placeholder="Saat giriniz"
+              placeholder="Gün giriniz"
               value={values.effortDuration ?? ""}
               onChange={(e) => {
                 const raw = e.target.value;
@@ -395,7 +395,7 @@ const TicketSubProjectDialog = ({
                   effortDuration: raw === "" ? null : Number(raw),
                 }));
               }}
-              aria-label="Efor süresi (saat)"
+              aria-label="Efor süresi (gün)"
             />
           </div>
         </div>

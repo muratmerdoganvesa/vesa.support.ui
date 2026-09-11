@@ -9,6 +9,7 @@ export type TicketSubProjectDto = {
   users: UserAppDto[];
   moduleIds: string[];
   modules: ListModuleDto[];
+  /** Alt proje eforu, gün cinsinden. */
   effortDuration: number | null;
   createdDate?: string | null;
 };

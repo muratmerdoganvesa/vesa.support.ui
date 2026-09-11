@@ -168,7 +168,7 @@ const TicketSubProjectsSection = ({
     if (value == null || Number.isNaN(Number(value))) return "-";
     return `${Number(value).toLocaleString("tr-TR", {
       maximumFractionDigits: 2,
-    })} saat`;
+    })} gün`;
   };
 
   const handleConfirmDelete = async () => {
@@ -222,7 +222,7 @@ const TicketSubProjectsSection = ({
               <TableHead>Ad</TableHead>
               <TableHead>Çalışanlar</TableHead>
               <TableHead>Modüller</TableHead>
-              <TableHead className="text-right">Efor</TableHead>
+              <TableHead className="text-right">Efor (gün)</TableHead>
               <TableHead className="w-20 text-right">İşlem</TableHead>
             </TableRow>
           </TableHeader>
