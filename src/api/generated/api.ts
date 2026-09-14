@@ -13710,6 +13710,12 @@ export interface ProjectTasksInsertDto {
      * @memberof ProjectTasksInsertDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectTasksInsertDto
+     */
+    'isSubProject'?: boolean;
 }
 
 
@@ -13815,6 +13821,12 @@ export interface ProjectTasksListDto {
      * @memberof ProjectTasksListDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectTasksListDto
+     */
+    'isSubProject'?: boolean;
 }
 
 
@@ -13914,6 +13926,12 @@ export interface ProjectTasksUpdateDto {
      * @memberof ProjectTasksUpdateDto
      */
     'projectStatus'?: ProjectTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof ProjectTasksUpdateDto
+     */
+    'isSubProject'?: boolean;
 }
 
 
@@ -13933,6 +13951,21 @@ export const ProjectTypes = {
 } as const;
 
 export type ProjectTypes = typeof ProjectTypes[keyof typeof ProjectTypes];
+
+
+/**
+ * 
+ * @export
+ * @enum {number}
+ */
+
+export const ProjectSupportTypes = {
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3
+} as const;
+
+export type ProjectSupportTypes = typeof ProjectSupportTypes[keyof typeof ProjectSupportTypes];
 
 
 /**
@@ -17380,6 +17413,12 @@ export interface TicketProjects {
      * @memberof TicketProjects
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjects
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
@@ -17509,6 +17548,12 @@ export interface TicketProjectsInsertDto {
      * @memberof TicketProjectsInsertDto
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjectsInsertDto
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
@@ -17680,6 +17725,12 @@ export interface TicketProjectsListDto {
      * @memberof TicketProjectsListDto
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjectsListDto
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
@@ -17797,6 +17848,12 @@ export interface TicketProjectsUpdateDto {
      * @memberof TicketProjectsUpdateDto
      */
     'projectBillingTime'?: number | null;
+    /**
+     * 
+     * @type {ProjectSupportTypes}
+     * @memberof TicketProjectsUpdateDto
+     */
+    'projectSupportType'?: ProjectSupportTypes;
 }
 
 
