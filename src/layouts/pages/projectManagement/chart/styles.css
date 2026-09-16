@@ -551,8 +551,18 @@ select.gantt-module-status-select:hover {
   background-color: #ecfeff !important;
 }
 
-.gantt-chart-container .e-gridcontent .e-row.gantt-row--subproject .e-rowcell:first-child {
+.gantt-chart-container .e-gridcontent .e-row.gantt-row--subproject .e-rowcell:first-child:not(.e-rowdragdrop) {
   box-shadow: inset 4px 0 0 #14b8a6;
+}
+
+.gantt-chart-container .e-gridcontent .e-row.gantt-row--subproject .e-rowcell.e-rowdragdrop + .e-rowcell {
+  box-shadow: inset 4px 0 0 #14b8a6;
+}
+
+.gantt-chart-container .e-gridcontent .e-rowcell.e-rowdragdrop,
+.gantt-chart-container .e-gridheader .e-rowdragdropcell,
+.gantt-chart-container .e-gridheader .e-rowdragheadercell {
+  cursor: grab;
 }
 
 .gantt-chart-container .e-gridcontent .e-row.gantt-row--subproject.e-selectionbackground .e-rowcell,
