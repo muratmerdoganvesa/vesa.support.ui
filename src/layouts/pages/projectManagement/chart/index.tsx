@@ -345,6 +345,111 @@ function filterCopyRootTaskIds(selectedIds: number[], tasks: any[]): number[] {
   return selectedIds.filter((id) => !isDescendantOfSelected(id));
 }
 
+function collectSubtreeTaskIds(rootId: number, tasks: any[]): Set<number> {
+  const ids = new Set<number>([rootId]);
+  const walk = (parentId: number) => {
+    for (const child of getDirectChildTasks(parentId, tasks)) {
+      const cid = Number(child.TaskID);
+      if (!Number.isFinite(cid) || ids.has(cid)) continue;
+      ids.add(cid);
+      walk(cid);
+    }
+  };
+  walk(rootId);
+  return ids;
+}
+
+function collectDroppedGanttRecords(args: any): any[] {
+  if (Array.isArray(args?.data)) return args.data.filter(Boolean);
+  if (args?.data) return [args.data];
+  if (Array.isArray(args?.modifiedRecords)) return args.modifiedRecords.filter(Boolean);
+  return [];
+}
+
+function resolveDropParentTaskId(args: any): number | null {
+  const position = String(args?.dropPosition ?? "");
+  const dropRecord = args?.dropRecord;
+  const dropTaskId = resolveGanttRowTaskId(dropRecord);
+  if (position === "middleSegment" || position === "child") {
+    return dropTaskId;
+  }
+  const pid =
+    dropRecord?.ganttProperties?.parentId ??
+    dropRecord?.ParentID ??
+    dropRecord?.taskData?.ParentID;
+  if (isRootParentId(pid)) return null;
+  const n = Number(pid);
+  return Number.isFinite(n) ? n : null;
+}
+
+function getGanttRecordParentId(rec: any): unknown {
+  if (!rec || typeof rec !== "object") return null;
+  return (
+    rec.ganttProperties?.parentId ??
+    rec.taskData?.ParentID ??
+    rec.ParentID ??
+    rec.parentItem?.taskId
+  );
+}
+
+function isInvalidGanttParentMove(
+  draggedIds: number[],
+  newParentId: number | null,
+  tasks: any[],
+): boolean {
+  if (newParentId == null) return false;
+  const roots = filterCopyRootTaskIds(draggedIds, tasks);
+  for (const id of roots) {
+    if (id === newParentId) return true;
+    if (collectSubtreeTaskIds(id, tasks).has(newParentId)) return true;
+  }
+  return false;
+}
+
+function resolveTaskStartDate(row: any, existing: any): Date | undefined {
+  const candidates = [
+    row?.StartDate,
+    row?.startDate,
+    row?.ganttProperties?.startDate,
+    row?.taskData?.StartDate,
+    existing?.StartDate,
+    existing?.startDate,
+  ];
+  for (const c of candidates) {
+    if (c == null || c === "") continue;
+    const d = new Date(c);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return undefined;
+}
+
+function resolveTaskEndDate(row: any, existing: any): Date | undefined {
+  const candidates = [
+    row?.EndDate,
+    row?.endDate,
+    row?.ganttProperties?.endDate,
+    row?.taskData?.EndDate,
+    existing?.EndDate,
+    existing?.endDate,
+  ];
+  for (const c of candidates) {
+    if (c == null || c === "") continue;
+    const d = new Date(c);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  const start = resolveTaskStartDate(row, existing);
+  const duration =
+    parsePositiveDuration(row?.Duration) ??
+    parsePositiveDuration(row?.ganttProperties?.duration) ??
+    parsePositiveDuration(existing?.Duration);
+  if (start != null && duration != null) {
+    const e = new Date(start);
+    e.setDate(e.getDate() + duration);
+    return e;
+  }
+  return undefined;
+}
+
 /** Proje görev listesi: kayıt için Guid id. Modules (ad) yalnızca geriye dönük fallback. */
 function resolveToModuleIds(values: string[], moduleList: GanttModuleOption[]): string[] {
   const out: string[] = [];
@@ -3044,9 +3149,12 @@ function ProjectChart() {
     }
   };
 
-  const updateTask = async (args: any) => {
-    if (isMyUserProjectsView) return;
-    if (isUpdatingTaskRef.current || isApplyingLocalPatchRef.current) return;
+  const updateTask = async (
+    args: any,
+    options?: { skipFetch?: boolean },
+  ): Promise<boolean> => {
+    if (isMyUserProjectsView) return false;
+    if (isUpdatingTaskRef.current || isApplyingLocalPatchRef.current) return false;
     const nested = args?.taskData && typeof args.taskData === "object" ? args.taskData : null;
     const taskData = nested ? { ...nested, ...args } : args;
     if (!projectId) {
@@ -3054,7 +3162,7 @@ function ProjectChart() {
         message: "Proje ID'si bulunamadı. Görev güncellenemedi.",
         type: "error",
       });
-      return;
+      return false;
     }
 
     const taskGuid = resolveGanttTaskGuid(args, projectDataRef.current);
@@ -3063,14 +3171,14 @@ function ProjectChart() {
         message: "Görev verileri eksik. Görev güncellenemedi.",
         type: "error",
       });
-      return;
+      return false;
     }
     if (!taskData.StartDate || !taskData.EndDate) {
       dispatchAlert({
         message: "StartDate ve EndDate zorunludur.",
         type: "error",
       });
-      return;
+      return false;
     }
 
     isUpdatingTaskRef.current = true;
@@ -3163,7 +3271,7 @@ function ProjectChart() {
         // Tam rebind + collapseAll yapma: çok görevde Durum/Modül React şablonları boş kalıyordu.
         commitLocalGanttRowPatch(taskGuid, patch);
         taskModuleIdsCacheRef.current.set(taskGuid, ((patch.moduleIds as string[]) ?? []).slice());
-      } else {
+      } else if (!options?.skipFetch) {
         const data = await fetchProjectData({ clearModuleCache: false, showBusy: false });
         const tid = taskData?.TaskID;
         if (data && tid != null) {
@@ -3172,12 +3280,14 @@ function ProjectChart() {
           };
         }
       }
+      return true;
     } catch (error) {
       console.error("Error updating task:", error);
       dispatchAlert({
         message: "Görev güncellenirken bir hata oluştu.",
         type: "error",
       });
+      return false;
     } finally {
       isUpdatingTaskRef.current = false;
       dispatch({ isBusy: false });
@@ -3265,7 +3375,8 @@ function ProjectChart() {
         args.requestType === "beginEdit" ||
         args.requestType === "add" ||
         args.requestType === "save" ||
-        args.requestType === "delete"
+        args.requestType === "delete" ||
+        args.requestType === "beforeDrop"
       ) {
         args.cancel = true;
       }
@@ -3395,11 +3506,111 @@ function ProjectChart() {
     }
   };
 
+  const handleGanttRowDrop = (args: any) => {
+    if (isMyUserProjectsView) {
+      args.cancel = true;
+      return;
+    }
+    if (String(args?.dropPosition ?? "") === "Invalid") {
+      args.cancel = true;
+      return;
+    }
+    const dragged = collectDroppedGanttRecords(args);
+    const draggedIds = dragged
+      .map((row) => resolveGanttRowTaskId(row))
+      .filter((n: number | null): n is number => n != null);
+    const newParentId = resolveDropParentTaskId(args);
+    if (isInvalidGanttParentMove(draggedIds, newParentId, projectDataRef.current)) {
+      args.cancel = true;
+      dispatchAlert({
+        message: "Bir görevi kendi alt görevlerinin içine taşıyamazsınız.",
+        type: "error",
+      });
+    }
+  };
+
+  const persistGanttRowDrop = async (args: any) => {
+    if (isMyUserProjectsView) return;
+    const dragged = collectDroppedGanttRecords(args);
+    const tasks = projectDataRef.current;
+    const draggedIds = dragged
+      .map((row) => resolveGanttRowTaskId(row))
+      .filter((n: number | null): n is number => n != null);
+    const rootIds = new Set(filterCopyRootTaskIds(draggedIds, tasks));
+    const moves: { rec: any; existing: any; newPid: unknown }[] = [];
+
+    for (const rec of dragged) {
+      const tid = resolveGanttRowTaskId(rec);
+      if (tid == null || !rootIds.has(tid)) continue;
+      const existing = tasks.find((t: any) => Number(t.TaskID) === tid);
+      if (!existing) continue;
+      const newPid = getGanttRecordParentId(rec);
+      const oldPid = existing.ParentID;
+      const parentUnchanged =
+        (isRootParentId(oldPid) && isRootParentId(newPid)) ||
+        (!isRootParentId(oldPid) && !isRootParentId(newPid) && Number(oldPid) === Number(newPid));
+      if (parentUnchanged) continue;
+      moves.push({ rec, existing, newPid });
+    }
+
+    if (moves.length === 0) return;
+
+    dispatch({ isBusy: true });
+    let persisted = true;
+    try {
+      for (const move of moves) {
+        const startDate = resolveTaskStartDate(move.rec, move.existing);
+        const endDate = resolveTaskEndDate(move.rec, move.existing);
+        const ok = await updateTask(
+          {
+            ...move.existing,
+            ParentID: isRootParentId(move.newPid) ? null : move.newPid,
+            StartDate: startDate ?? move.existing.StartDate,
+            EndDate: endDate,
+          },
+          { skipFetch: true },
+        );
+        if (!ok) {
+          persisted = false;
+          break;
+        }
+      }
+      const lastTid = resolveGanttRowTaskId(moves[moves.length - 1].rec);
+      const data = await fetchProjectData({ clearModuleCache: false, showBusy: false });
+      if (data && lastTid != null) {
+        ganttAfterDataBoundRef.current = {
+          expandPathTaskIds: getAncestorTaskIdsToExpandForTask(lastTid, data),
+        };
+      }
+      if (persisted) {
+        dispatchAlert({
+          message:
+            moves.length === 1
+              ? "Görev (alt görevleriyle birlikte) taşındı."
+              : `${moves.length} görev (alt görevleriyle birlikte) taşındı.`,
+          type: "success",
+        });
+      }
+    } catch (error) {
+      console.error("Error persisting gantt row drop:", error);
+      await fetchProjectData({ clearModuleCache: false, showBusy: false });
+      dispatchAlert({
+        message: "Görev taşınırken bir hata oluştu.",
+        type: "error",
+      });
+    } finally {
+      dispatch({ isBusy: false });
+    }
+  };
+
   const actionComplete = (args: any) => {
     if (args.requestType === "save" || args.requestType === "add") {
       if (args.data && args.data.StartDate) {
         handleDateFormat(args.data);
       }
+    }
+    if (args.requestType === "rowDropped") {
+      void persistGanttRowDrop(args);
     }
   };
 
@@ -3723,6 +3934,8 @@ function ProjectChart() {
           allowSorting={true}
           allowParentDependency={!isMyUserProjectsView}
           allowReordering={!isMyUserProjectsView}
+          allowRowDragAndDrop={!isMyUserProjectsView}
+          rowDrop={handleGanttRowDrop}
           allowResizing
           allowPdfExport={true}
           resources={resources}
