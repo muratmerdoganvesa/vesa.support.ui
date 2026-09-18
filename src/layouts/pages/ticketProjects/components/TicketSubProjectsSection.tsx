@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
-import { ListModuleDto, UserAppDto } from "api/generated";
+import { ListModuleDto, ProjectSupportTypes, UserAppDto } from "api/generated";
 import { Button } from "components/ui/button";
 import {
   Table,
@@ -35,11 +35,17 @@ import {
 import TicketSubProjectDialog, {
   type TicketSubProjectFormValues,
 } from "./TicketSubProjectDialog";
+import {
+  getProjectSupportTypeLabel,
+  matchesProjectSupportType,
+  normalizeProjectSupportType,
+} from "../projectSupportTypeHelpers";
 
 type TicketSubProjectsSectionProps = {
   ticketProjectId?: string;
   modules: ListModuleDto[];
   projectUsers: UserAppDto[];
+  projectSupportType?: ProjectSupportTypes | null;
   onDraftChange?: (items: TicketSubProjectDraftPayload[]) => void;
 };
 
@@ -48,12 +54,14 @@ const toDraftPayload = (item: TicketSubProjectDto): TicketSubProjectDraftPayload
   userIds: item.userIds,
   moduleIds: item.moduleIds,
   effortDuration: item.effortDuration,
+  projectSubSupportType: item.projectSubSupportType,
 });
 
 const TicketSubProjectsSection = ({
   ticketProjectId,
   modules,
   projectUsers,
+  projectSupportType,
   onDraftChange,
 }: TicketSubProjectsSectionProps) => {
   const dispatchAlert = useAlert();
@@ -65,11 +73,13 @@ const TicketSubProjectsSection = ({
   const [editingItem, setEditingItem] = useState<TicketSubProjectDto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TicketSubProjectDto | null>(null);
 
+  const resolvedSupportType = normalizeProjectSupportType(projectSupportType);
+
   const handleFetchItems = async () => {
     if (!ticketProjectId) return;
     try {
       dispatchBusy({ isBusy: true });
-      const data = await fetchTicketSubProjectsByProject(ticketProjectId);
+      const data = await fetchTicketSubProjectsByProject(ticketProjectId, resolvedSupportType);
       setItems(data);
     } catch {
       dispatchAlert({ message: "Alt projeler getirilirken hata oluştu.", type: "Error" });
@@ -80,11 +90,10 @@ const TicketSubProjectsSection = ({
 
   useEffect(() => {
     if (!ticketProjectId) {
-      setItems([]);
       return;
     }
     handleFetchItems();
-  }, [ticketProjectId]);
+  }, [ticketProjectId, resolvedSupportType]);
 
   useEffect(() => {
     if (!isDraftMode) return;
@@ -100,6 +109,7 @@ const TicketSubProjectsSection = ({
     moduleIds: values.moduleIds,
     modules: modules.filter((mod) => Boolean(mod.id) && values.moduleIds.includes(mod.id as string)),
     effortDuration: values.effortDuration,
+    projectSubSupportType: editingItem?.projectSubSupportType ?? resolvedSupportType,
   });
 
   const handleOpenCreate = () => {
@@ -135,6 +145,7 @@ const TicketSubProjectsSection = ({
       userIds: values.userIds,
       moduleIds: values.moduleIds,
       effortDuration: values.effortDuration,
+      projectSubSupportType: editingItem?.projectSubSupportType ?? resolvedSupportType,
     };
 
     try {
@@ -158,10 +169,20 @@ const TicketSubProjectsSection = ({
     }
   };
 
+  const visibleItems = useMemo(
+    () =>
+      isDraftMode
+        ? items.filter((item) =>
+            matchesProjectSupportType(item.projectSubSupportType, resolvedSupportType),
+          )
+        : items,
+    [items, isDraftMode, resolvedSupportType],
+  );
+
   const totalEffort = useMemo(
     () =>
-      items.reduce((sum, item) => sum + (Number(item.effortDuration) || 0), 0),
-    [items]
+      visibleItems.reduce((sum, item) => sum + (Number(item.effortDuration) || 0), 0),
+    [visibleItems]
   );
 
   const formatEffort = (value: number | null | undefined) => {
@@ -200,7 +221,7 @@ const TicketSubProjectsSection = ({
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="text-sm font-medium leading-none">Alt Projeler</span>
           <span className="text-xs text-muted-foreground" aria-live="polite">
-            Toplam efor: {formatEffort(totalEffort)}
+            {getProjectSupportTypeLabel(resolvedSupportType)} tipi · Toplam efor: {formatEffort(totalEffort)}
           </span>
         </div>
         <Button
@@ -227,14 +248,14 @@ const TicketSubProjectsSection = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.length === 0 ? (
+            {visibleItems.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="h-16 text-center text-muted-foreground">
-                  Henüz alt proje yok.
+                  Henüz {getProjectSupportTypeLabel(resolvedSupportType).toLowerCase()} tipi alt proje yok.
                 </TableCell>
               </TableRow>
             ) : (
-              items.map((item) => {
+              visibleItems.map((item) => {
                 const employeeNames = (item.users ?? [])
                   .map((user) => `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim())
                   .filter(Boolean)
@@ -285,7 +306,7 @@ const TicketSubProjectsSection = ({
               })
             )}
           </TableBody>
-          {items.length > 0 && (
+          {visibleItems.length > 0 && (
             <TableFooter>
               <TableRow>
                 <TableCell colSpan={3} className="font-medium">

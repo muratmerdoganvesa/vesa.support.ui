@@ -25,7 +25,7 @@ import { useAlert } from "layouts/pages/hooks/useAlert";
 import { projectTypeOptions } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import {
   ProjectSupportType,
-  isStandardProjectSupportType,
+  matchesProjectSupportType,
   projectSupportTypeOptions,
 } from "layouts/pages/ticketProjects/projectSupportTypeHelpers";
 import TicketSubProjectsSection from "layouts/pages/ticketProjects/components/TicketSubProjectsSection";
@@ -177,14 +177,6 @@ function CreateTicketProject() {
     return [...selectedMatches, ...fromApi];
   }, [selectedUsers, searchByName, employeeSearch]);
 
-  const showSubProjects = isStandardProjectSupportType(projectData.projectSupportType);
-
-  useEffect(() => {
-    if (!showSubProjects) {
-      setPendingSubProjects([]);
-    }
-  }, [showSubProjects]);
-
   // ─── Data fetching ──────────────────────────────────────────────────────────
 
   const handleSearchByName = (value: string) => {
@@ -331,10 +323,7 @@ function CreateTicketProject() {
       });
 
       const createdId = extractCreatedTicketProjectId(created);
-      if (
-        isStandardProjectSupportType(projectData.projectSupportType)
-        && pendingSubProjects.length > 0
-      ) {
+      if (pendingSubProjects.length > 0) {
         if (!createdId) {
           dispatchAlert({
             message: "Proje eklendi ancak alt projeler kaydedilemedi.",
@@ -344,13 +333,21 @@ function CreateTicketProject() {
           return;
         }
 
-        for (const item of pendingSubProjects) {
+        const selectedSupportType =
+          projectData.projectSupportType ?? ProjectSupportType.Project;
+
+        const subProjectsToCreate = pendingSubProjects.filter((item) =>
+          matchesProjectSupportType(item.projectSubSupportType, selectedSupportType),
+        );
+
+        for (const item of subProjectsToCreate) {
           await createTicketSubProject({
             ticketProjectId: createdId,
             name: item.name,
             userIds: item.userIds,
             moduleIds: item.moduleIds,
             effortDuration: item.effortDuration,
+            projectSubSupportType: item.projectSubSupportType ?? selectedSupportType,
           });
         }
       }
@@ -763,14 +760,13 @@ function CreateTicketProject() {
                 />
               </div>
 
-              {showSubProjects && (
-                <TicketSubProjectsSection
-                  ticketProjectId={id}
-                  modules={modules}
-                  projectUsers={selectedUsers ?? []}
-                  onDraftChange={setPendingSubProjects}
-                />
-              )}
+              <TicketSubProjectsSection
+                ticketProjectId={id}
+                modules={modules}
+                projectUsers={selectedUsers ?? []}
+                projectSupportType={projectData.projectSupportType ?? ProjectSupportType.Project}
+                onDraftChange={setPendingSubProjects}
+              />
             </div>
 
             {/* ── RIGHT COLUMN ────────────────────────────────────────── */}

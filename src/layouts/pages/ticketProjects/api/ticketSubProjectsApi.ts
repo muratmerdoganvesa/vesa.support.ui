@@ -1,5 +1,6 @@
-import { ListModuleDto, UserAppDto } from "api/generated";
+import { ListModuleDto, ProjectSupportTypes, UserAppDto } from "api/generated";
 import { axiosInstance } from "utils/axiosInstance";
+import { normalizeProjectSupportType } from "../projectSupportTypeHelpers";
 
 export type TicketSubProjectDto = {
   id: string;
@@ -11,6 +12,7 @@ export type TicketSubProjectDto = {
   modules: ListModuleDto[];
   /** Alt proje eforu, gün cinsinden. */
   effortDuration: number | null;
+  projectSubSupportType: ProjectSupportTypes;
   createdDate?: string | null;
 };
 
@@ -20,6 +22,7 @@ export type TicketSubProjectPayload = {
   userIds: string[];
   moduleIds: string[];
   effortDuration: number | null;
+  projectSubSupportType: ProjectSupportTypes;
 };
 
 export type TicketSubProjectDraftPayload = Omit<TicketSubProjectPayload, "ticketProjectId">;
@@ -27,6 +30,13 @@ export type TicketSubProjectDraftPayload = Omit<TicketSubProjectPayload, "ticket
 const toStringList = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item)).filter((item) => item.length > 0);
+};
+
+const toSupportType = (value: unknown): ProjectSupportTypes => {
+  if (value == null || value === "") return normalizeProjectSupportType(null);
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return normalizeProjectSupportType(null);
+  return normalizeProjectSupportType(numeric as ProjectSupportTypes);
 };
 
 export const normalizeTicketSubProject = (item: Record<string, unknown>): TicketSubProjectDto => {
@@ -48,15 +58,23 @@ export const normalizeTicketSubProject = (item: Record<string, unknown>): Ticket
     moduleIds: toStringList(item.moduleIds ?? item.ModuleIds),
     modules,
     effortDuration: Number.isFinite(effortDuration) ? effortDuration : null,
+    projectSubSupportType: toSupportType(item.projectSubSupportType ?? item.ProjectSubSupportType),
     createdDate: (item.createdDate ?? item.CreatedDate) as string | null | undefined,
   };
 };
 
 export const fetchTicketSubProjectsByProject = async (
-  ticketProjectId: string
+  ticketProjectId: string,
+  projectSubSupportType?: ProjectSupportTypes | null
 ): Promise<TicketSubProjectDto[]> => {
   const response = await axiosInstance.get<Record<string, unknown>[]>(
-    `/api/TicketSubProjects/ByProject/${ticketProjectId}`
+    `/api/TicketSubProjects/ByProject/${ticketProjectId}`,
+    {
+      params:
+        projectSubSupportType == null
+          ? undefined
+          : { projectSubSupportType },
+    }
   );
   return (response.data ?? []).map(normalizeTicketSubProject);
 };
