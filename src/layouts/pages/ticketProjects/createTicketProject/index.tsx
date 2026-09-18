@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
@@ -34,6 +34,7 @@ import {
   createTicketSubProject,
   type TicketSubProjectDraftPayload,
 } from "layouts/pages/ticketProjects/api/ticketSubProjectsApi";
+import { type EffortSummary } from "layouts/pages/ticketProjects/utils/effortDays";
 
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
@@ -112,8 +113,17 @@ function CreateTicketProject() {
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
   const [copyFromAnotherProject, setCopyFromAnotherProject] = useState(false);
   const [pendingSubProjects, setPendingSubProjects] = useState<TicketSubProjectDraftPayload[]>([]);
+  const [isBillingTimeLocked, setIsBillingTimeLocked] = useState(false);
   const searchRequestIdRef = useRef(0);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const projectDataRef = useRef(projectData);
+  const selectionKullaniciIdRef = useRef(selectionKullaniciId);
+  const selectionUserIdsRef = useRef(selectionUserIds);
+  const isFirstEffortSummaryRef = useRef(true);
+
+  projectDataRef.current = projectData;
+  selectionKullaniciIdRef.current = selectionKullaniciId;
+  selectionUserIdsRef.current = selectionUserIds;
 
   // Popover open states
   const [managerOpen, setManagerOpen] = useState(false);
@@ -387,6 +397,16 @@ function CreateTicketProject() {
   };
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
+
+  const handleEffortSummaryChange = useCallback((summary: EffortSummary) => {
+    setIsBillingTimeLocked(summary.hasAnyEffort);
+    if (!summary.hasAnyEffort) return;
+
+    setProjectData((prev) => {
+      if (prev.projectBillingTime === summary.totalDays) return prev;
+      return { ...prev, projectBillingTime: summary.totalDays };
+    });
+  }, []);
 
   const handleRemoveEmployee = (userId: string) => {
     const newUsers = selectedUsers.filter((u) => u.id !== userId);
@@ -741,23 +761,32 @@ function CreateTicketProject() {
 
               {/* Anlaşılan Sözleşme Eforu */}
               <div className="space-y-1.5">
-                <Label htmlFor="project-billing-time">Anlaşılan Sözleşme Eforu(saat)</Label>
+                <Label htmlFor="project-billing-time">Anlaşılan Sözleşme Eforu (gün)</Label>
                 <Input
                   id="project-billing-time"
                   type="number"
                   min={0}
                   step="0.01"
-                  placeholder="Saat giriniz"
+                  placeholder="Gün giriniz"
                   value={projectData?.projectBillingTime ?? ""}
+                  disabled={isBillingTimeLocked}
+                  readOnly={isBillingTimeLocked}
                   onChange={(e) => {
+                    if (isBillingTimeLocked) return;
                     const raw = e.target.value;
                     setProjectData({
                       ...projectData,
                       projectBillingTime: raw === "" ? null : Number(raw),
                     });
                   }}
-                  aria-label="Anlaşılan Sözleşme Eforu(saat)"
+                  aria-label="Anlaşılan Sözleşme Eforu (gün)"
+                  aria-readonly={isBillingTimeLocked}
                 />
+                {isBillingTimeLocked && (
+                  <p className="text-xs text-muted-foreground">
+                    Alt proje eforlarından otomatik hesaplandı.
+                  </p>
+                )}
               </div>
 
               <TicketSubProjectsSection
@@ -766,6 +795,7 @@ function CreateTicketProject() {
                 projectUsers={selectedUsers ?? []}
                 projectSupportType={projectData.projectSupportType ?? ProjectSupportType.Project}
                 onDraftChange={setPendingSubProjects}
+                onEffortSummaryChange={handleEffortSummaryChange}
               />
             </div>
 

@@ -40,6 +40,7 @@ import {
   matchesProjectSupportType,
   normalizeProjectSupportType,
 } from "../projectSupportTypeHelpers";
+import { summarizeSubProjectEffort, type EffortSummary } from "../utils/effortDays";
 
 type TicketSubProjectsSectionProps = {
   ticketProjectId?: string;
@@ -47,6 +48,7 @@ type TicketSubProjectsSectionProps = {
   projectUsers: UserAppDto[];
   projectSupportType?: ProjectSupportTypes | null;
   onDraftChange?: (items: TicketSubProjectDraftPayload[]) => void;
+  onEffortSummaryChange?: (summary: EffortSummary) => void;
 };
 
 const toDraftPayload = (item: TicketSubProjectDto): TicketSubProjectDraftPayload => ({
@@ -63,6 +65,7 @@ const TicketSubProjectsSection = ({
   projectUsers,
   projectSupportType,
   onDraftChange,
+  onEffortSummaryChange,
 }: TicketSubProjectsSectionProps) => {
   const dispatchAlert = useAlert();
   const dispatchBusy = useBusy();
@@ -179,11 +182,16 @@ const TicketSubProjectsSection = ({
     [items, isDraftMode, resolvedSupportType],
   );
 
-  const totalEffort = useMemo(
-    () =>
-      visibleItems.reduce((sum, item) => sum + (Number(item.effortDuration) || 0), 0),
-    [visibleItems]
+  const effortSummary = useMemo(
+    () => summarizeSubProjectEffort(visibleItems),
+    [visibleItems],
   );
+
+  const totalEffort = effortSummary.totalDays;
+
+  useEffect(() => {
+    onEffortSummaryChange?.(effortSummary);
+  }, [effortSummary, onEffortSummaryChange]);
 
   const formatEffort = (value: number | null | undefined) => {
     if (value == null || Number.isNaN(Number(value))) return "-";
