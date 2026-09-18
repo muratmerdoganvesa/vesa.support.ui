@@ -116,14 +116,7 @@ function CreateTicketProject() {
   const [isBillingTimeLocked, setIsBillingTimeLocked] = useState(false);
   const searchRequestIdRef = useRef(0);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const projectDataRef = useRef(projectData);
-  const selectionKullaniciIdRef = useRef(selectionKullaniciId);
-  const selectionUserIdsRef = useRef(selectionUserIds);
-  const isFirstEffortSummaryRef = useRef(true);
-
-  projectDataRef.current = projectData;
-  selectionKullaniciIdRef.current = selectionKullaniciId;
-  selectionUserIdsRef.current = selectionUserIds;
+  const effortSummaryRef = useRef<EffortSummary>({ totalDays: 0, hasAnyEffort: false });
 
   // Popover open states
   const [managerOpen, setManagerOpen] = useState(false);
@@ -231,9 +224,14 @@ function CreateTicketProject() {
       const api = new TicketProjectsApi(conf);
       const data = await api.apiTicketProjectsIdGet(id);
       const loaded = data.data as TicketProjectsListDto;
+      const effortSummary = effortSummaryRef.current;
+      setIsBillingTimeLocked(effortSummary.hasAnyEffort);
       setProjectData({
         ...loaded,
         projectSupportType: loaded.projectSupportType ?? ProjectSupportType.Project,
+        projectBillingTime: effortSummary.hasAnyEffort
+          ? effortSummary.totalDays
+          : loaded.projectBillingTime,
       });
       setSelectedKullanici(data.data.manager);
       setSelectionKullaniciId(data.data.managerId);
@@ -399,6 +397,7 @@ function CreateTicketProject() {
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
   const handleEffortSummaryChange = useCallback((summary: EffortSummary) => {
+    effortSummaryRef.current = summary;
     setIsBillingTimeLocked(summary.hasAnyEffort);
     if (!summary.hasAnyEffort) return;
 
@@ -781,9 +780,10 @@ function CreateTicketProject() {
                   }}
                   aria-label="Anlaşılan Sözleşme Eforu (gün)"
                   aria-readonly={isBillingTimeLocked}
+                  aria-describedby={isBillingTimeLocked ? "project-billing-time-hint" : undefined}
                 />
                 {isBillingTimeLocked && (
-                  <p className="text-xs text-muted-foreground">
+                  <p id="project-billing-time-hint" className="text-xs text-muted-foreground">
                     Alt proje eforlarından otomatik hesaplandı.
                   </p>
                 )}
