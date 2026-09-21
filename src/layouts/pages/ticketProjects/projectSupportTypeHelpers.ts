@@ -18,17 +18,26 @@ export const projectSupportTypeOptions = [
   { label: "Destek", value: ProjectSupportTypes.NUMBER_3 },
 ] as const;
 
+export const normalizeProjectSupportType = (
+  value?: ProjectSupportTypes | null,
+): ProjectSupportTypes => value ?? ProjectSupportTypes.NUMBER_1;
+
 export const getProjectSupportTypeLabel = (value?: ProjectSupportTypes | null): string => {
-  if (value == null) return PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[ProjectSupportTypes.NUMBER_1];
-  return PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[value] ?? PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[ProjectSupportTypes.NUMBER_1];
+  const type = normalizeProjectSupportType(value);
+  return PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[type] ?? PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[ProjectSupportTypes.NUMBER_1];
 };
 
 export const isStandardProjectSupportType = (
   value?: ProjectSupportTypes | null,
-): boolean => (value ?? ProjectSupportTypes.NUMBER_1) === ProjectSupportTypes.NUMBER_1;
+): boolean => normalizeProjectSupportType(value) === ProjectSupportTypes.NUMBER_1;
+
+export const matchesProjectSupportType = (
+  left?: ProjectSupportTypes | null,
+  right?: ProjectSupportTypes | null,
+): boolean => normalizeProjectSupportType(left) === normalizeProjectSupportType(right);
 
 export const getProjectSupportTypeBadgeClass = (value?: ProjectSupportTypes | null): string => {
-  const type = value ?? ProjectSupportTypes.NUMBER_1;
+  const type = normalizeProjectSupportType(value);
   if (type === ProjectSupportTypes.NUMBER_2) {
     return "border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950 dark:text-violet-300";
   }

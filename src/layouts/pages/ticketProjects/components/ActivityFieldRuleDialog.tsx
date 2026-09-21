@@ -204,8 +204,9 @@ const ActivityFieldRuleDialog = ({
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Çalışma yeri, açıklama, aktivite saati ve faturalanabilir saat her zaman görünür ve
-              zorunludur.
+              Çalışma yeri, açıklama ve aktivite saati her zaman görünür ve zorunludur. Fatura saati
+              onay sürecinden gelen ticketlarda kural açık olsa bile çalışana gösterilmez; sistem
+              doldurur.
             </p>
           </div>
         </div>

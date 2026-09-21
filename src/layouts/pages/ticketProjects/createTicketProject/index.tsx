@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ChevronDown, X } from "lucide-react";
@@ -25,7 +25,7 @@ import { useAlert } from "layouts/pages/hooks/useAlert";
 import { projectTypeOptions } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import {
   ProjectSupportType,
-  isStandardProjectSupportType,
+  matchesProjectSupportType,
   projectSupportTypeOptions,
 } from "layouts/pages/ticketProjects/projectSupportTypeHelpers";
 import TicketSubProjectsSection from "layouts/pages/ticketProjects/components/TicketSubProjectsSection";
@@ -34,6 +34,7 @@ import {
   createTicketSubProject,
   type TicketSubProjectDraftPayload,
 } from "layouts/pages/ticketProjects/api/ticketSubProjectsApi";
+import { type EffortSummary } from "layouts/pages/ticketProjects/utils/effortDays";
 
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
@@ -74,6 +75,30 @@ const extractCreatedTicketProjectId = (response: unknown): string | null => {
   return null;
 };
 
+const foldTurkish = (value: string) =>
+  value
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/ı/g, "i")
+    .replace(/ç/g, "c")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u");
+
+const getUserSearchText = (user: UserAppDto) =>
+  foldTurkish(
+    `${user.firstName ?? ""} ${user.lastName ?? ""} ${user.email ?? ""} ${user.userName ?? ""}`.trim(),
+  );
+
+const getUserCommandValue = (user: UserAppDto) =>
+  `${user.firstName ?? ""} ${user.lastName ?? ""} ${user.email ?? ""} ${user.id ?? ""}`;
+
+const matchesUserSearch = (user: UserAppDto, query: string) => {
+  const normalizedQuery = foldTurkish(query.trim());
+  if (!normalizedQuery) return true;
+  return getUserSearchText(user).includes(normalizedQuery);
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 function CreateTicketProject() {
@@ -88,6 +113,10 @@ function CreateTicketProject() {
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
   const [copyFromAnotherProject, setCopyFromAnotherProject] = useState(false);
   const [pendingSubProjects, setPendingSubProjects] = useState<TicketSubProjectDraftPayload[]>([]);
+  const [isBillingTimeLocked, setIsBillingTimeLocked] = useState(false);
+  const searchRequestIdRef = useRef(0);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const effortSummaryRef = useRef<EffortSummary>({ totalDays: 0, hasAnyEffort: false });
 
   // Popover open states
   const [managerOpen, setManagerOpen] = useState(false);
@@ -127,44 +156,66 @@ function CreateTicketProject() {
   const { id } = useParams();
   const { t } = useTranslation();
 
-  // Keep current selections visible even when searchByName is empty
+  // Keep current selections visible when they match the typed name; otherwise show API hits
   const managerOptions = useMemo(() => {
-    if (!selectedKullanici) return searchByName;
-    return [selectedKullanici, ...searchByName.filter((u) => u.id !== selectedKullanici.id)];
-  }, [selectedKullanici, searchByName]);
-
-  const employeeOptions = useMemo(
-    () => [
-      ...selectedUsers,
-      ...searchByName.filter((u) => !selectedUsers.some((s) => s.id === u.id)),
-    ],
-    [selectedUsers, searchByName]
-  );
-
-  const showSubProjects = isStandardProjectSupportType(projectData.projectSupportType);
-
-  useEffect(() => {
-    if (!showSubProjects) {
-      setPendingSubProjects([]);
+    const fromApi = searchByName.filter((u) => u.id !== selectedKullanici?.id);
+    if (!managerSearch.trim()) {
+      return selectedKullanici ? [selectedKullanici, ...fromApi] : fromApi;
     }
-  }, [showSubProjects]);
+    const selectedMatch =
+      selectedKullanici && matchesUserSearch(selectedKullanici, managerSearch)
+        ? [selectedKullanici]
+        : [];
+    return [...selectedMatch, ...fromApi];
+  }, [selectedKullanici, searchByName, managerSearch]);
+
+  const employeeOptions = useMemo(() => {
+    const fromApi = searchByName.filter((u) => !selectedUsers.some((s) => s.id === u.id));
+    if (!employeeSearch.trim()) {
+      return [...selectedUsers, ...fromApi];
+    }
+    const selectedMatches = selectedUsers.filter((user) =>
+      matchesUserSearch(user, employeeSearch),
+    );
+    return [...selectedMatches, ...fromApi];
+  }, [selectedUsers, searchByName, employeeSearch]);
 
   // ─── Data fetching ──────────────────────────────────────────────────────────
 
-  const handleSearchByName = async (value: string) => {
-    if (value === "") { setSearchByName([]); return; }
-    try {
-      dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const api = new UserApi(conf);
-      const data = await api.apiUserGetAllUsersAsyncWitNameGet(value);
-      setSearchByName(data.data);
-    } catch (error) {
-      console.log("error", error);
-    } finally {
-      dispatchBusy({ isBusy: false });
+  const handleSearchByName = (value: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
+
+    const trimmed = value.trim();
+    if (trimmed === "") {
+      searchRequestIdRef.current += 1;
+      setSearchByName([]);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(async () => {
+      const requestId = ++searchRequestIdRef.current;
+      try {
+        const conf = getConfiguration();
+        const api = new UserApi(conf);
+        const data = await api.apiUserGetAllUsersAsyncWitNameGet(trimmed);
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchByName(Array.isArray(data.data) ? data.data : []);
+      } catch (error) {
+        if (requestId !== searchRequestIdRef.current) return;
+        console.log("error", error);
+        setSearchByName([]);
+      }
+    }, 250);
   };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   const fetchProjectData = async () => {
     try {
@@ -173,9 +224,14 @@ function CreateTicketProject() {
       const api = new TicketProjectsApi(conf);
       const data = await api.apiTicketProjectsIdGet(id);
       const loaded = data.data as TicketProjectsListDto;
+      const effortSummary = effortSummaryRef.current;
+      setIsBillingTimeLocked(effortSummary.hasAnyEffort);
       setProjectData({
         ...loaded,
         projectSupportType: loaded.projectSupportType ?? ProjectSupportType.Project,
+        projectBillingTime: effortSummary.hasAnyEffort
+          ? effortSummary.totalDays
+          : loaded.projectBillingTime,
       });
       setSelectedKullanici(data.data.manager);
       setSelectionKullaniciId(data.data.managerId);
@@ -275,10 +331,7 @@ function CreateTicketProject() {
       });
 
       const createdId = extractCreatedTicketProjectId(created);
-      if (
-        isStandardProjectSupportType(projectData.projectSupportType)
-        && pendingSubProjects.length > 0
-      ) {
+      if (pendingSubProjects.length > 0) {
         if (!createdId) {
           dispatchAlert({
             message: "Proje eklendi ancak alt projeler kaydedilemedi.",
@@ -288,13 +341,21 @@ function CreateTicketProject() {
           return;
         }
 
-        for (const item of pendingSubProjects) {
+        const selectedSupportType =
+          projectData.projectSupportType ?? ProjectSupportType.Project;
+
+        const subProjectsToCreate = pendingSubProjects.filter((item) =>
+          matchesProjectSupportType(item.projectSubSupportType, selectedSupportType),
+        );
+
+        for (const item of subProjectsToCreate) {
           await createTicketSubProject({
             ticketProjectId: createdId,
             name: item.name,
             userIds: item.userIds,
             moduleIds: item.moduleIds,
             effortDuration: item.effortDuration,
+            projectSubSupportType: item.projectSubSupportType ?? selectedSupportType,
           });
         }
       }
@@ -335,6 +396,17 @@ function CreateTicketProject() {
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
 
+  const handleEffortSummaryChange = useCallback((summary: EffortSummary) => {
+    effortSummaryRef.current = summary;
+    setIsBillingTimeLocked(summary.hasAnyEffort);
+    if (!summary.hasAnyEffort) return;
+
+    setProjectData((prev) => {
+      if (prev.projectBillingTime === summary.totalDays) return prev;
+      return { ...prev, projectBillingTime: summary.totalDays };
+    });
+  }, []);
+
   const handleRemoveEmployee = (userId: string) => {
     const newUsers = selectedUsers.filter((u) => u.id !== userId);
     setSelectedUsers(newUsers);
@@ -342,12 +414,13 @@ function CreateTicketProject() {
   };
 
   const handleToggleEmployee = (user: UserAppDto) => {
+    if (!user.id) return;
     const isSelected = selectionUserIds.includes(user.id);
     if (isSelected) {
       handleRemoveEmployee(user.id);
     } else {
       setSelectedUsers((prev) => [...prev, user]);
-      setSelectionUserIds((prev) => [...prev, user.id]);
+      setSelectionUserIds((prev) => [...prev, user.id as string]);
     }
   };
 
@@ -520,19 +593,23 @@ function CreateTicketProject() {
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start" side="bottom" avoidCollisions={false}>
-                    <Command shouldFilter={false}>
+                    <Command shouldFilter={false} filter={() => 1}>
                       <CommandInput
                         placeholder={t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
                         value={managerSearch}
                         onValueChange={(v) => { setManagerSearch(v); handleSearchByName(v); }}
                       />
                       <CommandList>
-                        <CommandEmpty>Kullanıcı bulunamadı</CommandEmpty>
+                        <CommandEmpty>
+                          {managerSearch.trim()
+                            ? "Kullanıcı bulunamadı"
+                            : t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
+                        </CommandEmpty>
                         <CommandGroup>
                           {managerOptions.map((user) => (
                             <CommandItem
                               key={user.id}
-                              value={user.id}
+                              value={getUserCommandValue(user)}
                               data-checked={selectionKullaniciId === user.id}
                               onSelect={() => {
                                 setSelectedKullanici(user);
@@ -608,20 +685,24 @@ function CreateTicketProject() {
                     </div>
                   </PopoverTrigger>
                   <PopoverContent className="w-80 p-0" align="start" side="bottom" avoidCollisions={false}>
-                    <Command shouldFilter={false}>
+                    <Command shouldFilter={false} filter={() => 1}>
                       <CommandInput
                         placeholder={t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
                         value={employeeSearch}
                         onValueChange={(v) => { setEmployeeSearch(v); handleSearchByName(v); }}
                       />
                       <CommandList>
-                        <CommandEmpty>Kullanıcı bulunamadı</CommandEmpty>
+                        <CommandEmpty>
+                          {employeeSearch.trim()
+                            ? "Kullanıcı bulunamadı"
+                            : t("ns1:DepartmentPage.DepartmentDetail.IsimAratin")}
+                        </CommandEmpty>
                         <CommandGroup>
                           {employeeOptions.map((user) => (
                             <CommandItem
                               key={user.id}
-                              value={user.id}
-                              data-checked={selectionUserIds.includes(user.id)}
+                              value={getUserCommandValue(user)}
+                              data-checked={Boolean(user.id && selectionUserIds.includes(user.id))}
                               onSelect={() => handleToggleEmployee(user)}
                             >
                               <img
@@ -679,33 +760,43 @@ function CreateTicketProject() {
 
               {/* Anlaşılan Sözleşme Eforu */}
               <div className="space-y-1.5">
-                <Label htmlFor="project-billing-time">Anlaşılan Sözleşme Eforu(saat)</Label>
+                <Label htmlFor="project-billing-time">Anlaşılan Sözleşme Eforu (gün)</Label>
                 <Input
                   id="project-billing-time"
                   type="number"
                   min={0}
                   step="0.01"
-                  placeholder="Saat giriniz"
+                  placeholder="Gün giriniz"
                   value={projectData?.projectBillingTime ?? ""}
+                  disabled={isBillingTimeLocked}
+                  readOnly={isBillingTimeLocked}
                   onChange={(e) => {
+                    if (isBillingTimeLocked) return;
                     const raw = e.target.value;
                     setProjectData({
                       ...projectData,
                       projectBillingTime: raw === "" ? null : Number(raw),
                     });
                   }}
-                  aria-label="Anlaşılan Sözleşme Eforu(saat)"
+                  aria-label="Anlaşılan Sözleşme Eforu (gün)"
+                  aria-readonly={isBillingTimeLocked}
+                  aria-describedby={isBillingTimeLocked ? "project-billing-time-hint" : undefined}
                 />
+                {isBillingTimeLocked && (
+                  <p id="project-billing-time-hint" className="text-xs text-muted-foreground">
+                    Alt proje eforlarından otomatik hesaplandı.
+                  </p>
+                )}
               </div>
 
-              {showSubProjects && (
-                <TicketSubProjectsSection
-                  ticketProjectId={id}
-                  modules={modules}
-                  projectUsers={selectedUsers ?? []}
-                  onDraftChange={setPendingSubProjects}
-                />
-              )}
+              <TicketSubProjectsSection
+                ticketProjectId={id}
+                modules={modules}
+                projectUsers={selectedUsers ?? []}
+                projectSupportType={projectData.projectSupportType ?? ProjectSupportType.Project}
+                onDraftChange={setPendingSubProjects}
+                onEffortSummaryChange={handleEffortSummaryChange}
+              />
             </div>
 
             {/* ── RIGHT COLUMN ────────────────────────────────────────── */}

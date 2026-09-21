@@ -51,7 +51,6 @@ export const ACTIVITY_V2_ALWAYS_REQUIRED_FIELD_KEYS = [
   "effortLocation",
   "description",
   "activityHour",
-  "billableHour",
 ] as const satisfies readonly ActivityV2FieldKey[];
 
 export const ACTIVITY_V2_CONFIGURABLE_FIELD_KEYS: readonly ActivityV2FieldKey[] = [
@@ -59,6 +58,7 @@ export const ACTIVITY_V2_CONFIGURABLE_FIELD_KEYS: readonly ActivityV2FieldKey[] 
   "requestedCustomerName",
   "customerTicketNumber",
   "referenceEmployeeId",
+  "billableHour",
 ] as const;
 
 export const ACTIVITY_V2_FIELD_LABELS: Record<ActivityV2FieldKey, string> = {
@@ -67,7 +67,7 @@ export const ACTIVITY_V2_FIELD_LABELS: Record<ActivityV2FieldKey, string> = {
   ticketProjectId: "Proje",
   referenceEmployeeId: "Referans personel",
   requestedCustomerName: "Talep eden",
-  billableHour: "Faturalanabilir saat",
+  billableHour: "Fatura saati",
   effortLocation: "Çalışma yeri",
   description: "Açıklama",
   activityHour: "Aktivite saati",
@@ -117,10 +117,21 @@ export const parseRuleJson = (raw: string | Record<string, unknown>): ActivityV2
 export const stringifyRuleJson = (rule: ActivityV2FieldRuleJson): string =>
   JSON.stringify({ version: 1, fields: rule.fields ?? {} });
 
+const defaultConfigurableState = (key: ActivityV2FieldKey): ActivityV2FieldRuleState =>
+  key === "billableHour" ? { visible: true, required: true } : { visible: true, required: false };
+
+const isDefaultConfigurableState = (
+  key: ActivityV2FieldKey,
+  state: ActivityV2FieldRuleState,
+): boolean =>
+  key === "billableHour"
+    ? state.visible && state.required
+    : state.visible && !state.required;
+
 export const buildDefaultFieldState = (): Record<ActivityV2FieldKey, ActivityV2FieldRuleState> => {
   const state = {} as Record<ActivityV2FieldKey, ActivityV2FieldRuleState>;
   for (const key of ACTIVITY_V2_CONFIGURABLE_FIELD_KEYS) {
-    state[key] = { visible: true, required: false };
+    state[key] = defaultConfigurableState(key);
   }
   for (const key of ACTIVITY_V2_ALWAYS_REQUIRED_FIELD_KEYS) {
     state[key] = { visible: true, required: true };
@@ -165,7 +176,7 @@ export const buildRuleJsonFromStates = (
   const fields: Partial<Record<ActivityV2FieldKey, ActivityV2FieldRuleState>> = {};
   for (const key of ACTIVITY_V2_CONFIGURABLE_FIELD_KEYS) {
     const state = states[key];
-    if (!state.visible || state.required) {
+    if (!isDefaultConfigurableState(key, state)) {
       fields[key] = { visible: state.visible, required: state.required };
     }
   }
