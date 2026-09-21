@@ -38,6 +38,7 @@ import {
 } from "components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 import { downloadTicketProjectsExcel } from "layouts/pages/ticketProjects/api/fetchTicketProjectsExcel";
+import { formatEffortDays } from "layouts/pages/ticketProjects/utils/effortDays";
 
 const ROWS_PER_PAGE = 10;
 
@@ -294,7 +295,7 @@ const TicketProjectsListTab = () => {
               <TableHead className="font-bold text-foreground">Proje Alt Tanımı</TableHead>
               <TableHead className="font-bold text-foreground">Proje Tipi</TableHead>
               <TableHead className="font-bold text-foreground">Proje Durumu</TableHead>
-              <TableHead className="font-bold text-foreground">Anlaşılan Sözleşme Eforu(saat)</TableHead>
+              <TableHead className="font-bold text-foreground">Anlaşılan Sözleşme Eforu (gün)</TableHead>
               <TableHead className="font-bold text-foreground">Aktif/Pasif</TableHead>
               <TableHead className="font-bold text-foreground">Oluşturulma Tarihi</TableHead>
               <TableHead className="font-bold text-foreground">İşlemler</TableHead>
@@ -331,7 +332,7 @@ const TicketProjectsListTab = () => {
                     {getProjectStatusLabel(row.projectStatus ?? row.projectType)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {row.projectBillingTime != null ? row.projectBillingTime : "—"}
+                    {formatEffortDays(row.projectBillingTime)}
                   </TableCell>
                   <TableCell>
                     <Badge variant={row.isActive ? "default" : "secondary"}>

@@ -141,6 +141,14 @@ const TicketSubProjectDialog = ({
     [modules, values.moduleIds]
   );
 
+  const moduleOptions = useMemo(() => {
+    const query = moduleSearch.trim().toLowerCase();
+    const list = modules.filter((mod) => Boolean(mod.id));
+    if (!query) return list;
+
+    return list.filter((mod) => (mod.name ?? "").toLowerCase().includes(query));
+  }, [modules, moduleSearch]);
+
   const handleRemoveEmployee = (userId: string) => {
     setValues((prev) => ({
       ...prev,
@@ -214,6 +222,7 @@ const TicketSubProjectDialog = ({
           <div className="space-y-1.5">
             <Label>Çalışanlar</Label>
             <Popover
+              modal
               open={employeesOpen}
               onOpenChange={(nextOpen) => {
                 setEmployeesOpen(nextOpen);
@@ -257,14 +266,20 @@ const TicketSubProjectDialog = ({
                   <ChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
                 </div>
               </PopoverTrigger>
-              <PopoverContent className="z-[10060] w-80 p-0" align="start">
-                <Command shouldFilter={false}>
+              <PopoverContent
+                className="z-[10060] w-80 p-0"
+                align="start"
+                side="bottom"
+                avoidCollisions={false}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                <Command shouldFilter={false} className="h-auto overflow-hidden">
                   <CommandInput
                     placeholder="Çalışan ara"
                     value={employeeSearch}
                     onValueChange={setEmployeeSearch}
                   />
-                  <CommandList>
+                  <CommandList className="max-h-72 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
                     <CommandEmpty>
                       {projectUsers.length === 0
                         ? "Bu projede çalışan bulunamadı"
@@ -307,7 +322,14 @@ const TicketSubProjectDialog = ({
 
           <div className="space-y-1.5">
             <Label>Modüller</Label>
-            <Popover open={modulesOpen} onOpenChange={setModulesOpen}>
+            <Popover
+              modal
+              open={modulesOpen}
+              onOpenChange={(nextOpen) => {
+                setModulesOpen(nextOpen);
+                if (!nextOpen) setModuleSearch("");
+              }}
+            >
               <PopoverTrigger asChild>
                 <div
                   role="button"
@@ -345,17 +367,23 @@ const TicketSubProjectDialog = ({
                   <ChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
                 </div>
               </PopoverTrigger>
-              <PopoverContent className="z-[10060] w-80 p-0" align="start">
-                <Command>
+              <PopoverContent
+                className="z-[10060] w-80 p-0"
+                align="start"
+                side="bottom"
+                avoidCollisions={false}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                <Command shouldFilter={false} className="h-auto overflow-hidden">
                   <CommandInput
                     placeholder="Modül ara"
                     value={moduleSearch}
                     onValueChange={setModuleSearch}
                   />
-                  <CommandList>
+                  <CommandList className="max-h-72 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
                     <CommandEmpty>Modül bulunamadı</CommandEmpty>
                     <CommandGroup>
-                      {modules.map((mod) => {
+                      {moduleOptions.map((mod) => {
                         if (!mod.id) return null;
                         const isSelected = values.moduleIds.includes(mod.id);
                         return (
