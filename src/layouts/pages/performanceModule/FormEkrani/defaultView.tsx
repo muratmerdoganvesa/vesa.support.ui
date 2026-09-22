@@ -100,9 +100,10 @@ const FormEkrani = () => {
       });
       await fetchLogTable(activeCycle.id);
       await getActiveCycle();
-    } catch (error) {
+    } catch (error: any) {
+      const backendMessage = error?.response?.data;
       dispatchAlert({
-        message: "hata",
+        message: typeof backendMessage === "string" && backendMessage ? backendMessage : "hata",
         type: "Error",
       });
       dispatchBusy({ isBusy: false });
@@ -277,11 +278,13 @@ const FormEkrani = () => {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  const getInitials = (name: string) =>
-    name
+  const getInitials = (name?: string | null) =>
+    (name ?? "")
       .split(" ")
-      .map((n) => n[0])
-      .join("");
+      .map((n) => n[0] ?? "")
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
 
   const noActiveCycle =
     activeCycle.id === "" || activeCycle.id === "00000000-0000-0000-0000-000000000000";
@@ -518,7 +521,7 @@ const FormEkrani = () => {
                                 {getInitials(form.employeeName)}
                               </div>
                               <span className="text-sm font-semibold text-slate-800">
-                                {form.employeeName}
+                                {form.employeeName ?? "—"}
                               </span>
                             </div>
                           </td>
@@ -600,26 +603,34 @@ const FormEkrani = () => {
 
                           {/* Manager 1 */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-xs shrink-0">
-                                {getInitials(form.managerOneName)}
+                            {form.managerOneName ? (
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-700 font-semibold text-xs shrink-0">
+                                  {getInitials(form.managerOneName)}
+                                </div>
+                                <span className="text-sm text-slate-700">
+                                  {form.managerOneName}
+                                </span>
                               </div>
-                              <span className="text-sm text-slate-700">
-                                {form.managerOneName}
-                              </span>
-                            </div>
+                            ) : (
+                              <span className="text-sm text-slate-400">—</span>
+                            )}
                           </td>
 
                           {/* Manager 2 */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-xs shrink-0">
-                                {getInitials(form.managerTwoName)}
+                            {form.managerTwoName ? (
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-xs shrink-0">
+                                  {getInitials(form.managerTwoName)}
+                                </div>
+                                <span className="text-sm text-slate-700">
+                                  {form.managerTwoName}
+                                </span>
                               </div>
-                              <span className="text-sm text-slate-700">
-                                {form.managerTwoName}
-                              </span>
-                            </div>
+                            ) : (
+                              <span className="text-sm text-slate-400">—</span>
+                            )}
                           </td>
 
                           {/* Status badge */}
