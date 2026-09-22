@@ -573,9 +573,6 @@ function escapeHtml(text: string): string {
 
 /** Durum kolonu React template ile büyük listelerde rebind sonrası boş kalıyor; native HTML kullan. */
 function renderProjectStatusCellHtml(row: any): string {
-  if (!normalizeIsSubProjectFromRow(row)) {
-    return '<span class="gantt-chip-empty">-</span>';
-  }
   const status = normalizeProjectStatusFromRow(row);
   if (status == null) return '<span class="gantt-chip-empty">-</span>';
   const label = getProjectStatusLabel(status);
@@ -1095,8 +1092,9 @@ function mergeDialogModuleIdsIntoSaveData(data: any, moduleList: GanttModuleOpti
   applyModuleIdsToRow(data, resolveToModuleIds(raw, moduleList));
 }
 
-function shouldShowModuleStatusField(rowData: any): boolean {
-  return normalizeIsSubProjectFromRow(rowData);
+/** Durum alanı artık alt proje ayrımı olmadan tüm görevlerde düzenlenebilir. */
+function shouldShowModuleStatusField(_rowData: any): boolean {
+  return true;
 }
 
 function destroyEj2WidgetsIn(host: HTMLElement) {
