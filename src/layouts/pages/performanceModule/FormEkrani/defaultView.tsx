@@ -286,6 +286,10 @@ const FormEkrani = () => {
   const noActiveCycle =
     activeCycle.id === "" || activeCycle.id === "00000000-0000-0000-0000-000000000000";
 
+  const activeCycleLabel = `${activeCycle.year} — ${
+    activeCycle.name?.trim() || `${activeCycle.quarterId}. Çeyrek`
+  }`;
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -409,7 +413,7 @@ const FormEkrani = () => {
                     <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4 w-full text-center">
                       <p className="text-white/80 text-xs mb-1.5">Değerlendirme Dönemi</p>
                       <h3 className="text-2xl font-bold text-white">
-                        {activeCycle.year} — {activeCycle.quarterId}. Çeyrek
+                        {activeCycleLabel}
                       </h3>
                     </div>
                   </div>
