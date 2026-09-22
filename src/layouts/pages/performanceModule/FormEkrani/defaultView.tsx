@@ -286,9 +286,9 @@ const FormEkrani = () => {
   const noActiveCycle =
     activeCycle.id === "" || activeCycle.id === "00000000-0000-0000-0000-000000000000";
 
-  const activeCycleLabel = activeCycle.name?.trim()
-    ? activeCycle.name
-    : `${activeCycle.year} — ${activeCycle.quarterId}. Çeyrek`;
+  const activeCycleLabel = `${activeCycle.year} — ${
+    activeCycle.name?.trim() || `${activeCycle.quarterId}. Çeyrek`
+  }`;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 

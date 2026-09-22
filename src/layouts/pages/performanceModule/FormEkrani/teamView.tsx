@@ -306,9 +306,9 @@ function TeamFormEkrani() {
     }
   };
 
-  const activeCycleLabel = activeCycle.name?.trim()
-    ? activeCycle.name
-    : `${activeCycle.year} — ${activeCycle.quarterId}. Çeyrek`;
+  const activeCycleLabel = `${activeCycle.year} — ${
+    activeCycle.name?.trim() || `${activeCycle.quarterId}. Çeyrek`
+  }`;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
