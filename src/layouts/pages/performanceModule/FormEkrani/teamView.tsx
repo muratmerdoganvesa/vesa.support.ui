@@ -306,6 +306,10 @@ function TeamFormEkrani() {
     }
   };
 
+  const activeCycleLabel = activeCycle.name?.trim()
+    ? activeCycle.name
+    : `${activeCycle.year} — ${activeCycle.quarterId}. Çeyrek`;
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
@@ -350,7 +354,7 @@ function TeamFormEkrani() {
                     Değerlendirme Dönemi
                   </p>
                   <p className="text-2xl font-bold text-blue-700">
-                    {activeCycle.year} — {activeCycle.quarterId}. Çeyrek
+                    {activeCycleLabel}
                   </p>
                 </div>
               </div>
