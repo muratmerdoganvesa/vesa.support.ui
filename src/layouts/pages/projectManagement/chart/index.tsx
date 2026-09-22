@@ -646,6 +646,9 @@ function applyLocalPatchToGanttRecord(gantt: any, nextRow: any, patch: Record<st
   if (Array.isArray(nextRow.moduleIds)) {
     applyModuleIdsToRow(rec, nextRow.moduleIds);
   }
+  if (Array.isArray(patch.resources)) {
+    applyResourcesToRow(rec, patch.resources as GanttResourcePoolItem[]);
+  }
 
   const gp = rec.ganttProperties;
   if (gp) {
@@ -1429,7 +1432,6 @@ type GanttSubProjectEditorContext = {
 };
 
 const GANTT_SUBPROJECT_RADIO_NAME = "gantt-subproject-id";
-const GANTT_IS_SUBPROJECT_CHECKBOX_NAME = "gantt-is-subproject";
 
 const mapTicketSubProjectsForGantt = (
   items: TicketSubProjectDto[],
@@ -1723,43 +1725,13 @@ const renderSubProjectEditor = (
   host.closest(".e-edit-form-column")?.classList.add("gantt-subproject-tab-column");
 
   const selected = normalizeSubProjectIdFromRow(rowData);
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  checkbox.name = GANTT_IS_SUBPROJECT_CHECKBOX_NAME;
-  checkbox.checked = normalizeIsSubProjectFromRow(rowData) || Boolean(selected);
-  checkbox.setAttribute("aria-label", "Bu madde alt projedir");
 
-  const flagLabel = document.createElement("label");
-  flagLabel.className = "gantt-subproject-flag";
-  flagLabel.tabIndex = 0;
-  flagLabel.classList.toggle("is-checked", checkbox.checked);
-
-  const syncFlagUi = (next: boolean) => {
-    checkbox.checked = next;
-    flagLabel.classList.toggle("is-checked", next);
-    applyIsSubProjectToRow(rowData, next);
+  const syncIsSubProjectFromSelection = (subProjectId: string) => {
+    applyIsSubProjectToRow(rowData, Boolean(subProjectId));
     if (context?.moduleList) {
       refreshGanttDialogModuleStatusEditors(rowData, context.moduleList);
     }
   };
-
-  checkbox.addEventListener("change", () => {
-    syncFlagUi(checkbox.checked);
-  });
-
-  const flagText = document.createElement("span");
-  flagText.className = "gantt-subproject-flag-text";
-  flagText.textContent = "Bu madde alt projedir";
-
-  flagLabel.append(checkbox, flagText);
-  flagLabel.addEventListener("keydown", (event) => {
-    if (event.target !== flagLabel) return;
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    syncFlagUi(!checkbox.checked);
-  });
-  host.appendChild(flagLabel);
-  applyIsSubProjectToRow(rowData, checkbox.checked);
 
   if (items.length === 0) {
     const empty = document.createElement("p");
@@ -1767,8 +1739,11 @@ const renderSubProjectEditor = (
     empty.textContent = "Bu projeye bağlı alt proje bulunamadı.";
     host.appendChild(empty);
     applySubProjectIdToRow(rowData, "");
+    syncIsSubProjectFromSelection("");
     return;
   }
+
+  syncIsSubProjectFromSelection(selected);
 
   const list = document.createElement("div");
   list.className = "gantt-subproject-list";
@@ -1795,7 +1770,7 @@ const renderSubProjectEditor = (
     radio.setAttribute("aria-label", title);
     radio.addEventListener("change", () => {
       applySubProjectIdToRow(rowData, id);
-      syncFlagUi(Boolean(id));
+      syncIsSubProjectFromSelection(id);
       syncSelectedClass();
       if (!id || !context) return;
       const selectedItem = items.find((item) => item.id === id);
@@ -1845,6 +1820,7 @@ const renderSubProjectEditor = (
   host.appendChild(list);
   if (!items.some((item) => item.id === selected)) {
     applySubProjectIdToRow(rowData, "");
+    syncIsSubProjectFromSelection("");
   }
   syncSelectedClass();
 };
@@ -1858,17 +1834,6 @@ const readSubProjectIdFromDialogElement = (
   );
   if (!checked) return undefined;
   return checked.value ?? "";
-};
-
-const readIsSubProjectFromDialogElement = (
-  root: HTMLElement | null | undefined,
-): boolean | undefined => {
-  if (!root) return undefined;
-  const checkbox = root.querySelector<HTMLInputElement>(
-    `input[name="${GANTT_IS_SUBPROJECT_CHECKBOX_NAME}"]`,
-  );
-  if (!checkbox) return undefined;
-  return checkbox.checked;
 };
 
 const mergeDialogSubProjectIntoSaveData = (
@@ -1886,15 +1851,7 @@ const mergeDialogSubProjectIntoSaveData = (
   } else {
     applySubProjectIdToRow(data, normalizeSubProjectIdFromRow(data));
   }
-  const fromFlag = readIsSubProjectFromDialogElement(editor);
-  if (fromFlag !== undefined) {
-    applyIsSubProjectToRow(data, fromFlag);
-  } else {
-    applyIsSubProjectToRow(
-      data,
-      normalizeIsSubProjectFromRow(data) || Boolean(normalizeSubProjectIdFromRow(data)),
-    );
-  }
+  applyIsSubProjectToRow(data, Boolean(normalizeSubProjectIdFromRow(data)));
   applySelectedSubProjectFieldsToRow(data, subProjects, resourcePool, moduleList);
 };
 
@@ -2679,11 +2636,7 @@ function ProjectChart() {
         const next = fromDom !== undefined ? fromDom : normalizeSubProjectIdFromRow(rowData);
         if (rowData) {
           applySubProjectIdToRow(rowData, next);
-          const fromFlag = readIsSubProjectFromDialogElement(element);
-          applyIsSubProjectToRow(
-            rowData,
-            fromFlag !== undefined ? fromFlag : Boolean(next) || normalizeIsSubProjectFromRow(rowData),
-          );
+          applyIsSubProjectToRow(rowData, Boolean(next));
         }
         return next;
       },
@@ -3262,7 +3215,13 @@ function ProjectChart() {
         if (body.notes !== undefined) patch.Notes = body.notes;
         if (body.milestone !== undefined && body.milestone !== null) patch.Milestone = body.milestone;
         if (body.isManual !== undefined && body.isManual !== null) patch.IsManual = body.isManual;
-        if (body.users !== undefined) patch.resources = body.users;
+        // API'ye sadece id gider; satırda isim gösterebilmek için kaynak havuzundan zenginleştirilir.
+        if (body.users !== undefined) {
+          patch.resources = buildResourcesFromUserIds(
+            body.users.map((user) => readUserIdFromObject(user)),
+            resourcesRef.current as GanttResourcePoolItem[],
+          );
+        }
         patch.moduleIds = moduleIdsPayload.slice();
         patch.modules = moduleIdsPayload.slice();
         patch.projectStatus =
