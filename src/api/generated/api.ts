@@ -13716,6 +13716,12 @@ export interface ProjectTasksInsertDto {
      * @memberof ProjectTasksInsertDto
      */
     'isSubProject'?: boolean;
+    'systemAccess'?: ProjectTaskStatus;
+    'conceptualApproval'?: ProjectTaskStatus;
+    'uatTestScenarios'?: ProjectTaskStatus;
+    'masterDataTemplate'?: ProjectTaskStatus;
+    'authorization'?: ProjectTaskStatus;
+    'integration'?: ProjectTaskStatus;
 }
 
 
@@ -13827,6 +13833,12 @@ export interface ProjectTasksListDto {
      * @memberof ProjectTasksListDto
      */
     'isSubProject'?: boolean;
+    'systemAccess'?: ProjectTaskStatus;
+    'conceptualApproval'?: ProjectTaskStatus;
+    'uatTestScenarios'?: ProjectTaskStatus;
+    'masterDataTemplate'?: ProjectTaskStatus;
+    'authorization'?: ProjectTaskStatus;
+    'integration'?: ProjectTaskStatus;
 }
 
 
@@ -13932,7 +13944,23 @@ export interface ProjectTasksUpdateDto {
      * @memberof ProjectTasksUpdateDto
      */
     'isSubProject'?: boolean;
+    'systemAccess'?: ProjectTaskStatus;
+    'conceptualApproval'?: ProjectTaskStatus;
+    'uatTestScenarios'?: ProjectTaskStatus;
+    'masterDataTemplate'?: ProjectTaskStatus;
+    'authorization'?: ProjectTaskStatus;
+    'integration'?: ProjectTaskStatus;
 }
+
+
+export const ProjectTaskStatus = {
+    NUMBER_1: 1,
+    NUMBER_2: 2,
+    NUMBER_3: 3,
+    NUMBER_4: 4
+} as const;
+
+export type ProjectTaskStatus = typeof ProjectTaskStatus[keyof typeof ProjectTaskStatus];
 
 
 /**

@@ -1041,6 +1041,7 @@ function buildLocalRowPatchFromTaskData(
     moduleIds: modulesArray.slice(),
     projectStatus:
       normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
+    ...resolveChecklistForSave(taskData, existing),
     isSubProject: hasIsSubProjectField(taskData)
       ? normalizeIsSubProjectFromRow(taskData)
       : Boolean(existing?.isSubProject),
@@ -1168,6 +1169,7 @@ function refreshGanttDialogModuleStatusEditors(
             }
           }
         }
+        syncTaskChecklistSelects(host, rowData);
         return;
       }
 
@@ -1188,6 +1190,7 @@ function renderModuleStatusEditor(
 
   if (!shouldShowModuleStatusField(rowData)) {
     appendModuleMultiSelect(host, rowData, moduleList);
+    appendTaskChecklist(host, rowData);
     return;
   }
 
@@ -1201,6 +1204,7 @@ function renderModuleStatusEditor(
   host.appendChild(row);
   appendModuleMultiSelect(moduleHost, rowData, moduleList);
   appendStatusDropDown(statusHost, rowData);
+  appendTaskChecklist(host, rowData);
 }
 
 function applyModuleIdsToRow(rowData: any, next: string[]) {
@@ -1217,6 +1221,93 @@ function applyProjectStatusToRow(rowData: any, next: ProjectTypes | null) {
   if (rowData.taskData) {
     rowData.taskData.projectStatus = next;
   }
+}
+
+type ProjectTaskChecklistKey =
+  | "systemAccess"
+  | "conceptualApproval"
+  | "uatTestScenarios"
+  | "masterDataTemplate"
+  | "authorization"
+  | "integration";
+
+type ProjectTaskChecklist = Record<ProjectTaskChecklistKey, number | null>;
+
+const PROJECT_TASK_CHECKLIST_FIELDS: { key: ProjectTaskChecklistKey; label: string }[] = [
+  { key: "systemAccess", label: "Sisteme giriş sağlandı mı?" },
+  { key: "conceptualApproval", label: "Kavramsal onay alındı mı?" },
+  { key: "uatTestScenarios", label: "UAT test senaryoları müşteriye atıldı mı?" },
+  { key: "masterDataTemplate", label: "Ana veri format müşteriye atıldı mı?" },
+  { key: "authorization", label: "Yetkilendirme" },
+  { key: "integration", label: "Entegrasyon çalışmaları" },
+];
+
+const PROJECT_TASK_STATUS_OPTIONS: { label: string; value: string }[] = [
+  { label: "Seçilmedi", value: "__unset__" },
+  { label: "Başlanmadı", value: "1" },
+  { label: "Danışmanda Devam Ediyor", value: "2" },
+  { label: "Müşteride Devam Ediyor", value: "3" },
+  { label: "Tamamlandı", value: "4" },
+];
+
+function parseProjectTaskStatus(raw: unknown): number | null {
+  if (raw == null || raw === "" || raw === "__unset__") return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1 || n > 4) return null;
+  return n;
+}
+
+function readChecklistValue(row: any, key: ProjectTaskChecklistKey): number | null {
+  if (!row || typeof row !== "object") return null;
+  const pascal = key.charAt(0).toUpperCase() + key.slice(1);
+  const raw = row[key] ?? row[pascal] ?? row?.taskData?.[key] ?? row?.taskData?.[pascal];
+  return parseProjectTaskStatus(raw);
+}
+
+function hasChecklistKey(row: any, key: ProjectTaskChecklistKey): boolean {
+  if (!row || typeof row !== "object") return false;
+  const pascal = key.charAt(0).toUpperCase() + key.slice(1);
+  return key in row || pascal in row || (row.taskData && (key in row.taskData || pascal in row.taskData));
+}
+
+function extractChecklistFromApiTask(task: any): ProjectTaskChecklist {
+  const next = {} as ProjectTaskChecklist;
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    next[field.key] = readChecklistValue(task, field.key);
+  }
+  return next;
+}
+
+function applyTaskChecklistToRow(rowData: any, next: Partial<ProjectTaskChecklist>) {
+  if (!rowData) return;
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    if (!(field.key in next)) continue;
+    const value = next[field.key] ?? null;
+    rowData[field.key] = value;
+    if (rowData.taskData) rowData.taskData[field.key] = value;
+  }
+}
+
+function hydrateMissingChecklist(rowData: any, source: any) {
+  if (!rowData || !source) return;
+  const next: Partial<ProjectTaskChecklist> = {};
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    if (hasChecklistKey(rowData, field.key)) continue;
+    next[field.key] = readChecklistValue(source, field.key);
+  }
+  applyTaskChecklistToRow(rowData, next);
+}
+
+function resolveChecklistForSave(taskData: any, existing: any): ProjectTaskChecklist {
+  const next = {} as ProjectTaskChecklist;
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    if (hasChecklistKey(taskData, field.key)) {
+      next[field.key] = readChecklistValue(taskData, field.key);
+    } else {
+      next[field.key] = readChecklistValue(existing, field.key);
+    }
+  }
+  return next;
 }
 
 /**
@@ -1310,6 +1401,9 @@ function mergeDialogModuleStatusIntoSaveData(data: any) {
   if (status !== undefined) {
     applyProjectStatusToRow(data, status);
   }
+
+  const checklist = readTaskChecklistFromElement(editor);
+  if (checklist) applyTaskChecklistToRow(data, checklist);
 }
 
 /** Durum (projectStatus) yalnızca Modüller sekmesi composite editöründe; kayıttan önce DOM'dan çek. */
@@ -1322,6 +1416,8 @@ function mergeDialogProjectStatusIntoSaveData(data: any) {
   if (status !== undefined) {
     applyProjectStatusToRow(data, status);
   }
+  const checklist = readTaskChecklistFromElement(editor);
+  if (checklist) applyTaskChecklistToRow(data, checklist);
 }
 
 function appendModuleMultiSelect(
@@ -1403,6 +1499,81 @@ function appendStatusDropDown(host: HTMLElement, rowData: any) {
 
   host.appendChild(select);
   return select;
+}
+
+function appendTaskChecklist(host: HTMLElement, rowData: any) {
+  host.querySelectorAll(".gantt-task-checklist").forEach((el) => el.remove());
+  const wrap = document.createElement("div");
+  wrap.className = "gantt-task-checklist";
+
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    const row = document.createElement("div");
+    row.className = "gantt-task-checklist__row";
+
+    const label = document.createElement("label");
+    label.className = "gantt-task-checklist__label";
+    const selectId = `gantt-checklist-${field.key}-${Math.random().toString(36).slice(2, 8)}`;
+    label.htmlFor = selectId;
+    label.textContent = field.label;
+
+    const selectWrap = document.createElement("div");
+    selectWrap.className = "gantt-task-checklist__select-wrap";
+    const select = document.createElement("select");
+    select.id = selectId;
+    select.className = "gantt-module-status-select";
+    select.dataset.checklist = field.key;
+    select.setAttribute("aria-label", field.label);
+
+    const current = readChecklistValue(rowData, field.key);
+    for (const opt of PROJECT_TASK_STATUS_OPTIONS) {
+      const option = document.createElement("option");
+      option.value = opt.value;
+      option.textContent = opt.label;
+      select.appendChild(option);
+    }
+    select.value = current == null ? "__unset__" : String(current);
+    select.addEventListener("change", () => {
+      applyTaskChecklistToRow(rowData, {
+        [field.key]: parseProjectTaskStatus(select.value),
+      });
+    });
+
+    selectWrap.appendChild(select);
+    row.append(label, selectWrap);
+    wrap.appendChild(row);
+  }
+
+  host.appendChild(wrap);
+}
+
+function syncTaskChecklistSelects(host: HTMLElement, rowData: any) {
+  const wrap = host.querySelector<HTMLElement>(".gantt-task-checklist");
+  if (!wrap) {
+    appendTaskChecklist(host, rowData);
+    return;
+  }
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    const select = wrap.querySelector<HTMLSelectElement>(
+      `select[data-checklist="${field.key}"]`,
+    );
+    if (!select) continue;
+    const current = readChecklistValue(rowData, field.key);
+    select.value = current == null ? "__unset__" : String(current);
+  }
+}
+
+function readTaskChecklistFromElement(root: HTMLElement | null | undefined): ProjectTaskChecklist | undefined {
+  if (!root) return undefined;
+  const wrap = root.querySelector<HTMLElement>(".gantt-task-checklist");
+  if (!wrap) return undefined;
+  const next = {} as ProjectTaskChecklist;
+  for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
+    const select = wrap.querySelector<HTMLSelectElement>(
+      `select[data-checklist="${field.key}"]`,
+    );
+    next[field.key] = select ? parseProjectTaskStatus(select.value) : readChecklistValue(root as any, field.key);
+  }
+  return next;
 }
 
 const RESOURCES_ADDITIONAL_PARAMS = {
@@ -2020,6 +2191,12 @@ function ProjectChart() {
 
       if (tabLabel === "MODÜLLER") {
         const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
+        const existingChecklistRow = projectDataRef.current.find(
+          (t: any) => taskGuid && String(t.Id).toLowerCase() === String(taskGuid).toLowerCase(),
+        );
+        if (existingChecklistRow) {
+          hydrateMissingChecklist(row, existingChecklistRow);
+        }
         const moduleList = moduleDataRef.current as GanttModuleOption[];
         if (taskGuid) {
           const cached = taskModuleIdsCacheRef.current.get(String(taskGuid));
@@ -2496,6 +2673,7 @@ function ProjectChart() {
           modules: modulesArray,
           moduleIds: modulesArray.slice(),
           projectStatus: extractProjectStatusFromApiTask(task),
+          ...extractChecklistFromApiTask(task),
           isSubProject: Boolean(task.isSubProject ?? task.IsSubProject),
           subProjectId: String(
             task.ticketSubProjectId ?? task.TicketSubProjectId ?? task.subProjectId ?? "",
@@ -2588,9 +2766,11 @@ function ProjectChart() {
       },
       read: (element: HTMLElement, value?: unknown) => {
         const status = readProjectStatusFromCompositeElement(element);
-        if (status !== undefined) {
-          const rowData = (element as any).__ganttEditRowData;
-          if (rowData) applyProjectStatusToRow(rowData, status);
+        const checklist = readTaskChecklistFromElement(element);
+        const rowData = (element as any).__ganttEditRowData;
+        if (rowData) {
+          if (status !== undefined) applyProjectStatusToRow(rowData, status);
+          if (checklist) applyTaskChecklistToRow(rowData, checklist);
         }
         let raw: string[] = [];
         if (Array.isArray(value)) {
@@ -2858,6 +3038,7 @@ function ProjectChart() {
         ) ?? usersForInsert(pickNonEmptyResources(args)),
         moduleIds: moduleIdsPayload,
         projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? normalizeProjectStatusFromRow(args),
+        ...resolveChecklistForSave(args.taskData ?? args, args),
         isSubProject:
           normalizeIsSubProjectFromRow(args) || Boolean(normalizeSubProjectIdFromRow(args)),
       };
@@ -3182,6 +3363,7 @@ function ProjectChart() {
         moduleIds: moduleIdsPayload,
         projectStatus:
           normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
+        ...resolveChecklistForSave(taskData, existing),
         isSubProject: hasIsSubProjectField(taskData)
           ? normalizeIsSubProjectFromRow(taskData)
           : Boolean(existing?.isSubProject),
@@ -3224,6 +3406,7 @@ function ProjectChart() {
         patch.modules = moduleIdsPayload.slice();
         patch.projectStatus =
           normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null;
+        Object.assign(patch, resolveChecklistForSave(taskData, existing));
         patch.isSubProject = body.isSubProject ?? false;
         // Tam rebind + collapseAll yapma: çok görevde Durum/Modül React şablonları boş kalıyordu.
         commitLocalGanttRowPatch(taskGuid, patch);
@@ -3414,6 +3597,12 @@ function ProjectChart() {
     } else if (args.requestType === "beforeOpenEditDialog") {
       const row = args.rowData;
       const taskGuid = row?.Id ?? row?.taskData?.Id ?? row?.taskData?.id;
+      const existingChecklistRow = projectDataRef.current.find(
+        (t: any) => taskGuid && String(t.Id).toLowerCase() === String(taskGuid).toLowerCase(),
+      );
+      if (existingChecklistRow) {
+        hydrateMissingChecklist(row, existingChecklistRow);
+      }
       await fetchSubProjectsData();
       const pushSubProjects = () =>
         refreshGanttDialogSubProjectEditor(
