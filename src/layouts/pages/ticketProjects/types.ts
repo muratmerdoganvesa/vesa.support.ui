@@ -1,4 +1,5 @@
 import { ProjectTypes } from "api/generated";
+import type { ProjectTaskChecklist } from "./projectTaskChecklist";
 
 export type TicketProjectStatsPersonDto = {
   id: string;
@@ -24,4 +25,6 @@ export type StatsBoardItem = {
   taskId?: number | null;
   kalemName?: string | null;
   projectStatus?: ProjectTypes | null;
+  /** Yalnızca statuslü kalem kartında; o görevin checklist cevapları */
+  taskChecklist?: ProjectTaskChecklist;
 };

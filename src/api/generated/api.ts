@@ -13567,6 +13567,12 @@ export interface ProjectKalemStatisticsDto {
      * @memberof ProjectKalemStatisticsDto
      */
     'createdDate'?: string | null;
+    'systemAccess'?: ProjectTaskStatus;
+    'conceptualApproval'?: ProjectTaskStatus;
+    'uatTestScenarios'?: ProjectTaskStatus;
+    'masterDataTemplate'?: ProjectTaskStatus;
+    'authorization'?: ProjectTaskStatus;
+    'integration'?: ProjectTaskStatus;
 }
 
 
