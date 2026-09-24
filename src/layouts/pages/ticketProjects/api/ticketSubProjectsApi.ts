@@ -67,15 +67,16 @@ export const fetchTicketSubProjectsByProject = async (
   ticketProjectId: string,
   projectSubSupportType?: ProjectSupportTypes | null
 ): Promise<TicketSubProjectDto[]> => {
-  const response = await axiosInstance.get<Record<string, unknown>[]>(
-    `/api/TicketSubProjects/ByProject/${ticketProjectId}`,
-    {
-      params:
-        projectSubSupportType == null
-          ? undefined
-          : { projectSubSupportType },
-    }
-  );
+  const response = projectSubSupportType == null
+    ? await axiosInstance.get<Record<string, unknown>[]>(
+        "/api/TicketSubProjects",
+        { params: { ticketProjectId } },
+      )
+    : await axiosInstance.get<Record<string, unknown>[]>(
+        `/api/TicketSubProjects/ByProject/${ticketProjectId}`,
+        { params: { projectSubSupportType } },
+      );
+
   return (response.data ?? []).map(normalizeTicketSubProject);
 };
 

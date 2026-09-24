@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { ListModuleDto, ProjectSupportTypes, UserAppDto } from "api/generated";
+import { Badge } from "components/ui/badge";
 import { Button } from "components/ui/button";
 import {
   Table,
@@ -36,9 +37,10 @@ import TicketSubProjectDialog, {
   type TicketSubProjectFormValues,
 } from "./TicketSubProjectDialog";
 import {
-  getProjectSupportTypeLabel,
-  matchesProjectSupportType,
-  normalizeProjectSupportType,
+  getProjectSupportTypeBadgeClass,
+  getSubProjectSupportTypeLabel,
+  isAllowedSubProjectSupportType,
+  resolveSubProjectSupportType,
 } from "../projectSupportTypeHelpers";
 import { summarizeSubProjectEffort, type EffortSummary } from "../utils/effortDays";
 
@@ -76,14 +78,14 @@ const TicketSubProjectsSection = ({
   const [editingItem, setEditingItem] = useState<TicketSubProjectDto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TicketSubProjectDto | null>(null);
 
-  const resolvedSupportType = normalizeProjectSupportType(projectSupportType);
+  const defaultSupportType = resolveSubProjectSupportType(projectSupportType);
 
   const handleFetchItems = async () => {
     if (!ticketProjectId) return;
     try {
       dispatchBusy({ isBusy: true });
-      const data = await fetchTicketSubProjectsByProject(ticketProjectId, resolvedSupportType);
-      setItems(data);
+      const data = await fetchTicketSubProjectsByProject(ticketProjectId);
+      setItems(data.filter((item) => isAllowedSubProjectSupportType(item.projectSubSupportType)));
     } catch {
       dispatchAlert({ message: "Alt projeler getirilirken hata oluştu.", type: "Error" });
     } finally {
@@ -96,7 +98,7 @@ const TicketSubProjectsSection = ({
       return;
     }
     handleFetchItems();
-  }, [ticketProjectId, resolvedSupportType]);
+  }, [ticketProjectId]);
 
   useEffect(() => {
     if (!isDraftMode) return;
@@ -112,7 +114,7 @@ const TicketSubProjectsSection = ({
     moduleIds: values.moduleIds,
     modules: modules.filter((mod) => Boolean(mod.id) && values.moduleIds.includes(mod.id as string)),
     effortDuration: values.effortDuration,
-    projectSubSupportType: editingItem?.projectSubSupportType ?? resolvedSupportType,
+    projectSubSupportType: resolveSubProjectSupportType(values.projectSubSupportType),
   });
 
   const handleOpenCreate = () => {
@@ -148,7 +150,7 @@ const TicketSubProjectsSection = ({
       userIds: values.userIds,
       moduleIds: values.moduleIds,
       effortDuration: values.effortDuration,
-      projectSubSupportType: editingItem?.projectSubSupportType ?? resolvedSupportType,
+      projectSubSupportType: resolveSubProjectSupportType(values.projectSubSupportType),
     };
 
     try {
@@ -173,13 +175,8 @@ const TicketSubProjectsSection = ({
   };
 
   const visibleItems = useMemo(
-    () =>
-      isDraftMode
-        ? items.filter((item) =>
-            matchesProjectSupportType(item.projectSubSupportType, resolvedSupportType),
-          )
-        : items,
-    [items, isDraftMode, resolvedSupportType],
+    () => items.filter((item) => isAllowedSubProjectSupportType(item.projectSubSupportType)),
+    [items],
   );
 
   const effortSummary = useMemo(
@@ -229,7 +226,7 @@ const TicketSubProjectsSection = ({
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className="text-sm font-medium leading-none">Alt Projeler</span>
           <span className="text-xs text-muted-foreground" aria-live="polite">
-            {getProjectSupportTypeLabel(resolvedSupportType)} tipi · Toplam efor: {formatEffort(totalEffort)}
+            Toplam efor: {formatEffort(totalEffort)}
           </span>
         </div>
         <Button
@@ -249,6 +246,7 @@ const TicketSubProjectsSection = ({
           <TableHeader>
             <TableRow>
               <TableHead>Ad</TableHead>
+              <TableHead>Tip</TableHead>
               <TableHead>Çalışanlar</TableHead>
               <TableHead>Modüller</TableHead>
               <TableHead className="text-right">Efor (gün)</TableHead>
@@ -258,8 +256,8 @@ const TicketSubProjectsSection = ({
           <TableBody>
             {visibleItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-16 text-center text-muted-foreground">
-                  Henüz {getProjectSupportTypeLabel(resolvedSupportType).toLowerCase()} tipi alt proje yok.
+                <TableCell colSpan={6} className="h-16 text-center text-muted-foreground">
+                  Henüz alt proje yok.
                 </TableCell>
               </TableRow>
             ) : (
@@ -277,6 +275,14 @@ const TicketSubProjectsSection = ({
                   <TableRow key={item.id}>
                     <TableCell className="max-w-40 whitespace-normal font-medium">
                       {item.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={getProjectSupportTypeBadgeClass(item.projectSubSupportType)}
+                      >
+                        {getSubProjectSupportTypeLabel(item.projectSubSupportType)}
+                      </Badge>
                     </TableCell>
                     <TableCell className="max-w-48 whitespace-normal text-muted-foreground">
                       {employeeNames || "-"}
@@ -317,7 +323,7 @@ const TicketSubProjectsSection = ({
           {visibleItems.length > 0 && (
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={3} className="font-medium">
+                <TableCell colSpan={4} className="font-medium">
                   Toplam
                 </TableCell>
                 <TableCell className="text-right tabular-nums font-medium">
@@ -339,6 +345,7 @@ const TicketSubProjectsSection = ({
         editingItem={editingItem}
         modules={modules}
         projectUsers={projectUsers}
+        defaultSupportType={defaultSupportType}
         onSubmit={handleSubmit}
       />
 
