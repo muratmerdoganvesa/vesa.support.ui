@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
 
-import { ListModuleDto, UserAppDto } from "api/generated";
+import { ListModuleDto, ProjectSupportTypes, UserAppDto } from "api/generated";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import {
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
+import { RadioGroup, RadioGroupItem } from "components/ui/radio-group";
 import {
   Command,
   CommandEmpty,
@@ -23,6 +24,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 import { cn } from "lib/utils";
 import type { TicketSubProjectDto } from "../api/ticketSubProjectsApi";
+import {
+  resolveSubProjectSupportType,
+  subProjectSupportTypeOptions,
+} from "../projectSupportTypeHelpers";
 
 type TicketSubProjectFormValues = {
   name: string;
@@ -30,6 +35,7 @@ type TicketSubProjectFormValues = {
   users: UserAppDto[];
   moduleIds: string[];
   effortDuration: number | null;
+  projectSubSupportType: ProjectSupportTypes;
 };
 
 type TicketSubProjectDialogProps = {
@@ -38,18 +44,20 @@ type TicketSubProjectDialogProps = {
   editingItem?: TicketSubProjectDto | null;
   modules: ListModuleDto[];
   projectUsers: UserAppDto[];
+  defaultSupportType?: ProjectSupportTypes | null;
   onSubmit: (values: TicketSubProjectFormValues) => Promise<void>;
 };
 
 const getUserSearchText = (user: UserAppDto) =>
   `${user.firstName ?? ""} ${user.lastName ?? ""} ${user.email ?? ""}`.trim().toLowerCase();
 
-const emptyForm = (): TicketSubProjectFormValues => ({
+const emptyForm = (supportType?: ProjectSupportTypes | null): TicketSubProjectFormValues => ({
   name: "",
   userIds: [],
   users: [],
   moduleIds: [],
   effortDuration: null,
+  projectSubSupportType: resolveSubProjectSupportType(supportType),
 });
 
 const TicketSubProjectDialog = ({
@@ -58,6 +66,7 @@ const TicketSubProjectDialog = ({
   editingItem,
   modules,
   projectUsers = [],
+  defaultSupportType,
   onSubmit,
 }: TicketSubProjectDialogProps) => {
   const isEdit = Boolean(editingItem);
@@ -95,16 +104,17 @@ const TicketSubProjectDialog = ({
         users,
         moduleIds,
         effortDuration: editingItem.effortDuration,
+        projectSubSupportType: resolveSubProjectSupportType(editingItem.projectSubSupportType),
       });
     } else {
-      setValues(emptyForm());
+      setValues(emptyForm(defaultSupportType));
     }
 
     setEmployeesOpen(false);
     setModulesOpen(false);
     setEmployeeSearch("");
     setModuleSearch("");
-  }, [open, editingItem]);
+  }, [open, editingItem, defaultSupportType]);
 
   const employeeOptions = useMemo(() => {
     const byId = new Map<string, UserAppDto>();
@@ -217,6 +227,44 @@ const TicketSubProjectDialog = ({
               onChange={(e) => setValues((prev) => ({ ...prev, name: e.target.value }))}
               aria-label="Alt proje adı"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label id="sub-project-support-type-label">Proje tipi</Label>
+            <RadioGroup
+              value={String(values.projectSubSupportType)}
+              onValueChange={(value) =>
+                setValues((prev) => ({
+                  ...prev,
+                  projectSubSupportType: Number(value) as ProjectSupportTypes,
+                }))
+              }
+              className="flex flex-wrap gap-2"
+              aria-labelledby="sub-project-support-type-label"
+            >
+              {subProjectSupportTypeOptions.map((option) => {
+                const isSelected = values.projectSubSupportType === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    htmlFor={`sub-project-support-type-${option.value}`}
+                    className={cn(
+                      "inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                      isSelected
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-input bg-transparent text-foreground hover:bg-muted/50",
+                    )}
+                  >
+                    <RadioGroupItem
+                      value={String(option.value)}
+                      id={`sub-project-support-type-${option.value}`}
+                      aria-label={option.label}
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </RadioGroup>
           </div>
 
           <div className="space-y-1.5">

@@ -403,8 +403,7 @@ export default function App() {
             <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
             <Route path="/myUserProjects" element={<MyUserProjects />} />
             <Route path="/myUserProjects/chart" element={<ProjectChart />} />
-            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
-            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
+
           </Route> 
 
           {/* <Route path="/mmessages" element={<ChatPage />} /> */}
