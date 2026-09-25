@@ -18,6 +18,11 @@ export const projectSupportTypeOptions = [
   { label: "Destek", value: ProjectSupportTypes.NUMBER_3 },
 ] as const;
 
+export const subProjectSupportTypeOptions = [
+  { label: "Proje", value: ProjectSupportTypes.NUMBER_1 },
+  { label: "Ek kapsam", value: ProjectSupportTypes.NUMBER_2 },
+] as const;
+
 export const normalizeProjectSupportType = (
   value?: ProjectSupportTypes | null,
 ): ProjectSupportTypes => value ?? ProjectSupportTypes.NUMBER_1;
@@ -25,6 +30,26 @@ export const normalizeProjectSupportType = (
 export const getProjectSupportTypeLabel = (value?: ProjectSupportTypes | null): string => {
   const type = normalizeProjectSupportType(value);
   return PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[type] ?? PROJECT_SUPPORT_TYPE_LABEL_BY_VALUE[ProjectSupportTypes.NUMBER_1];
+};
+
+export const getSubProjectSupportTypeLabel = (value?: ProjectSupportTypes | null): string => {
+  const type = normalizeProjectSupportType(value);
+  if (type === ProjectSupportTypes.NUMBER_2) return "Ek kapsam";
+  return getProjectSupportTypeLabel(type);
+};
+
+export const isAllowedSubProjectSupportType = (
+  value?: ProjectSupportTypes | null,
+): boolean => {
+  const type = normalizeProjectSupportType(value);
+  return type === ProjectSupportTypes.NUMBER_1 || type === ProjectSupportTypes.NUMBER_2;
+};
+
+export const resolveSubProjectSupportType = (
+  value?: ProjectSupportTypes | null,
+): ProjectSupportTypes => {
+  const type = normalizeProjectSupportType(value);
+  return isAllowedSubProjectSupportType(type) ? type : ProjectSupportTypes.NUMBER_1;
 };
 
 export const isStandardProjectSupportType = (

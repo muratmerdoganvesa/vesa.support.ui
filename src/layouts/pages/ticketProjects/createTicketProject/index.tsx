@@ -25,7 +25,7 @@ import { useAlert } from "layouts/pages/hooks/useAlert";
 import { projectTypeOptions } from "layouts/pages/ticketProjects/projectTypeHelpers";
 import {
   ProjectSupportType,
-  matchesProjectSupportType,
+  resolveSubProjectSupportType,
   projectSupportTypeOptions,
 } from "layouts/pages/ticketProjects/projectSupportTypeHelpers";
 import TicketSubProjectsSection from "layouts/pages/ticketProjects/components/TicketSubProjectsSection";
@@ -341,21 +341,14 @@ function CreateTicketProject() {
           return;
         }
 
-        const selectedSupportType =
-          projectData.projectSupportType ?? ProjectSupportType.Project;
-
-        const subProjectsToCreate = pendingSubProjects.filter((item) =>
-          matchesProjectSupportType(item.projectSubSupportType, selectedSupportType),
-        );
-
-        for (const item of subProjectsToCreate) {
+        for (const item of pendingSubProjects) {
           await createTicketSubProject({
             ticketProjectId: createdId,
             name: item.name,
             userIds: item.userIds,
             moduleIds: item.moduleIds,
             effortDuration: item.effortDuration,
-            projectSubSupportType: item.projectSubSupportType ?? selectedSupportType,
+            projectSubSupportType: resolveSubProjectSupportType(item.projectSubSupportType),
           });
         }
       }

@@ -384,12 +384,54 @@ select.gantt-module-status-select:hover {
   width: 100% !important;
 }
 
+.gantt-task-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+}
+
+.gantt-task-checklist__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(90deg, #ffffff 0%, #f0fdfa 100%);
+  border: 1px solid #99f6e4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+
+.gantt-task-checklist__label {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: #134e4a;
+}
+
+.gantt-task-checklist__select-wrap {
+  width: 260px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 720px) {
   .gantt-module-status-row {
     flex-direction: column;
   }
 
   .gantt-module-status-row__status {
+    width: 100%;
+  }
+
+  .gantt-task-checklist__row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gantt-task-checklist__select-wrap {
     width: 100%;
   }
 }

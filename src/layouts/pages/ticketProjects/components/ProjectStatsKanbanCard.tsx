@@ -13,6 +13,11 @@ import {
   SIMULATED_PLAN_CARD_COLORS,
   UNASSIGNED_PROJECT_TYPE_KEY,
 } from "layouts/pages/ticketProjects/projectTypeHelpers";
+import {
+  getProjectTaskStatusClass,
+  getProjectTaskStatusLabel,
+  PROJECT_TASK_CHECKLIST_FIELDS,
+} from "layouts/pages/ticketProjects/projectTaskChecklist";
 import type { StatsBoardItem } from "layouts/pages/ticketProjects/types";
 import { Button } from "components/ui/button";
 import { Label } from "components/ui/label";
@@ -261,6 +266,34 @@ const ProjectStatsKanbanCard = ({
                 {stepName}
               </span>
             </div>
+          ) : null}
+
+          {item.kind === "kalem" && item.taskChecklist ? (
+            <dl
+              className="space-y-2.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 dark:border-border dark:bg-muted/40"
+              aria-label="Görev durum soruları"
+            >
+              {PROJECT_TASK_CHECKLIST_FIELDS.map((field) => {
+                const answer = item.taskChecklist?.[field.key] ?? null;
+                return (
+                  <div key={field.key} className="space-y-1">
+                    <dt className="text-[11px] font-bold leading-snug text-slate-900 dark:text-foreground">
+                      {field.label}
+                    </dt>
+                    <dd>
+                      <span
+                        className={cn(
+                          "inline-flex rounded px-1.5 py-0.5 text-[10px] font-semibold",
+                          getProjectTaskStatusClass(answer),
+                        )}
+                      >
+                        {getProjectTaskStatusLabel(answer)}
+                      </span>
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
           ) : null}
 
           {isSimulated && onChangeSimulatedStatus && (

@@ -1,6 +1,7 @@
 import { axiosInstance } from "utils/axiosInstance";
 import type { StatsBoardItem, TicketProjectStatsPersonDto } from "../types";
 import { ProjectTypes } from "api/generated";
+import { readProjectTaskChecklist } from "../projectTaskChecklist";
 
 const normalizePerson = (item: Record<string, unknown>): TicketProjectStatsPersonDto => ({
   id: String(item.id ?? item.Id ?? ""),
@@ -78,6 +79,7 @@ const normalizeStatsItem = (item: Record<string, unknown>): StatsBoardItem | nul
     taskId,
     kalemName: String(item.kalemName ?? item.KalemName ?? ""),
     projectStatus,
+    taskChecklist: readProjectTaskChecklist(item),
   };
 };
 
