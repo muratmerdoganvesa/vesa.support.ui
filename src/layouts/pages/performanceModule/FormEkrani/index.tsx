@@ -5,6 +5,7 @@
   PerformanceFormsApi,
   PerformanceFormStatus,
   QuestionAndAnswerDto,
+  SendPerformanceFormDto,
   UserApi,
   UserAppDto,
 } from "api/generated";
@@ -389,11 +390,14 @@ function PerformanceModule() {
       console.log("deneme", answers);
 
       await apiInstance.apiPerformanceFormAnswersAddAnswersPost(answers);
+      const sendPerformanceForm: SendPerformanceFormDto = {
+        rejectDescription: "",
+        improvementSuggestion,
+      };
       await apiInstance.apiPerformanceFormAnswersSendFormFormIdPut(
         id,
         true,
-        "",
-        improvementSuggestion
+        sendPerformanceForm
       );
 
       dispatchAlert({
