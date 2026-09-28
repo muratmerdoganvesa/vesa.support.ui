@@ -7,6 +7,7 @@
   PerformanceFormsApi,
   PerformanceFormStatus,
   Quarter,
+  SendPerformanceFormDto,
   UserApi,
   UserAppDto,
 } from "api/generated";
@@ -249,10 +250,13 @@ function TeamFormEkrani() {
       dispatchBusy({ isBusy: true });
       let config = getConfiguration();
       let apiInstance = new PerformanceFormAnswersApi(config);
+      const sendPerformanceForm: SendPerformanceFormDto = {
+        rejectDescription: reason,
+      };
       let response = await apiInstance.apiPerformanceFormAnswersSendFormFormIdPut(
         formId,
         false,
-        reason
+        sendPerformanceForm
       );
       console.log("response", response.data);
       dispatchAlert({

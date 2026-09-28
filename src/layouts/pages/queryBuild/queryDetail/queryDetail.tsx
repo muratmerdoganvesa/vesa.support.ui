@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect, useMemo, useRef } from "react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import QueryBuilder, { Field, formatQuery, RuleGroupType } from "react-querybuilder";
@@ -47,6 +47,7 @@ import { RadioGroup, RadioGroupItem } from "components/ui/radio-group";
 import { Separator } from "components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "components/ui/popover";
 
 // Lucide icons
 import {
@@ -86,6 +87,20 @@ type SearchableSelectProps<T> = {
   disabled?: boolean;
 };
 
+const MAX_VISIBLE_OPTIONS = 80;
+
+const readLabel = <T,>(item: T | null | undefined, getLabel: (item: T) => string) => {
+  if (item == null) return "";
+  const label = getLabel(item);
+  return typeof label === "string" ? label : String(label ?? "");
+};
+
+const readId = <T,>(item: T | null | undefined, getId: (item: T) => string) => {
+  if (item == null) return "";
+  const id = getId(item);
+  return id == null ? "" : String(id);
+};
+
 function SearchableSelect<T>({
   options,
   value,
@@ -97,10 +112,27 @@ function SearchableSelect<T>({
 }: SearchableSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const filtered = (options || []).filter((opt) =>
-    getLabel(opt).toLowerCase().includes(search.toLowerCase())
+  const safeOptions = useMemo(
+    () => (Array.isArray(options) ? options.filter((opt) => opt != null) : []),
+    [options]
   );
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return safeOptions;
+    return safeOptions.filter((opt) => readLabel(opt, getLabel).toLowerCase().includes(query));
+  }, [safeOptions, search, getLabel]);
+
+  const visibleOptions = filtered.slice(0, MAX_VISIBLE_OPTIONS);
+  const hiddenCount = filtered.length - visibleOptions.length;
+
+  const handleOpenChange = (next: boolean) => {
+    if (disabled) return;
+    setOpen(next);
+    if (!next) setSearch("");
+  };
 
   const handleSelect = (opt: T) => {
     onChange(opt);
@@ -108,108 +140,118 @@ function SearchableSelect<T>({
     setSearch("");
   };
 
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleClear = (event: React.MouseEvent | React.KeyboardEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
     onChange(null);
     setSearch("");
   };
 
-  return (
-    <div className="relative w-full">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setOpen((prev) => !prev)}
-        className={cn(
-          "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors",
-          "hover:border-sky-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20",
-          disabled && "cursor-not-allowed opacity-50"
-        )}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <span className={cn("truncate text-left", !value && "text-muted-foreground")}>
-          {value ? getLabel(value) : placeholder}
-        </span>
-        <span className="flex items-center gap-1 shrink-0 ml-2">
-          {value && !disabled && (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={handleClear}
-              onKeyDown={(e) => e.key === "Enter" && handleClear(e as any)}
-              className="rounded p-0.5 hover:bg-muted text-muted-foreground"
-              aria-label="Clear selection"
-            >
-              <X className="size-3" />
-            </span>
-          )}
-          <ChevronRight
-            className={cn(
-              "size-4 text-muted-foreground transition-transform duration-200",
-              open && "rotate-90"
-            )}
-          />
-        </span>
-      </button>
+  const selectedLabel = value ? readLabel(value, getLabel) : "";
+  const selectedId = value ? readId(value, getId) : "";
 
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
-              setOpen(false);
-              setSearch("");
-            }}
-          />
-          <div className="absolute z-50 mt-1 w-full min-w-[180px] rounded-lg border bg-popover shadow-lg ring-1 ring-foreground/10 overflow-hidden">
-            <div className="p-1.5 border-b bg-muted/20">
-              <div className="flex items-center gap-1.5 px-2 h-7 bg-background rounded border border-input/40">
-                <Search className="size-3.5 text-muted-foreground shrink-0" />
-                <input
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Ara..."
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            </div>
-            <div className="max-h-52 overflow-y-auto p-1">
-              {filtered.length === 0 ? (
-                <p className="py-3 text-center text-sm text-muted-foreground">
-                  Sonuç bulunamadı
-                </p>
-              ) : (
-                filtered.map((opt) => {
-                  const isSelected = value !== null && getId(value) === getId(opt);
-                  return (
-                    <button
-                      key={getId(opt)}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left hover:bg-accent transition-colors",
-                        isSelected && "bg-accent/60 font-medium"
-                      )}
-                      onClick={() => handleSelect(opt)}
-                    >
-                      <CheckCircle
-                        className={cn(
-                          "size-3.5 shrink-0 transition-opacity",
-                          isSelected ? "opacity-100 text-primary" : "opacity-0"
-                        )}
-                      />
-                      <span>{getLabel(opt)}</span>
-                    </button>
-                  );
-                })
+  return (
+    <Popover open={open && !disabled} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm transition-colors",
+            "hover:border-sky-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20",
+            disabled && "cursor-not-allowed opacity-50"
+          )}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span className={cn("truncate text-left", !value && "text-muted-foreground")}>
+            {selectedLabel || placeholder}
+          </span>
+          <span className="flex items-center gap-1 shrink-0 ml-2">
+            {value && !disabled && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={handleClear}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") handleClear(event);
+                }}
+                className="rounded p-0.5 hover:bg-muted text-muted-foreground"
+                aria-label="Seçimi temizle"
+              >
+                <X className="size-3" />
+              </span>
+            )}
+            <ChevronRight
+              className={cn(
+                "size-4 text-muted-foreground transition-transform duration-200",
+                open && "rotate-90"
               )}
-            </div>
+            />
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="min-w-[220px] p-0"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          searchRef.current?.focus();
+        }}
+      >
+        <div className="p-1.5 border-b bg-muted/20">
+          <div className="flex items-center gap-1.5 px-2 h-7 bg-background rounded border border-input/40">
+            <Search className="size-3.5 text-muted-foreground shrink-0" />
+            <input
+              ref={searchRef}
+              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Ara..."
+              aria-label="Kişi ara"
+            />
           </div>
-        </>
-      )}
-    </div>
+        </div>
+        <div className="max-h-52 overflow-y-auto p-1" role="listbox">
+          {visibleOptions.length === 0 ? (
+            <p className="py-3 text-center text-sm text-muted-foreground">Sonuç bulunamadı</p>
+          ) : (
+            visibleOptions.map((opt, index) => {
+              const optionId = readId(opt, getId);
+              const optionLabel = readLabel(opt, getLabel);
+              const isSelected = selectedId !== "" && selectedId === optionId;
+              return (
+                <button
+                  key={`${optionId || "option"}-${index}`}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left hover:bg-accent transition-colors",
+                    isSelected && "bg-accent/60 font-medium"
+                  )}
+                  onClick={() => handleSelect(opt)}
+                >
+                  <CheckCircle
+                    className={cn(
+                      "size-3.5 shrink-0 transition-opacity",
+                      isSelected ? "opacity-100 text-primary" : "opacity-0"
+                    )}
+                  />
+                  <span className="truncate">{optionLabel || "İsimsiz kullanıcı"}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+        {hiddenCount > 0 && (
+          <p className="border-t px-2 py-1.5 text-center text-xs text-muted-foreground">
+            {hiddenCount} kayıt daha var. Arayarak daraltın.
+          </p>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -519,24 +561,24 @@ function QueryDetail() {
           setSelectedActionWorkFlow(
             actionWorkFlows.find((workflow) => workflow.id === response.data.workflowId)
           );
-          if (
-            response.data.assignedTeamId &&
-            response.data.assignedUserId === "00000000-0000-0000-0000-000000000000"
-          ) {
-            setUserOrTeam("team");
-            setSelectedActionTeam(
-              actionTeams.find((team) => team.id === response.data.assignedTeamId)
-            );
-          }
-          if (
-            response.data.assignedUserId &&
-            response.data.assignedTeamId === "00000000-0000-0000-0000-000000000000"
-          ) {
-            setUserOrTeam("user");
-            setSelectedActionUser(
-              actionUsers.find((user) => user.id === response.data.assignedUserId)
-            );
-          }
+
+          const emptyId = "00000000-0000-0000-0000-000000000000";
+          const assignedTeamId = response.data.assignedTeamId;
+          const assignedUserId = response.data.assignedUserId;
+          const hasTeam = Boolean(assignedTeamId) && assignedTeamId !== emptyId;
+          const hasUser = Boolean(assignedUserId) && assignedUserId !== emptyId;
+          const team = hasTeam
+            ? actionTeams.find((item) => item.id === assignedTeamId) ?? null
+            : null;
+          const user = hasUser
+            ? actionUsers.find((item) => item.id === assignedUserId) ?? null
+            : null;
+
+          setSelectedActionTeam(team);
+          setSelectedActionUser(user);
+          if (team && !user) setUserOrTeam("team");
+          else if (user && !team) setUserOrTeam("user");
+          else setUserOrTeam("");
         } catch (error) {
           dispatchAlert({
             message: "Error fetching query data",
