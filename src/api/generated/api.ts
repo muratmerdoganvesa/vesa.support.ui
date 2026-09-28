@@ -831,6 +831,25 @@ export interface AnswerDto {
 /**
  * 
  * @export
+ * @interface SendPerformanceFormDto
+ */
+export interface SendPerformanceFormDto {
+    /**
+     * 
+     * @type {string}
+     * @memberof SendPerformanceFormDto
+     */
+    'rejectDescription'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof SendPerformanceFormDto
+     */
+    'improvementSuggestion'?: string | null;
+}
+/**
+ * 
+ * @export
  * @enum {number}
  */
 
@@ -45202,12 +45221,11 @@ export const PerformanceFormAnswersApiAxiosParamCreator = function (configuratio
          * 
          * @param {string} formId 
          * @param {boolean} [isApproved] 
-         * @param {string} [rejectDescription] 
-         * @param {string} [improvementSuggestion] 
+         * @param {SendPerformanceFormDto} [sendPerformanceFormDto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiPerformanceFormAnswersSendFormFormIdPut: async (formId: string, isApproved?: boolean, rejectDescription?: string, improvementSuggestion?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiPerformanceFormAnswersSendFormFormIdPut: async (formId: string, isApproved?: boolean, sendPerformanceFormDto?: SendPerformanceFormDto, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'formId' is not null or undefined
             assertParamExists('apiPerformanceFormAnswersSendFormFormIdPut', 'formId', formId)
             const localVarPath = `/api/PerformanceFormAnswers/SendForm/{formId}`
@@ -45231,19 +45249,12 @@ export const PerformanceFormAnswersApiAxiosParamCreator = function (configuratio
                 localVarQueryParameter['isApproved'] = isApproved;
             }
 
-            if (rejectDescription !== undefined) {
-                localVarQueryParameter['rejectDescription'] = rejectDescription;
-            }
+            localVarHeaderParameter['Content-Type'] = 'application/json';
 
-            if (improvementSuggestion !== undefined) {
-                localVarQueryParameter['improvementSuggestion'] = improvementSuggestion;
-            }
-
-
-    
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(sendPerformanceFormDto, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -45289,13 +45300,12 @@ export const PerformanceFormAnswersApiFp = function(configuration?: Configuratio
          * 
          * @param {string} formId 
          * @param {boolean} [isApproved] 
-         * @param {string} [rejectDescription] 
-         * @param {string} [improvementSuggestion] 
+         * @param {SendPerformanceFormDto} [sendPerformanceFormDto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiPerformanceFormAnswersSendFormFormIdPut(formId: string, isApproved?: boolean, rejectDescription?: string, improvementSuggestion?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiPerformanceFormAnswersSendFormFormIdPut(formId, isApproved, rejectDescription, improvementSuggestion, options);
+        async apiPerformanceFormAnswersSendFormFormIdPut(formId: string, isApproved?: boolean, sendPerformanceFormDto?: SendPerformanceFormDto, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiPerformanceFormAnswersSendFormFormIdPut(formId, isApproved, sendPerformanceFormDto, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PerformanceFormAnswersApi.apiPerformanceFormAnswersSendFormFormIdPut']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -45333,13 +45343,12 @@ export const PerformanceFormAnswersApiFactory = function (configuration?: Config
          * 
          * @param {string} formId 
          * @param {boolean} [isApproved] 
-         * @param {string} [rejectDescription] 
-         * @param {string} [improvementSuggestion] 
+         * @param {SendPerformanceFormDto} [sendPerformanceFormDto] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiPerformanceFormAnswersSendFormFormIdPut(formId: string, isApproved?: boolean, rejectDescription?: string, improvementSuggestion?: string, options?: RawAxiosRequestConfig): AxiosPromise<void> {
-            return localVarFp.apiPerformanceFormAnswersSendFormFormIdPut(formId, isApproved, rejectDescription, improvementSuggestion, options).then((request) => request(axios, basePath));
+        apiPerformanceFormAnswersSendFormFormIdPut(formId: string, isApproved?: boolean, sendPerformanceFormDto?: SendPerformanceFormDto, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.apiPerformanceFormAnswersSendFormFormIdPut(formId, isApproved, sendPerformanceFormDto, options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -45378,14 +45387,13 @@ export class PerformanceFormAnswersApi extends BaseAPI {
      * 
      * @param {string} formId 
      * @param {boolean} [isApproved] 
-     * @param {string} [rejectDescription] 
-     * @param {string} [improvementSuggestion] 
+     * @param {SendPerformanceFormDto} [sendPerformanceFormDto] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      * @memberof PerformanceFormAnswersApi
      */
-    public apiPerformanceFormAnswersSendFormFormIdPut(formId: string, isApproved?: boolean, rejectDescription?: string, improvementSuggestion?: string, options?: RawAxiosRequestConfig) {
-        return PerformanceFormAnswersApiFp(this.configuration).apiPerformanceFormAnswersSendFormFormIdPut(formId, isApproved, rejectDescription, improvementSuggestion, options).then((request) => request(this.axios, this.basePath));
+    public apiPerformanceFormAnswersSendFormFormIdPut(formId: string, isApproved?: boolean, sendPerformanceFormDto?: SendPerformanceFormDto, options?: RawAxiosRequestConfig) {
+        return PerformanceFormAnswersApiFp(this.configuration).apiPerformanceFormAnswersSendFormFormIdPut(formId, isApproved, sendPerformanceFormDto, options).then((request) => request(this.axios, this.basePath));
     }
 }
 
