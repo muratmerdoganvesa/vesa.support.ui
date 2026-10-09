@@ -157,7 +157,7 @@ function ApproveList() {
   const customerFilterRef = useRef("");
   const ticketNumberFilterRef = useRef("");
   const skipNextFilterFetchRef = useRef(true);
-  const filterDebounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const filterDebounceTimeoutRef = useRef<number | null>(null);
 
   // ── Pagination ──────────────────────────────────────────────────────────────
 
@@ -216,7 +216,10 @@ function ApproveList() {
   ) {
     if (status == 0) {
       setstatusText("Bekleyenler");
-    } else if (status == 1) {
+    } else {
+      setSelectedRows([]);
+    }
+    if (status == 1) {
       setstatusText("Onaylananlar");
     } else if (status == 2) {
       setstatusText("Reddedilenler");
@@ -718,7 +721,9 @@ function ApproveList() {
 
   // ── Table columns ─────────────────────────────────────────────────────────────
 
+  const canSelectRows = selectedStatus === ApproverStatus.NUMBER_0;
   const showNoteColumn = selectedStatus === 1 || selectedStatus === 2;
+  const tableColumnCount = 10 + (canSelectRows ? 1 : 0) + (showNoteColumn ? 1 : 0);
 
   // ── Pagination helper ─────────────────────────────────────────────────────────
 
@@ -952,8 +957,8 @@ function ApproveList() {
                   )}
                 </div>
 
-                {/* Bulk action buttons (shown when rows selected) */}
-                {selectedRows.length > 0 && (
+                {/* Bulk action buttons — only on Bekleyenler */}
+                {canSelectRows && selectedRows.length > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500 mr-1">
                       {selectedRows.length} seçili
@@ -983,16 +988,17 @@ function ApproveList() {
                 <table className="min-w-max mx-auto border-collapse text-left text-sm">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-200">
-                      {/* Checkbox */}
-                      <th className="w-10 px-3 py-3 align-middle">
-                        <input
-                          type="checkbox"
-                          checked={gridData.length > 0 && selectedRows.length === gridData.length}
-                          onChange={toggleSelectAll}
-                          className="w-3.5 h-3.5 rounded border-slate-300 accent-violet-600 cursor-pointer"
-                          aria-label="Tümünü seç"
-                        />
-                      </th>
+                      {canSelectRows && (
+                        <th className="w-10 px-3 py-3 align-middle">
+                          <input
+                            type="checkbox"
+                            checked={gridData.length > 0 && selectedRows.length === gridData.length}
+                            onChange={toggleSelectAll}
+                            className="w-3.5 h-3.5 rounded border-slate-300 accent-violet-600 cursor-pointer"
+                            aria-label="Tümünü seç"
+                          />
+                        </th>
+                      )}
                       <th className="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap align-middle">
                         İşlemler
                       </th>
@@ -1053,7 +1059,7 @@ function ApproveList() {
                     {gridData.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={showNoteColumn ? 12 : 11}
+                          colSpan={tableColumnCount}
                           className="px-5 py-14 text-center"
                         >
                           <div className="flex flex-col items-center gap-3">
@@ -1112,21 +1118,22 @@ function ApproveList() {
                               rowSelected ? "bg-violet-50/40" : "hover:bg-slate-50/60"
                             )}
                           >
-                            {/* Checkbox */}
-                            <td className="w-10 px-3 py-3 align-middle">
-                              <input
-                                type="checkbox"
-                                checked={rowSelected}
-                                onChange={() => toggleRowSelection(row)}
-                                className="w-3.5 h-3.5 rounded border-slate-300 accent-violet-600 cursor-pointer"
-                                aria-label="Satırı seç"
-                              />
-                            </td>
+                            {canSelectRows && (
+                              <td className="w-10 px-3 py-3 align-middle">
+                                <input
+                                  type="checkbox"
+                                  checked={rowSelected}
+                                  onChange={() => toggleRowSelection(row)}
+                                  className="w-3.5 h-3.5 rounded border-slate-300 accent-violet-600 cursor-pointer"
+                                  aria-label="Satırı seç"
+                                />
+                              </td>
+                            )}
 
                             {/* Actions */}
                             <td className="px-3 py-3 align-middle whitespace-nowrap">
                               <div className="flex items-center gap-1">
-                                {statusText === "Bekleyenler" && (
+                                {canSelectRows && (
                                   <>
                                     <button
                                       type="button"

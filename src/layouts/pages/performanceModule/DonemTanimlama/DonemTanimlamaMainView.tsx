@@ -1,12 +1,10 @@
 ﻿import {
-  PerformanceCycleQuestionsApi,
   PerformanceCyclesApi,
   PerformanceCyclesListDto,
-  PerformanceQuestionDto,
-  PerformanceQuestionListDto,
   QuestionCycleListInsertDto,
 } from "api/generated";
 import getConfiguration from "confiuration";
+import { axiosInstance } from "utils/axiosInstance";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import MessageBox from "layouts/pages/Components/MessageBox";
@@ -27,7 +25,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ensureSyncfusionLicense } from "utils/syncfusionInit";
 import {
   Table,
@@ -54,12 +52,57 @@ ensureSyncfusionLicense();
 
 const ROWS_PER_PAGE = 15;
 
+interface CycleQuestionItem {
+  id?: string;
+  questionText?: string | null;
+}
+
+const normalizeQuestionList = (body: unknown): CycleQuestionItem[] => {
+  if (Array.isArray(body)) return body as CycleQuestionItem[];
+  if (!body || typeof body !== "object") return [];
+  const record = body as Record<string, unknown>;
+  const payload = record.data ?? record.Data;
+  if (Array.isArray(payload)) return payload as CycleQuestionItem[];
+  return [];
+};
+
+const readErrorMessage = (error: unknown, fallback: string) => {
+  const axiosError = error as {
+    message?: string;
+    response?: { status?: number; data?: unknown };
+  };
+  const data = axiosError.response?.data;
+
+  if (typeof data === "string" && data.trim()) {
+    const text = data.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (text) return text.slice(0, 240);
+  }
+
+  if (data && typeof data === "object") {
+    const record = data as Record<string, unknown>;
+    const errors = record.errors ?? record.Errors;
+    if (Array.isArray(errors) && errors.length > 0) return errors.map(String).join(" ");
+    if (typeof errors === "string" && errors.trim()) return errors;
+    if (typeof record.message === "string") return record.message;
+    if (typeof record.Message === "string") return record.Message;
+    if (typeof record.title === "string") return record.title;
+  }
+
+  if (axiosError.message) return axiosError.message;
+  return fallback;
+};
+
+const uniqueQuestionIds = (questions: CycleQuestionItem[]) =>
+  Array.from(
+    new Set(questions.map((question) => question.id).filter((id): id is string => Boolean(id)))
+  );
+
 // ─── MultiSelect ──────────────────────────────────────────────────────────────
 
 interface MultiSelectProps {
-  options: PerformanceQuestionDto[];
-  value: PerformanceQuestionDto[];
-  onChange: (value: PerformanceQuestionDto[]) => void;
+  options: CycleQuestionItem[];
+  value: CycleQuestionItem[];
+  onChange: (value: CycleQuestionItem[]) => void;
   label: string;
   placeholder?: string;
 }
@@ -87,7 +130,8 @@ const MultiSelect = ({ options, value, onChange, label, placeholder }: MultiSele
     [options, search]
   );
 
-  const toggle = (option: PerformanceQuestionDto) => {
+  const toggle = (option: CycleQuestionItem) => {
+    if (!option.id) return;
     const exists = value.some((v) => v.id === option.id);
     onChange(exists ? value.filter((v) => v.id !== option.id) : [...value, option]);
   };
@@ -100,11 +144,18 @@ const MultiSelect = ({ options, value, onChange, label, placeholder }: MultiSele
         {label}
       </label>
 
-      {/* Trigger */}
-      <button
-        type="button"
+      {/* Trigger is a div so the chip remove buttons stay clickable */}
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((o) => !o)}
-        className="w-full min-h-[38px] flex flex-wrap items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-left text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
+        className="w-full min-h-[38px] flex flex-wrap items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg bg-white text-left text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all cursor-pointer"
       >
         {value.length === 0 ? (
           <span className="text-slate-400 text-xs">{placeholder ?? "Seçiniz..."}</span>
@@ -117,7 +168,10 @@ const MultiSelect = ({ options, value, onChange, label, placeholder }: MultiSele
               {v.questionText?.slice(0, 40)}{(v.questionText?.length ?? 0) > 40 ? "…" : ""}
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); remove(v.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (v.id) remove(v.id);
+                }}
                 className="hover:text-blue-900 transition-colors"
                 aria-label="Kaldır"
               >
@@ -127,7 +181,7 @@ const MultiSelect = ({ options, value, onChange, label, placeholder }: MultiSele
           ))
         )}
         <ChevronDown className={cn("w-3.5 h-3.5 text-slate-400 ml-auto shrink-0 transition-transform", open && "rotate-180")} />
-      </button>
+      </div>
 
       {/* Dropdown */}
       {open && (
@@ -199,6 +253,7 @@ const MultiSelect = ({ options, value, onChange, label, placeholder }: MultiSele
 
 function DonemTanimlamaMainView() {
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatchAlert = useAlert();
   const { userAppDto } = useUser();
   const { t } = useTranslation();
@@ -208,11 +263,10 @@ function DonemTanimlamaMainView() {
   const [isTeamLeader, setIsTeamLeader] = useState<boolean>(false);
   const [selectedId, setSelectedId] = useState<string>("");
   const [openDialog, setOpenDialog] = useState(false);
-  const [questionData, setQuestionData] = useState<PerformanceQuestionListDto[]>([]);
-  const [addedQuestions, setAddedQuestions] = useState<PerformanceQuestionDto[]>([]);
-  const [selectedQuestions, setSelectedQuestions] = useState<PerformanceQuestionDto[]>([]);
-  const [selectedQuestions2, setSelectedQuestions2] = useState<PerformanceQuestionDto[]>([]);
-  const [isInsert, setIsInsert] = useState<boolean | null>(null);
+  const [availableQuestions, setAvailableQuestions] = useState<CycleQuestionItem[]>([]);
+  const [questionsToAdd, setQuestionsToAdd] = useState<CycleQuestionItem[]>([]);
+  const [assignedQuestions, setAssignedQuestions] = useState<CycleQuestionItem[]>([]);
+  const loadRequestId = useRef(0);
 
   // Table search + pagination
   const [tableSearch, setTableSearch] = useState("");
@@ -220,86 +274,88 @@ function DonemTanimlamaMainView() {
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
-  const fetchQuestions = async () => {
+  const loadCycleQuestions = async (cycleId: string, teamLeader: boolean) => {
+    const requestId = ++loadRequestId.current;
     try {
       dispatchBusy({ isBusy: true });
-      let config = getConfiguration();
-      let apiInstance = new PerformanceCycleQuestionsApi(config);
-      console.log(isTeamLeader);
 
-      let response =
-        await apiInstance.apiPerformanceCycleQuestionsGetCyclePassiveQuestionListCycleIdIsTeamLeaderGet(
-          selectedId,
-          isTeamLeader
-        );
-      console.log("Bu Döneme Ait Seçilmemiş Sorular : ", response.data);
-      setQuestionData(response.data);
+      const [allResponse, passiveResponse] = await Promise.all([
+        axiosInstance.get("/api/PerformanceQuestions/QuestionList"),
+        axiosInstance.get(
+          `/api/PerformanceCycleQuestions/GetCyclepassiveQuestionList/${cycleId}/${teamLeader}`
+        ),
+      ]);
 
-      let response2 =
-        await apiInstance.apiPerformanceCycleQuestionsGetCycleQuestionsCycleIdIsTeamLeaderGet(
-          selectedId,
-          isTeamLeader
-        );
-      console.log("Bu Döneme Ait Hali Hazırda Atanmış Sorular : ", response2.data);
+      if (requestId !== loadRequestId.current) return;
 
-      if (!response2.data.errors || response2.data.errors === null) {
-        console.log("şuan update true");
-        setSelectedQuestions(response2.data.data.questions ?? []);
-        setSelectedQuestions2(response2.data.data.questions ?? []);
-        setIsInsert(false);
-      } else if (
-        response2.data.errors &&
-        response2.data.errors[0] === "Dönem bulunamadı."
-      ) {
-        console.log("şuan insert true");
-        setSelectedQuestions([]);
-        setIsInsert(true);
-      } else {
-        setSelectedQuestions([]);
-        setIsInsert(true);
-      }
-    } catch (e) {
-      console.log("e", e);
-      dispatchAlert({ message: "hata burada mı", type: "Error" });
+      const allQuestions = normalizeQuestionList(allResponse.data);
+      const available = normalizeQuestionList(passiveResponse.data);
+      const availableIds = new Set(available.map((question) => question.id).filter(Boolean));
+      const assigned = allQuestions.filter(
+        (question) => question.id && !availableIds.has(question.id)
+      );
+
+      setAssignedQuestions(assigned);
+      setAvailableQuestions(available);
+      setQuestionsToAdd([]);
+    } catch (error) {
+      if (requestId !== loadRequestId.current) return;
+      setAvailableQuestions([]);
+      setAssignedQuestions([]);
+      setQuestionsToAdd([]);
+      dispatchAlert({
+        message: readErrorMessage(error, "Dönem soruları yüklenemedi"),
+        type: "Error",
+      });
     } finally {
-      dispatchBusy({ isBusy: false });
+      if (requestId === loadRequestId.current) {
+        dispatchBusy({ isBusy: false });
+      }
     }
   };
 
   useEffect(() => {
-    if (!selectedId) return;
-    fetchQuestions();
-  }, [isTeamLeader]);
+    if (!openDialog || !selectedId) return;
+    loadCycleQuestions(selectedId, isTeamLeader);
+  }, [openDialog, selectedId, isTeamLeader]);
 
-  useEffect(() => {
-    if (openDialog) {
-      fetchQuestions();
-    }
-  }, [openDialog]);
-
-  useEffect(() => {
-    console.log("selected", selectedQuestions);
-    console.log("selecte12d", addedQuestions);
-    console.log("33", selectedQuestions2);
-  }, [selectedQuestions, addedQuestions, selectedQuestions2]);
+  const handleRemoveAssigned = (question: CycleQuestionItem) => {
+    if (!question.id) return;
+    setAssignedQuestions((current) => current.filter((item) => item.id !== question.id));
+    setAvailableQuestions((current) =>
+      current.some((item) => item.id === question.id) ? current : [...current, question]
+    );
+    setQuestionsToAdd((current) => current.filter((item) => item.id !== question.id));
+  };
 
   const handleAddQuestions = async () => {
+    if (!selectedId) return;
+
+    const payload: QuestionCycleListInsertDto = {
+      performanceCycleId: selectedId,
+      isTeamLeader,
+      performanceQuestionIds: uniqueQuestionIds([...assignedQuestions, ...questionsToAdd]),
+    };
+
     try {
       dispatchBusy({ isBusy: true });
-      let config = getConfiguration();
-      let apiInstance = new PerformanceCycleQuestionsApi(config);
-      let mergedArray: PerformanceQuestionDto[] = [...selectedQuestions2, ...addedQuestions];
-      console.log("mergedArray", mergedArray);
-
-      let payload: QuestionCycleListInsertDto = {
-        performanceCycleId: selectedId,
-        isTeamLeader,
-        performanceQuestionIds: mergedArray.map((v) => v.id),
-      };
-      await apiInstance.apiPerformanceCycleQuestionsCycleQuestionCreatePost(payload);
+      await axiosInstance.post("/api/PerformanceCycleQuestions/CycleQuestionCreate", payload);
+      dispatchAlert({
+        message: isTeamLeader
+          ? "Takım lideri soruları kaydedildi"
+          : "Dönem soruları kaydedildi",
+        type: "Success",
+      });
       setOpenDialog(false);
+      setQuestionsToAdd([]);
+      setAssignedQuestions([]);
+      setAvailableQuestions([]);
+      setIsTeamLeader(false);
     } catch (error) {
-      dispatchAlert({ message: "hata", type: "Error" });
+      dispatchAlert({
+        message: readErrorMessage(error, "Sorular kaydedilemedi"),
+        type: "Error",
+      });
     } finally {
       dispatchBusy({ isBusy: false });
     }
@@ -322,7 +378,7 @@ function DonemTanimlamaMainView() {
 
   useEffect(() => {
     fetchDonems();
-  }, []);
+  }, [location.key]);
 
   const handleOpenQuestionBox = (id: string) => {
     setSelectedId(id);
@@ -355,15 +411,30 @@ function DonemTanimlamaMainView() {
   };
 
   const handleOpenDialog = (id: string) => {
+    loadRequestId.current += 1;
+    setQuestionsToAdd([]);
+    setAssignedQuestions([]);
+    setAvailableQuestions([]);
+    setIsTeamLeader(false);
     setSelectedId(id);
     setOpenDialog(true);
   };
 
   const handleCloseDialog = () => {
-    setSelectedQuestions([]);
-    setAddedQuestions([]);
-    setIsInsert(null);
+    loadRequestId.current += 1;
+    setQuestionsToAdd([]);
+    setAssignedQuestions([]);
+    setAvailableQuestions([]);
+    setIsTeamLeader(false);
     setOpenDialog(false);
+  };
+
+  const handleTeamLeaderChange = (nextValue: boolean) => {
+    if (nextValue === isTeamLeader) return;
+    setQuestionsToAdd([]);
+    setAssignedQuestions([]);
+    setAvailableQuestions([]);
+    setIsTeamLeader(nextValue);
   };
 
   // ── Search + Pagination ────────────────────────────────────────────────────
@@ -650,7 +721,7 @@ function DonemTanimlamaMainView() {
 
       {/* ── Question assignment dialog ── */}
       <Dialog open={openDialog} onOpenChange={(o) => !o && handleCloseDialog()}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold text-slate-800">
               Dönem — Soru Atama
@@ -659,23 +730,27 @@ function DonemTanimlamaMainView() {
 
           <div className="space-y-5 py-2">
             {/* Team leader toggle */}
-            <label className="flex items-center gap-3 cursor-pointer select-none group">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-700">Takım Lideri mi?</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Açıkken takım lideri soruları, kapalıyken çalışan soruları düzenlenir. Kaydet yalnızca bu listeyi günceller.
+                </p>
+              </div>
               <div
-                onClick={() => {
-                  setIsTeamLeader((v) => !v);
-                  fetchQuestions();
-                }}
+                onClick={() => handleTeamLeaderChange(!isTeamLeader)}
                 className={cn(
                   "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none cursor-pointer",
                   isTeamLeader ? "bg-teal-600" : "bg-slate-200"
                 )}
                 role="switch"
                 aria-checked={isTeamLeader}
+                aria-label="Takım lideri soruları"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === " " || e.key === "Enter") {
-                    setIsTeamLeader((v) => !v);
-                    fetchQuestions();
+                    e.preventDefault();
+                    handleTeamLeaderChange(!isTeamLeader);
                   }
                 }}
               >
@@ -686,26 +761,45 @@ function DonemTanimlamaMainView() {
                   )}
                 />
               </div>
-              <span className="text-sm font-medium text-slate-700">Takım Lideri mi?</span>
-            </label>
+            </div>
 
-            {/* Added questions multi-select */}
             <MultiSelect
-              options={questionData}
-              value={addedQuestions}
-              onChange={setAddedQuestions}
+              options={availableQuestions}
+              value={questionsToAdd}
+              onChange={setQuestionsToAdd}
               label="Eklenecek Sorular"
               placeholder="Soru seçiniz..."
             />
 
-            {/* Already assigned questions multi-select */}
-            <MultiSelect
-              options={selectedQuestions}
-              value={selectedQuestions2}
-              onChange={setSelectedQuestions2}
-              label="Bu Döneme Ait Sorular"
-              placeholder="Soru seçiniz..."
-            />
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  {isTeamLeader ? "Takım liderine ait sorular" : "Bu döneme ait sorular"}
+                </label>
+                <span className="text-xs text-slate-400">{assignedQuestions.length} soru</span>
+              </div>
+              {assignedQuestions.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-xs text-slate-400 text-center">
+                  Bu listeye henüz soru eklenmedi
+                </div>
+              ) : (
+                <ul className="max-h-52 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+                  {assignedQuestions.map((question) => (
+                    <li key={question.id} className="flex items-center gap-2 px-3 py-2">
+                      <span className="flex-1 text-xs text-slate-700">{question.questionText}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAssigned(question)}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        aria-label="Soruyu çıkar"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           <DialogFooter className="gap-2 pt-2">

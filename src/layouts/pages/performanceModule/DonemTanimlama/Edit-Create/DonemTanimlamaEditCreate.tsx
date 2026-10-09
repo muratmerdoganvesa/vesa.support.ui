@@ -4,6 +4,7 @@ import { PerformanceCyclesApi, PerformanceCyclesListDto, Quarter } from "api/gen
 import getConfiguration from "confiuration";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
+import { useAlert } from "layouts/pages/hooks/useAlert";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -55,6 +56,7 @@ function DonemTanimlamaEditCreate() {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatchBusy = useBusy();
+  const dispatchAlert = useAlert();
 
   const [donemForm, setDonemForm] = useState<PerformanceCyclesListDto>({
     id: "",
@@ -93,13 +95,20 @@ function DonemTanimlamaEditCreate() {
       let config = getConfiguration();
       let apiInstance = new PerformanceCyclesApi(config);
       if (donemForm.id) {
-        apiInstance.apiPerformanceCyclesUpdatePerformanceCyclePut(donemForm);
+        await apiInstance.apiPerformanceCyclesUpdatePerformanceCyclePut(donemForm);
       } else {
-        let createForm: Omit<PerformanceCyclesListDto, "id" | "createdDate"> = donemForm;
-        apiInstance.apiPerformanceCyclesPerformanceCycleInsertPost(createForm);
+        await apiInstance.apiPerformanceCyclesPerformanceCycleInsertPost({
+          year: donemForm.year,
+          quarterNumber: donemForm.quarterNumber,
+          name: donemForm.name,
+          startDate: donemForm.startDate,
+          endDate: donemForm.endDate,
+          status: donemForm.status,
+        });
       }
       navigate("/donemTanimlama");
     } catch (e) {
+      dispatchAlert({ message: "Dönem kaydedilemedi", type: "Error" });
     } finally {
       dispatchBusy({ isBusy: false });
     }
