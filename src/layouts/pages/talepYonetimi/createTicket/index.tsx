@@ -837,7 +837,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
     const api = new TicketApi(conf);
     const data = await api.apiTicketTicketStatusGet();
     const statData = data.data as any;
-    setStatusData(statData.filter((item: any) => item.id !== 2 && item.id !== 1));
+    setStatusData(statData.filter((item: any) => item.id !== 2 && item.id !== 1 && item.id !== 12));
     dispatchBusy({ isBusy: false });
   };
 
@@ -1411,6 +1411,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const statusComboboxOptions = useMemo((): ComboboxOption[] => {
     const base = toOpts(statusData, "id", "description");
     if (!selectedStatus) return base;
+    // Onay Sürecinde (12) listede gösterilmez
+    if (Number(selectedStatus.id) === 12) return base;
     const idStr = String(selectedStatus.id);
     if (base.some((o) => o.value === idStr)) return base;
     const fallbackLabel = selectedStatus.description ?? selectedStatus.name ?? idStr;
