@@ -1,7 +1,7 @@
 ﻿import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "components/ui/tooltip";
+import { Popover, PopoverAnchor, PopoverContent } from "components/ui/popover";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "components/ui/tabs";
 import {
   Table,
@@ -35,6 +36,7 @@ import {
   Search,
   Pencil,
   Eye,
+  Zap,
   BarChart2,
   LayoutList,
   ChevronLeft,
@@ -57,6 +59,7 @@ import FilterTableMethod from "../components";
 import HistoryDialog from "components/HistoryDialog/HistoryDialog";
 import ShowHistory from "layouts/pages/WorkFlow/ShowHistory";
 import TicketGraphic from "../components/Graphics";
+import QuickUpdatePanel, { QuickUpdateTicket } from "./QuickUpdateDialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -142,7 +145,7 @@ const TicketTable = ({ columns, rows }: { columns: ColumnDef[]; rows: any[] }) =
       <TableBody>
         {rows.map((row, rowIdx) => (
           <TableRow
-            key={rowIdx}
+            key={row.id ?? rowIdx}
             className="group border-slate-50 hover:bg-blue-50/30 transition-colors duration-100"
           >
             {columns.map((col) => {
@@ -319,6 +322,9 @@ function SolveAllTicket() {
 
   const [selectedAprHis, setSelectedAprHis] = useState<any>(null);
   const [aprHistoryOpen, setAprHistoryOpen] = useState(false);
+  const [quickUpdateTicket, setQuickUpdateTicket] = useState<QuickUpdateTicket | null>(null);
+  const [quickUpdateBusy, setQuickUpdateBusy] = useState(false);
+  const quickUpdateIdRef = useRef<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<"table" | "chart">("table");
   const [createGraph, setCreateGraph] = useState(false);
@@ -364,13 +370,40 @@ function SolveAllTicket() {
 
   const handleFilterData = (data: any) => setTicketRowData(data);
 
+  const handleQuickUpdateClose = () => {
+    if (quickUpdateBusy) return;
+    quickUpdateIdRef.current = null;
+    setQuickUpdateTicket(null);
+    setQuickUpdateBusy(false);
+  };
+
+  const handleQuickUpdateOpen = (row: QuickUpdateTicket) => {
+    if (quickUpdateBusy) return;
+    quickUpdateIdRef.current = row.id;
+    setQuickUpdateTicket(row);
+  };
+
+  const handleQuickUpdated = (ticketId: string, status: number, statusText: string, assigneeText?: string) => {
+    setTicketRowData((rows) =>
+      rows.map((row) => (
+        row.id === ticketId
+          ? { ...row, status, statusText, ...(assigneeText ? { ticketAssigneText: assigneeText } : {}) }
+          : row
+      ))
+    );
+    setIsRefresh(true);
+    quickUpdateIdRef.current = null;
+    setQuickUpdateBusy(false);
+    setQuickUpdateTicket(null);
+  };
+
   // ── Column definitions ────────────────────────────────────────────────────
 
   const columns: ColumnDef[] = [
     {
       accessor: "actions",
       header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.Islemler"),
-      className: "w-32 sticky left-0 bg-white group-hover:bg-blue-50/30",
+      className: "w-48 sticky left-0 bg-white group-hover:bg-blue-50/30",
       cell: ({ row }) => {
         const { id, workFlowHeadId } = row.original;
         const openInTab = (review: boolean) => {
@@ -380,7 +413,7 @@ function SolveAllTicket() {
         };
 
         return (
-          <div className="flex items-center gap-0.5">
+          <div className="flex flex-nowrap items-center gap-0.5">
             <ActionBtn
               tooltip={t("ns1:TicketPage.TicketTablePage.OnayGecmisi")}
               onClick={() => { setSelectedAprHis(workFlowHeadId); setAprHistoryOpen(true); }}
@@ -408,6 +441,54 @@ function SolveAllTicket() {
             >
               <Pencil className="w-3.5 h-3.5" />
             </ActionBtn>
+
+            <Popover
+              open={quickUpdateTicket?.id === row.original.id}
+              onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                  handleQuickUpdateOpen(row.original);
+                  return;
+                }
+                if (quickUpdateIdRef.current !== row.original.id) return;
+                handleQuickUpdateClose();
+              }}
+            >
+              <PopoverAnchor asChild>
+                <span className="inline-flex">
+                  <ActionBtn
+                    tooltip="Hızlı Güncelle"
+                    disabled={quickUpdateBusy}
+                    onClick={() => handleQuickUpdateOpen(row.original)}
+                  >
+                    <Zap className="w-3.5 h-3.5" />
+                  </ActionBtn>
+                </span>
+              </PopoverAnchor>
+              {quickUpdateTicket?.id === row.original.id && (
+                <PopoverContent
+                  align="start"
+                  side="bottom"
+                  sideOffset={8}
+                  collisionPadding={12}
+                  style={{ width: "min(920px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
+                  className="z-[1300] w-[920px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                  onOpenAutoFocus={(event) => event.preventDefault()}
+                  onInteractOutside={(event) => {
+                    if (quickUpdateBusy) event.preventDefault();
+                  }}
+                  onEscapeKeyDown={(event) => {
+                    if (quickUpdateBusy) event.preventDefault();
+                  }}
+                >
+                  <QuickUpdatePanel
+                    ticket={quickUpdateTicket}
+                    onClose={handleQuickUpdateClose}
+                    onUpdated={handleQuickUpdated}
+                    onBusyChange={setQuickUpdateBusy}
+                  />
+                </PopoverContent>
+              )}
+            </Popover>
           </div>
         );
       },
