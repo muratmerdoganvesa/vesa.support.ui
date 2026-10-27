@@ -37,6 +37,7 @@ import {
   Pencil,
   Eye,
   Zap,
+  UserCheck,
   BarChart2,
   LayoutList,
   ChevronLeft,
@@ -60,6 +61,7 @@ import HistoryDialog from "components/HistoryDialog/HistoryDialog";
 import ShowHistory from "layouts/pages/WorkFlow/ShowHistory";
 import TicketGraphic from "../components/Graphics";
 import QuickUpdatePanel, { QuickUpdateTicket } from "./QuickUpdateDialog";
+import SubmitForApprovalPanel, { SubmitForApprovalTicket } from "./SubmitForApprovalDialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -326,6 +328,10 @@ function SolveAllTicket() {
   const [quickUpdateBusy, setQuickUpdateBusy] = useState(false);
   const quickUpdateIdRef = useRef<string | null>(null);
 
+  const [submitApprovalTicket, setSubmitApprovalTicket] = useState<SubmitForApprovalTicket | null>(null);
+  const [submitApprovalBusy, setSubmitApprovalBusy] = useState(false);
+  const submitApprovalIdRef = useRef<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<"table" | "chart">("table");
   const [createGraph, setCreateGraph] = useState(false);
   const [graphicData, setGraphicData] = useState<any[]>([]);
@@ -378,7 +384,12 @@ function SolveAllTicket() {
   };
 
   const handleQuickUpdateOpen = (row: QuickUpdateTicket) => {
-    if (quickUpdateBusy) return;
+    if (quickUpdateBusy || submitApprovalBusy) return;
+    if (submitApprovalTicket) {
+      submitApprovalIdRef.current = null;
+      setSubmitApprovalTicket(null);
+      setSubmitApprovalBusy(false);
+    }
     quickUpdateIdRef.current = row.id;
     setQuickUpdateTicket(row);
   };
@@ -397,15 +408,42 @@ function SolveAllTicket() {
     setQuickUpdateTicket(null);
   };
 
+  const handleSubmitApprovalClose = () => {
+    if (submitApprovalBusy) return;
+    submitApprovalIdRef.current = null;
+    setSubmitApprovalTicket(null);
+    setSubmitApprovalBusy(false);
+  };
+
+  const handleSubmitApprovalOpen = (row: SubmitForApprovalTicket) => {
+    if (submitApprovalBusy || quickUpdateBusy) return;
+    if (quickUpdateTicket) {
+      quickUpdateIdRef.current = null;
+      setQuickUpdateTicket(null);
+      setQuickUpdateBusy(false);
+    }
+    submitApprovalIdRef.current = row.id;
+    setSubmitApprovalTicket(row);
+  };
+
+  const handleSubmitApprovalDone = (ticketId: string) => {
+    setTicketRowData((rows) => rows.filter((row) => row.id !== ticketId));
+    setIsRefresh(true);
+    submitApprovalIdRef.current = null;
+    setSubmitApprovalBusy(false);
+    setSubmitApprovalTicket(null);
+  };
+
   // ── Column definitions ────────────────────────────────────────────────────
 
   const columns: ColumnDef[] = [
     {
       accessor: "actions",
       header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.Islemler"),
-      className: "w-48 sticky left-0 bg-white group-hover:bg-blue-50/30",
+      className: "w-64 sticky left-0 bg-white group-hover:bg-blue-50/30",
       cell: ({ row }) => {
         const { id, workFlowHeadId } = row.original;
+        const panelBusy = quickUpdateBusy || submitApprovalBusy;
         const openInTab = (review: boolean) => {
           sessionStorage.setItem("ticketId", id);
           sessionStorage.setItem("review", String(review));
@@ -457,7 +495,7 @@ function SolveAllTicket() {
                 <span className="inline-flex">
                   <ActionBtn
                     tooltip="Hızlı Güncelle"
-                    disabled={quickUpdateBusy}
+                    disabled={panelBusy}
                     onClick={() => handleQuickUpdateOpen(row.original)}
                   >
                     <Zap className="w-3.5 h-3.5" />
@@ -489,6 +527,55 @@ function SolveAllTicket() {
                 </PopoverContent>
               )}
             </Popover>
+
+            <Popover
+              open={submitApprovalTicket?.id === row.original.id}
+              onOpenChange={(nextOpen) => {
+                if (nextOpen) {
+                  handleSubmitApprovalOpen(row.original);
+                  return;
+                }
+                if (submitApprovalIdRef.current !== row.original.id) return;
+                handleSubmitApprovalClose();
+              }}
+            >
+              <PopoverAnchor asChild>
+                <span className="inline-flex">
+                  <ActionBtn
+                    tooltip="Onaya Sun"
+                    disabled={panelBusy}
+                    onClick={() => handleSubmitApprovalOpen(row.original)}
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                  </ActionBtn>
+                </span>
+              </PopoverAnchor>
+              {submitApprovalTicket?.id === row.original.id && (
+                <PopoverContent
+                  align="start"
+                  side="bottom"
+                  sideOffset={8}
+                  collisionPadding={12}
+                  style={{ width: "min(520px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
+                  className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                  onOpenAutoFocus={(event) => event.preventDefault()}
+                  onInteractOutside={(event) => {
+                    if (submitApprovalBusy) event.preventDefault();
+                  }}
+                  onEscapeKeyDown={(event) => {
+                    if (submitApprovalBusy) event.preventDefault();
+                  }}
+                >
+                  <SubmitForApprovalPanel
+                    ticket={submitApprovalTicket}
+                    onClose={handleSubmitApprovalClose}
+                    onSubmitted={handleSubmitApprovalDone}
+                    onBusyChange={setSubmitApprovalBusy}
+                  />
+                </PopoverContent>
+              )}
+            </Popover>
+
           </div>
         );
       },

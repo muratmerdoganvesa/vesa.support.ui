@@ -1341,7 +1341,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
 
   const downloadBase64File = (base64Data: string) => {
     const mimeType = "application/pdf";
-    const fileName = `Talep#${selectedTicketNo}.pdf`;
+    const fileName = `Talep Numarası ${selectedTicketNo}.pdf`;
     const base64String = base64Data.includes(",") ? base64Data.split(",")[1] : base64Data;
     const byteCharacters = atob(base64String);
     const byteArrays = [];

@@ -40,6 +40,7 @@ import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Label } from "components/ui/label";
 import { Checkbox } from "components/ui/checkbox";
+import { Switch } from "components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "components/ui/radio-group";
 import { cn } from "lib/utils";
 import {
@@ -148,6 +149,7 @@ function CreateTicketProject() {
     projectType: null,
     projectBillingTime: null,
     projectSupportType: ProjectSupportType.Project,
+    isTest: false,
   });
 
   const dispatchBusy = useBusy();
@@ -232,6 +234,7 @@ function CreateTicketProject() {
         projectBillingTime: effortSummary.hasAnyEffort
           ? effortSummary.totalDays
           : loaded.projectBillingTime,
+        isTest: loaded.isTest ?? false,
       });
       setSelectedKullanici(data.data.manager);
       setSelectionKullaniciId(data.data.managerId);
@@ -325,6 +328,7 @@ function CreateTicketProject() {
       const created = await api.apiTicketProjectsPost({
         ...projectData,
         projectSupportType: projectData.projectSupportType ?? ProjectSupportType.Project,
+        isTest: projectData.isTest ?? false,
         manager: selectedKullanici,
         managerId: selectionKullaniciId,
         userIds: selectionUserIds,
@@ -374,6 +378,7 @@ function CreateTicketProject() {
       await api.apiTicketProjectsPut({
         ...projectData,
         projectSupportType: projectData.projectSupportType ?? ProjectSupportType.Project,
+        isTest: projectData.isTest ?? false,
         managerId: selectionKullaniciId,
         userIds: selectionUserIds,
         id,
@@ -858,6 +863,20 @@ function CreateTicketProject() {
                     <SelectItem value="Pasif">Pasif</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+                <Label htmlFor="project-is-test" className="cursor-pointer font-normal">
+                  Test verisi
+                </Label>
+                <Switch
+                  id="project-is-test"
+                  checked={projectData.isTest ?? false}
+                  onCheckedChange={(checked) =>
+                    setProjectData({ ...projectData, isTest: checked === true })
+                  }
+                  aria-label="Test verisi"
+                />
               </div>
 
               {/* Proje Tipi */}

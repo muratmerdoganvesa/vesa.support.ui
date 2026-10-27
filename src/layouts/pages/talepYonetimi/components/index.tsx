@@ -480,29 +480,32 @@ const SearchResultsTable = ({
 }) => {
   if (rows.length === 0) return null;
 
-  const cols: { key: string; label: string }[] = [
-    { key: "ticketNumber", label: "Talep No" },
-    { key: "statusText", label: "Durum" },
-    { key: "title", label: "Başlık" },
-    { key: "customerRefName", label: "Müşteri" },
-    { key: "isMsp", label: "Msp Durumu" },
-    { key: "ticketAssigneText", label: "Atanan" },
-    { key: "userAppName", label: "Oluşturan" },
-    { key: "createdDate", label: "Tarih" },
-    { key: "ticketDepartmentText", label: "Departman" },
+  const cols: { key: string; label: string; width: string; wrap?: boolean }[] = [
+    { key: "ticketNumber", label: "Talep No", width: "w-[7%]" },
+    { key: "statusText", label: "Durum", width: "w-[7%]" },
+    { key: "title", label: "Başlık", width: "w-[14%]", wrap: true },
+    { key: "customerRefName", label: "Müşteri", width: "w-[10%]", wrap: true },
+    { key: "isMsp", label: "Msp Durumu", width: "w-[11%]" },
+    { key: "ticketAssigneText", label: "Atanan", width: "w-[9%]", wrap: true },
+    { key: "userAppName", label: "Oluşturan", width: "w-[9%]", wrap: true },
+    { key: "createdDate", label: "Tarih", width: "w-[12%]" },
+    { key: "ticketDepartmentText", label: "Departman", width: "w-[9%]", wrap: true },
   ];
 
   return (
-    <Table className="min-w-[700px]">
+    <Table className="w-full table-fixed">
       <TableHeader className="sticky top-0 z-10 bg-slate-50">
         <TableRow className="border-b border-slate-200 hover:bg-slate-50">
-          <TableHead className="px-4 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap w-36">
+          <TableHead className="w-[12%] px-2 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap">
             İşlemler
           </TableHead>
           {cols.map((c) => (
             <TableHead
               key={c.key}
-              className="px-4 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap"
+              className={cn(
+                "px-2 py-3 text-sm font-semibold text-slate-700 whitespace-nowrap",
+                c.width
+              )}
             >
               {c.label}
             </TableHead>
@@ -515,7 +518,7 @@ const SearchResultsTable = ({
             key={i}
             className="border-b border-slate-100 hover:bg-slate-50/80 transition-colors"
           >
-            <TableCell className="px-4 py-2.5 align-middle">
+            <TableCell className="px-2 py-2.5 align-middle whitespace-nowrap">
               <div className="flex items-center gap-0.5">
                 <TipBtn tip="Onay Geçmişi" onClick={() => onAprHistory(row.workFlowHeadId)}>
                   <History className="w-3.5 h-3.5" />
@@ -534,9 +537,21 @@ const SearchResultsTable = ({
             {cols.map((c) => (
               <TableCell
                 key={c.key}
-                className="px-4 py-2.5 text-sm text-slate-700 align-middle whitespace-nowrap"
+                className={cn(
+                  "px-2 py-2.5 text-sm text-slate-700 align-middle",
+                  c.wrap ? "whitespace-normal" : "whitespace-nowrap"
+                )}
               >
-                <GlobalCell value={row[c.key]} statusId={row.status} columnName={c.key} testRow={row} />
+                <div
+                  className={cn(
+                    "max-w-full",
+                    c.wrap
+                      ? "min-w-0 whitespace-normal break-words [&_div]:min-w-0 [&_div]:max-w-full [&_span]:whitespace-normal [&_span]:break-words [&_span]:leading-5"
+                      : "whitespace-nowrap"
+                  )}
+                >
+                  <GlobalCell value={row[c.key]} statusId={row.status} columnName={c.key} testRow={row} />
+                </div>
               </TableCell>
             ))}
           </TableRow>
@@ -625,7 +640,8 @@ function FilterTableMethod({
 
   // ── Search dialog state ────────────────────────────────────────────────────
   const [openSearchDialog, setOpenSearchDialog] = useState(false);
-  const [searchTalepNo, setSearchTalepNo] = useState("");
+  const [searchTicketNo, setSearchTicketNo] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [searchedData, setSearchedData] = useState<any[]>([]);
   const [searchMsj, setSearchMsj] = useState("");
   const [selectedAprHis, setSelectedAprHis] = useState<any>(null);
@@ -965,24 +981,41 @@ function FilterTableMethod({
 
   const onCloseSearchDialog = () => {
     setOpenSearchDialog(false);
-    setSearchTalepNo("");
+    setSearchTicketNo("");
+    setSearchText("");
     setSearchedData([]);
     setSearchMsj("");
   };
 
   const onSearchButton = async () => {
-    if (!searchTalepNo.trim()) {
+    const ticketNo = searchTicketNo.trim();
+    const text = searchText.trim();
+    if (!ticketNo && !text) {
       dispatchAlert({ message: t("ns1:TicketPage.TicketTablePage.AramaMetniGirin"), type: "Warning" });
       return;
     }
     setLoading(true);
-    const conf = getConfiguration();
-    const api = new TicketApi(conf);
-    // API: (pageDesc, talepNo, searchText, skip, top) — searchText UniqNumber/Title/Comment Body arar
-    const data = await api.apiTicketSearchTicketGet(pageDesc, undefined, searchTalepNo.trim(), 0, 10);
-    setSearchedData(data.data.ticketList);
-    setSearchMsj(data.data.ticketList.length === 0 ? t("ns1:TicketPage.TicketTablePage.AramaSonucBulunamadi") : "");
-    setLoading(false);
+    try {
+      const conf = getConfiguration();
+      const api = new TicketApi(conf);
+      // API: (pageDesc, talepNo, searchText, skip, top)
+      // talepNo → UniqNumber, searchText → Title ve yorum (Comment Body)
+      const data = await api.apiTicketSearchTicketGet(
+        pageDesc,
+        ticketNo || undefined,
+        text || undefined,
+        0,
+        10
+      );
+      setSearchedData(data.data.ticketList);
+      setSearchMsj(data.data.ticketList.length === 0 ? t("ns1:TicketPage.TicketTablePage.AramaSonucBulunamadi") : "");
+    } catch (error) {
+      console.error(error);
+      setSearchedData([]);
+      setSearchMsj(t("ns1:TicketPage.TicketTablePage.AramaSonucBulunamadi"));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSearchNavigate = (id: string, review: boolean) => {
@@ -1358,7 +1391,7 @@ function FilterTableMethod({
 
       {/* ── Search Dialog ── */}
       <Dialog open={openSearchDialog} onOpenChange={(open) => !open && onCloseSearchDialog()}>
-        <DialogContent className="w-[95vw] max-w-7xl p-0 gap-0 overflow-hidden sm:max-w-7xl">
+        <DialogContent className="grid w-[95vw] max-w-7xl grid-cols-1 p-0 gap-0 overflow-hidden sm:max-w-7xl">
           <DialogHeader className="px-6 py-4 border-b border-slate-100 bg-slate-50/40">
             <DialogTitle className="text-base font-semibold text-[#344767] tracking-tight">
               {t("ns1:TicketPage.TicketTablePage.AramaYapin")}
@@ -1368,19 +1401,36 @@ function FilterTableMethod({
             </p>
           </DialogHeader>
 
-          <div className="flex flex-col gap-5 px-6 py-5">
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-4 max-w-md">
-              <FilterField label={t("ns1:TicketPage.TicketTablePage.AramaMetni")}>
-                <Input
-                  placeholder={t("ns1:TicketPage.TicketTablePage.AramaMetniPlaceholder")}
-                  value={searchTalepNo}
-                  onChange={(e) => {
-                    setSearchTalepNo(e.target.value);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && onSearchButton()}
-                  className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-slate-100"
-                />
-              </FilterField>
+          <div className="flex w-full min-w-0 flex-col gap-5 px-6 py-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-4">
+                <FilterField label={t("ns1:TicketPage.TicketTablePage.TalepNumarasi")}>
+                  <Input
+                    aria-label={t("ns1:TicketPage.TicketTablePage.TalepNumarasi")}
+                    placeholder={t("ns1:TicketPage.TicketTablePage.TalepNumarasiPlaceholder")}
+                    value={searchTicketNo}
+                    onChange={(e) => setSearchTicketNo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onSearchButton();
+                    }}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-slate-100"
+                  />
+                </FilterField>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-4">
+                <FilterField label={t("ns1:TicketPage.TicketTablePage.AramaMetni")}>
+                  <Input
+                    aria-label={t("ns1:TicketPage.TicketTablePage.AramaMetni")}
+                    placeholder={t("ns1:TicketPage.TicketTablePage.AramaMetniPlaceholder")}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onSearchButton();
+                    }}
+                    className="h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus-visible:border-slate-400 focus-visible:ring-slate-100"
+                  />
+                </FilterField>
+              </div>
             </div>
 
             {searchMsj && !loading && searchedData.length === 0 && (
@@ -1398,7 +1448,7 @@ function FilterTableMethod({
                 <p className="text-sm text-slate-500">Aranıyor...</p>
               </div>
             ) : searchedData.length > 0 && (
-              <div className="flex flex-col gap-3">
+              <div className="flex w-full min-w-0 flex-col gap-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-slate-700">
                     Arama Sonuçları
@@ -1408,7 +1458,7 @@ function FilterTableMethod({
                   </span>
                 </div>
 
-                <div className="overflow-auto rounded-xl border border-slate-200 max-h-[60vh] shadow-sm">
+                <div className="w-full min-w-0 max-h-[60vh] overflow-auto rounded-xl border border-slate-200 shadow-sm">
                   <SearchResultsTable
                     rows={searchedData}
                     pageDesc={pageDesc}

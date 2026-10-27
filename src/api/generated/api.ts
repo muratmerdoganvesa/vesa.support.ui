@@ -17472,6 +17472,12 @@ export interface TicketProjects {
      * @memberof TicketProjects
      */
     'projectSupportType'?: ProjectSupportTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof TicketProjects
+     */
+    'isTest'?: boolean;
 }
 
 
@@ -17607,6 +17613,12 @@ export interface TicketProjectsInsertDto {
      * @memberof TicketProjectsInsertDto
      */
     'projectSupportType'?: ProjectSupportTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof TicketProjectsInsertDto
+     */
+    'isTest'?: boolean | null;
 }
 
 
@@ -17784,6 +17796,12 @@ export interface TicketProjectsListDto {
      * @memberof TicketProjectsListDto
      */
     'projectSupportType'?: ProjectSupportTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof TicketProjectsListDto
+     */
+    'isTest'?: boolean;
 }
 
 
@@ -17907,6 +17925,12 @@ export interface TicketProjectsUpdateDto {
      * @memberof TicketProjectsUpdateDto
      */
     'projectSupportType'?: ProjectSupportTypes;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof TicketProjectsUpdateDto
+     */
+    'isTest'?: boolean | null;
 }
 
 
