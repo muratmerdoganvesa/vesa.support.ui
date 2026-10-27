@@ -38,6 +38,7 @@ import {
   Eye,
   Zap,
   UserCheck,
+  UserPlus,
   BarChart2,
   LayoutList,
   ChevronLeft,
@@ -62,6 +63,7 @@ import ShowHistory from "layouts/pages/WorkFlow/ShowHistory";
 import TicketGraphic from "../components/Graphics";
 import QuickUpdatePanel, { QuickUpdateTicket } from "./QuickUpdateDialog";
 import SubmitForApprovalPanel, { SubmitForApprovalTicket } from "./SubmitForApprovalDialog";
+import GrantTicketAccessPanel, { GrantTicketAccessTicket } from "./GrantTicketAccessDialog";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -332,6 +334,10 @@ function SolveAllTicket() {
   const [submitApprovalBusy, setSubmitApprovalBusy] = useState(false);
   const submitApprovalIdRef = useRef<string | null>(null);
 
+  const [grantAccessTicket, setGrantAccessTicket] = useState<GrantTicketAccessTicket | null>(null);
+  const [grantAccessBusy, setGrantAccessBusy] = useState(false);
+  const grantAccessIdRef = useRef<string | null>(null);
+
   const [activeTab, setActiveTab] = useState<"table" | "chart">("table");
   const [createGraph, setCreateGraph] = useState(false);
   const [graphicData, setGraphicData] = useState<any[]>([]);
@@ -383,13 +389,20 @@ function SolveAllTicket() {
     setQuickUpdateBusy(false);
   };
 
+  const closeGrantAccessPanel = () => {
+    grantAccessIdRef.current = null;
+    setGrantAccessTicket(null);
+    setGrantAccessBusy(false);
+  };
+
   const handleQuickUpdateOpen = (row: QuickUpdateTicket) => {
-    if (quickUpdateBusy || submitApprovalBusy) return;
+    if (quickUpdateBusy || submitApprovalBusy || grantAccessBusy) return;
     if (submitApprovalTicket) {
       submitApprovalIdRef.current = null;
       setSubmitApprovalTicket(null);
       setSubmitApprovalBusy(false);
     }
+    if (grantAccessTicket) closeGrantAccessPanel();
     quickUpdateIdRef.current = row.id;
     setQuickUpdateTicket(row);
   };
@@ -416,12 +429,13 @@ function SolveAllTicket() {
   };
 
   const handleSubmitApprovalOpen = (row: SubmitForApprovalTicket) => {
-    if (submitApprovalBusy || quickUpdateBusy) return;
+    if (submitApprovalBusy || quickUpdateBusy || grantAccessBusy) return;
     if (quickUpdateTicket) {
       quickUpdateIdRef.current = null;
       setQuickUpdateTicket(null);
       setQuickUpdateBusy(false);
     }
+    if (grantAccessTicket) closeGrantAccessPanel();
     submitApprovalIdRef.current = row.id;
     setSubmitApprovalTicket(row);
   };
@@ -434,6 +448,40 @@ function SolveAllTicket() {
     setSubmitApprovalTicket(null);
   };
 
+  const handleGrantAccessClose = () => {
+    if (grantAccessBusy) return;
+    closeGrantAccessPanel();
+  };
+
+  const handleGrantAccessOpen = (row: GrantTicketAccessTicket) => {
+    if (grantAccessBusy || quickUpdateBusy || submitApprovalBusy) return;
+    if (quickUpdateTicket) {
+      quickUpdateIdRef.current = null;
+      setQuickUpdateTicket(null);
+      setQuickUpdateBusy(false);
+    }
+    if (submitApprovalTicket) {
+      submitApprovalIdRef.current = null;
+      setSubmitApprovalTicket(null);
+      setSubmitApprovalBusy(false);
+    }
+    grantAccessIdRef.current = row.id;
+    setGrantAccessTicket(row);
+  };
+
+  const handleGrantAccessDone = () => {
+    // Liste yenilemeye gerek yok; atama değişmez, sadece erişim eklenir.
+  };
+
+  const handleEffortEnterChange = (ticketId: string, isEffortEnter: boolean) => {
+    setTicketRowData((rows) =>
+      rows.map((row) => (row.id === ticketId ? { ...row, isEffortEnter } : row))
+    );
+    setGrantAccessTicket((current) =>
+      current && current.id === ticketId ? { ...current, isEffortEnter } : current
+    );
+  };
+
   // ── Column definitions ────────────────────────────────────────────────────
 
   const columns: ColumnDef[] = [
@@ -443,7 +491,7 @@ function SolveAllTicket() {
       className: "w-64 sticky left-0 bg-white group-hover:bg-blue-50/30",
       cell: ({ row }) => {
         const { id, workFlowHeadId } = row.original;
-        const panelBusy = quickUpdateBusy || submitApprovalBusy;
+        const panelBusy = quickUpdateBusy || submitApprovalBusy || grantAccessBusy;
         const openInTab = (review: boolean) => {
           sessionStorage.setItem("ticketId", id);
           sessionStorage.setItem("review", String(review));
@@ -576,6 +624,56 @@ function SolveAllTicket() {
               )}
             </Popover>
 
+            {row.original.canGrantTicketAccess === true && (
+              <Popover
+                open={grantAccessTicket?.id === row.original.id}
+                onOpenChange={(nextOpen) => {
+                  if (nextOpen) {
+                    handleGrantAccessOpen(row.original);
+                    return;
+                  }
+                  if (grantAccessIdRef.current !== row.original.id) return;
+                  handleGrantAccessClose();
+                }}
+              >
+                <PopoverAnchor asChild>
+                  <span className="inline-flex">
+                    <ActionBtn
+                      tooltip="Efor İste"
+                      disabled={panelBusy}
+                      onClick={() => handleGrantAccessOpen(row.original)}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                    </ActionBtn>
+                  </span>
+                </PopoverAnchor>
+                {grantAccessTicket?.id === row.original.id && (
+                  <PopoverContent
+                    align="start"
+                    side="bottom"
+                    sideOffset={8}
+                    collisionPadding={12}
+                    style={{ width: "min(520px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
+                    className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                    onOpenAutoFocus={(event) => event.preventDefault()}
+                    onInteractOutside={(event) => {
+                      if (grantAccessBusy) event.preventDefault();
+                    }}
+                    onEscapeKeyDown={(event) => {
+                      if (grantAccessBusy) event.preventDefault();
+                    }}
+                  >
+                    <GrantTicketAccessPanel
+                      ticket={grantAccessTicket}
+                      onClose={handleGrantAccessClose}
+                      onGranted={handleGrantAccessDone}
+                      onEffortEnterChange={handleEffortEnterChange}
+                      onBusyChange={setGrantAccessBusy}
+                    />
+                  </PopoverContent>
+                )}
+              </Popover>
+            )}
           </div>
         );
       },

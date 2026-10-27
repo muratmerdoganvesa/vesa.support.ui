@@ -98,11 +98,22 @@ import {
   ShieldCheck,
   MessageSquare,
   Upload,
+  Timer,
 } from "lucide-react";
 
 import TaskList from "./components/TaskList";
+import EffortList from "./components/EffortList";
 import UserSearchCombobox, { getUserDisplayName } from "./components/UserSearchCombobox";
 import { filterTicketSubjectsForCompany } from "./utils/filterTicketSubjectsForCompany";
+import {
+  addTicketEffort,
+  deleteTicketEffort,
+  fetchTicketEfforts,
+  readEffortApiError,
+  setTicketEffortEnter,
+  updateTicketEffort,
+} from "./api/ticketEffortApi";
+import type { TicketEffortListDto, TicketEffortListResponseDto } from "./types/ticketEffort.types";
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -724,6 +735,20 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [existingTasks, setExistingTasks] = useState<TicketTaskListDto[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
 
+  // ── Efor sekmesi state ─────────────────────────────────────────────────────
+  const [existingEfforts, setExistingEfforts] = useState<TicketEffortListDto[]>([]);
+  const [effortsLoading, setEffortsLoading] = useState(false);
+  const [isEffortDeptManager, setIsEffortDeptManager] = useState(false);
+  const [isEffortEnter, setIsEffortEnter] = useState(false);
+  const [canEnterEffort, setCanEnterEffort] = useState(false);
+
+  const applyEffortResponse = (data: TicketEffortListResponseDto) => {
+    setExistingEfforts(data.items ?? []);
+    setIsEffortDeptManager(Boolean(data.isDepartmentManager));
+    setIsEffortEnter(Boolean(data.isEffortEnter));
+    setCanEnterEffort(Boolean(data.canEnterEffort));
+  };
+
   // ── Yönlendirme geçmişi collapsible ───────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
 
@@ -735,6 +760,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
     { value: "1", label: "Görevler", icon: <CheckSquare className="w-3.5 h-3.5" /> },
     ...(isSolveTicket && !review
       ? [{ value: "2", label: t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailNavBarProps.TalepGuncelleme"), icon: <Settings2 className="w-3.5 h-3.5" /> }]
+      : []),
+    ...(isSolveTicket
+      ? [{ value: "3", label: "Efor Bilgisi", icon: <Timer className="w-3.5 h-3.5" /> }]
       : []),
   ];
 
@@ -1096,6 +1124,23 @@ function CreateRequest({ ...rest }: createTicketProps) {
       }
     };
     fetchTasks();
+  }, [activeIndex, id]);
+
+  // ── Efor sekmesi açılınca efor kayıtlarını çek ─────────────────────────────
+  useEffect(() => {
+    if (activeIndex !== 3 || !id) return;
+    const loadEfforts = async () => {
+      try {
+        setEffortsLoading(true);
+        const data = await fetchTicketEfforts(id);
+        applyEffortResponse(data);
+      } catch (error) {
+        dispatchAlert({ message: "Efor kayıtları yüklenemedi: " + error, type: "Error" });
+      } finally {
+        setEffortsLoading(false);
+      }
+    };
+    loadEfforts();
   }, [activeIndex, id]);
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -1988,6 +2033,89 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   <div className="flex flex-col gap-1">
                     <p className="text-sm font-medium text-slate-500">Görev eklemek için önce talebi oluşturun</p>
                     <p className="text-xs text-slate-400">Talep kaydedildikten sonra bu sekmeden görev ekleyebilirsiniz.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────── */}
+          {/* Tab 3: Efor Bilgisi (isSolveTicket)                            */}
+          {/* ─────────────────────────────────────────────────────────────── */}
+          {activeIndex === 3 && (
+            <div className="p-6">
+              {id ? (
+                <EffortList
+                  efforts={existingEfforts}
+                  loading={effortsLoading}
+                  isDepartmentManager={isEffortDeptManager}
+                  isEffortEnter={isEffortEnter}
+                  canEnterEffort={canEnterEffort}
+                  onEffortEnterChange={async (next) => {
+                    try {
+                      await setTicketEffortEnter(id, next);
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({
+                        message: next ? "Efor girişi açıldı." : "Efor girişi kapatıldı.",
+                        type: "Success",
+                      });
+                    } catch (error) {
+                      dispatchAlert({
+                        message: "Efor girilebilir durumu güncellenemedi: " + readEffortApiError(error),
+                        type: "Error",
+                      });
+                      throw error;
+                    }
+                  }}
+                  onAdd={async (effortHours, description, invoiceHours) => {
+                    try {
+                      await addTicketEffort(id, {
+                        effortHours,
+                        description: description ?? null,
+                        ...(invoiceHours !== undefined ? { invoiceHours } : {}),
+                      });
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({ message: "Efor kaydı eklendi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({ message: "Efor eklenemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                  onUpdate={async (effortId, effortHours, description, invoiceHours) => {
+                    try {
+                      await updateTicketEffort(id, effortId, {
+                        effortHours,
+                        description: description ?? null,
+                        ...(invoiceHours !== undefined ? { invoiceHours } : {}),
+                      });
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({ message: "Efor kaydı güncellendi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({ message: "Efor güncellenemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                  onDelete={async (effortId) => {
+                    try {
+                      await deleteTicketEffort(id, effortId);
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({ message: "Efor kaydı silindi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({ message: "Efor silinemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
+                  <Timer className="w-10 h-10 text-slate-300" />
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-slate-500">Efor girmek için önce talebi seçin</p>
+                    <p className="text-xs text-slate-400">Talep açıldıktan sonra bu sekmeden efor ekleyebilirsiniz.</p>
                   </div>
                 </div>
               )}
