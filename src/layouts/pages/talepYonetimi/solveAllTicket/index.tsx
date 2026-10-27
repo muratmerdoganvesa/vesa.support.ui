@@ -440,9 +440,10 @@ function SolveAllTicket() {
     {
       accessor: "actions",
       header: t("ns1:TicketPage.TicketTablePage.TableColumnProps.Islemler"),
-      className: "w-56 sticky left-0 bg-white group-hover:bg-blue-50/30",
+      className: "w-64 sticky left-0 bg-white group-hover:bg-blue-50/30",
       cell: ({ row }) => {
         const { id, workFlowHeadId } = row.original;
+        const panelBusy = quickUpdateBusy || submitApprovalBusy;
         const openInTab = (review: boolean) => {
           sessionStorage.setItem("ticketId", id);
           sessionStorage.setItem("review", String(review));
@@ -494,7 +495,7 @@ function SolveAllTicket() {
                 <span className="inline-flex">
                   <ActionBtn
                     tooltip="Hızlı Güncelle"
-                    disabled={quickUpdateBusy || submitApprovalBusy}
+                    disabled={panelBusy}
                     onClick={() => handleQuickUpdateOpen(row.original)}
                   >
                     <Zap className="w-3.5 h-3.5" />
@@ -542,7 +543,7 @@ function SolveAllTicket() {
                 <span className="inline-flex">
                   <ActionBtn
                     tooltip="Onaya Sun"
-                    disabled={quickUpdateBusy || submitApprovalBusy}
+                    disabled={panelBusy}
                     onClick={() => handleSubmitApprovalOpen(row.original)}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
@@ -574,6 +575,7 @@ function SolveAllTicket() {
                 </PopoverContent>
               )}
             </Popover>
+
           </div>
         );
       },
