@@ -114,6 +114,11 @@ import {
   updateTicketEffort,
 } from "./api/ticketEffortApi";
 import type { TicketEffortListDto, TicketEffortListResponseDto } from "./types/ticketEffort.types";
+import {
+  fetchEffortManagementByTicket,
+  sendTicketEffortManagement,
+} from "layouts/pages/effortManagement/api";
+import type { TicketEffortManagementStatusDto } from "layouts/pages/effortManagement/types";
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -741,6 +746,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [isEffortDeptManager, setIsEffortDeptManager] = useState(false);
   const [isEffortEnter, setIsEffortEnter] = useState(false);
   const [canEnterEffort, setCanEnterEffort] = useState(false);
+  const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
 
   const applyEffortResponse = (data: TicketEffortListResponseDto) => {
     setExistingEfforts(data.items ?? []);
@@ -760,9 +766,6 @@ function CreateRequest({ ...rest }: createTicketProps) {
     { value: "1", label: "Görevler", icon: <CheckSquare className="w-3.5 h-3.5" /> },
     ...(isSolveTicket && !review
       ? [{ value: "2", label: t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailNavBarProps.TalepGuncelleme"), icon: <Settings2 className="w-3.5 h-3.5" /> }]
-      : []),
-    ...(isSolveTicket
-      ? [{ value: "3", label: "Efor Bilgisi", icon: <Timer className="w-3.5 h-3.5" /> }]
       : []),
   ];
 
@@ -1134,6 +1137,20 @@ function CreateRequest({ ...rest }: createTicketProps) {
         setEffortsLoading(true);
         const data = await fetchTicketEfforts(id);
         applyEffortResponse(data);
+        if (data.isDepartmentManager) {
+          try {
+            const status = await fetchEffortManagementByTicket(id);
+            setEffortSendStatus(status);
+          } catch (statusError) {
+            setEffortSendStatus(null);
+            dispatchAlert({
+              message: "Efor gönderim durumu alınamadı: " + readEffortApiError(statusError),
+              type: "Error",
+            });
+          }
+        } else {
+          setEffortSendStatus(null);
+        }
       } catch (error) {
         dispatchAlert({ message: "Efor kayıtları yüklenemedi: " + error, type: "Error" });
       } finally {
@@ -2106,6 +2123,21 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       dispatchAlert({ message: "Efor kaydı silindi.", type: "Success" });
                     } catch (error) {
                       dispatchAlert({ message: "Efor silinemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                  effortSendStatus={effortSendStatus}
+                  onSendToEffortManager={async () => {
+                    try {
+                      await sendTicketEffortManagement(id);
+                      const status = await fetchEffortManagementByTicket(id);
+                      setEffortSendStatus(status);
+                      dispatchAlert({ message: "Efor, efor yöneticisine gönderildi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({
+                        message: "Efor gönderilemedi: " + readEffortApiError(error),
+                        type: "Error",
+                      });
                       throw error;
                     }
                   }}

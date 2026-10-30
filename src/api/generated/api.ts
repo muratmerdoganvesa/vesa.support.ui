@@ -5236,6 +5236,12 @@ export interface CreateUserDto {
     'pCname'?: string | null;
     /**
      * 
+     * @type {string}
+     * @memberof CreateUserDto
+     */
+    'sicilNo'?: string | null;
+    /**
+     * 
      * @type {boolean}
      * @memberof CreateUserDto
      */
@@ -20319,6 +20325,12 @@ export interface UpdateUserDto {
     'pCname'?: string | null;
     /**
      * 
+     * @type {string}
+     * @memberof UpdateUserDto
+     */
+    'sicilNo'?: string | null;
+    /**
+     * 
      * @type {boolean}
      * @memberof UpdateUserDto
      */
@@ -20676,6 +20688,12 @@ export interface UserApp {
     'pCname'?: string | null;
     /**
      * 
+     * @type {string}
+     * @memberof UserApp
+     */
+    'sicilNo'?: string | null;
+    /**
+     * 
      * @type {boolean}
      * @memberof UserApp
      */
@@ -20977,6 +20995,12 @@ export interface UserAppDto {
      * @memberof UserAppDto
      */
     'pCname'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof UserAppDto
+     */
+    'sicilNo'?: string | null;
     /**
      * 
      * @type {boolean}

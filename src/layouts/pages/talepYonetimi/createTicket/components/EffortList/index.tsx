@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Clock, Loader2, Pencil, Plus, Timer, Trash2 } from "lucide-react";
+import { Clock, Loader2, Pencil, Plus, Send, Timer, Trash2 } from "lucide-react";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Switch } from "components/ui/switch";
@@ -24,6 +24,9 @@ import {
 } from "components/ui/table";
 import { cn } from "lib/utils";
 import type { TicketEffortListDto } from "../../types/ticketEffort.types";
+import type { TicketEffortManagementStatusDto } from "layouts/pages/effortManagement/types";
+import { TicketEffortStatus } from "layouts/pages/effortManagement/types";
+import { formatDateTime } from "layouts/pages/effortManagement/shared";
 
 interface EffortListProps {
   efforts: TicketEffortListDto[];
@@ -44,6 +47,8 @@ interface EffortListProps {
     invoiceHours?: number | null
   ) => Promise<void>;
   onDelete: (effortId: string) => Promise<void>;
+  effortSendStatus?: TicketEffortManagementStatusDto | null;
+  onSendToEffortManager?: () => Promise<void>;
 }
 
 const formatHours = (value: number | null | undefined): string => {
@@ -61,6 +66,8 @@ const EffortList = ({
   onAdd,
   onUpdate,
   onDelete,
+  effortSendStatus = null,
+  onSendToEffortManager,
 }: EffortListProps) => {
   const [hours, setHours] = useState("");
   const [invoiceHours, setInvoiceHours] = useState("");
@@ -70,6 +77,7 @@ const EffortList = ({
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
+  const [sendingToManager, setSendingToManager] = useState(false);
   const hoursRef = useRef<HTMLInputElement>(null);
   const invoiceHoursRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +123,19 @@ const EffortList = ({
     setEditHoursError("");
     setEditInvoiceError("");
   }, [editOpen, editingEffort]);
+
+  const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
+
+  const handleSendToEffortManager = async () => {
+    if (!onSendToEffortManager || sendingToManager || isEffortEnter) return;
+    if (effortSendStatus?.exists && !isReturnedForEdit) return;
+    try {
+      setSendingToManager(true);
+      await onSendToEffortManager();
+    } finally {
+      setSendingToManager(false);
+    }
+  };
 
   const handleToggleEffortEnter = async (next: boolean) => {
     if (!onEffortEnterChange || effortEnterSaving) return;
@@ -233,33 +254,83 @@ const EffortList = ({
   return (
     <div className="flex flex-col gap-5">
       {isDepartmentManager && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800">Efor girilebilir</p>
-            <p className="mt-0.5 text-xs text-slate-500">
-              {isEffortEnter
-                ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz."
-                : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz."}
-            </p>
+        <>
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800">Efor girilebilir</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {isEffortEnter
+                  ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz."
+                  : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz."}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span
+                className={cn(
+                  "text-[11px] font-semibold uppercase tracking-wider",
+                  isEffortEnter ? "text-emerald-600" : "text-slate-400"
+                )}
+              >
+                {isEffortEnter ? "Aktif" : "Pasif"}
+              </span>
+              <Switch
+                checked={isEffortEnter}
+                disabled={effortEnterSaving || !onEffortEnterChange}
+                onCheckedChange={(checked) => void handleToggleEffortEnter(checked)}
+                aria-label="Efor girilebilir durumunu değiştir"
+              />
+              {effortEnterSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
+            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span
-              className={cn(
-                "text-[11px] font-semibold uppercase tracking-wider",
-                isEffortEnter ? "text-emerald-600" : "text-slate-400"
-              )}
-            >
-              {isEffortEnter ? "Aktif" : "Pasif"}
-            </span>
-            <Switch
-              checked={isEffortEnter}
-              disabled={effortEnterSaving || !onEffortEnterChange}
-              onCheckedChange={(checked) => void handleToggleEffortEnter(checked)}
-              aria-label="Efor girilebilir durumunu değiştir"
-            />
-            {effortEnterSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />}
-          </div>
-        </div>
+
+          {effortSendStatus?.exists && !isReturnedForEdit ? (
+            <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4">
+              <p className="text-sm font-semibold text-sky-900">Efor onayına gönderildi</p>
+              <p className="mt-1 text-xs text-sky-800">
+                Durum: {effortSendStatus.statusText || "Gönderildi"}
+                {effortSendStatus.sentByUserName ? ` · Gönderen: ${effortSendStatus.sentByUserName}` : ""}
+                {effortSendStatus.sentAt ? ` · ${formatDateTime(effortSendStatus.sentAt)}` : ""}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800">
+                  {isReturnedForEdit ? "Düzenleme için geri gönderildi" : "Efor onayına gönder"}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {isReturnedForEdit
+                    ? isEffortEnter
+                      ? "Efor girişi yeniden açıldı. Düzeltmeleri yaptıktan sonra girişi kapatıp tekrar gönderin."
+                      : "Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
+                    : isEffortEnter
+                      ? "Göndermek için önce efor girişini kapatın."
+                      : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
+                </p>
+                {isReturnedForEdit && effortSendStatus?.returnNote && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                    {effortSendStatus.effortManagerUserName ? `${effortSendStatus.effortManagerUserName}: ` : ""}
+                    {effortSendStatus.returnNote}
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                onClick={() => void handleSendToEffortManager()}
+                disabled={isEffortEnter || sendingToManager || !onSendToEffortManager}
+                aria-label={isReturnedForEdit ? "Eforu tekrar onayına gönder" : "Efor onayına gönder"}
+                className="h-10 shrink-0 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
+              >
+                {sendingToManager ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                {isReturnedForEdit ? "Tekrar gönder" : "Efor Onayına Gönder"}
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {!isDepartmentManager && !canEnterEffort && (

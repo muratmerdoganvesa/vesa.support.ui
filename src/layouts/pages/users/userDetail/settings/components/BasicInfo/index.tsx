@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent, type FocusEvent } from "react";
 import { useFormikContext } from "formik";
 import { Card, CardContent, CardHeader, CardTitle } from "components/ui/card";
+import { Input } from "components/ui/input";
+import { Label } from "components/ui/label";
 import FormField from "layouts/pages/users/new-user/components/FormField";
+import { normalizeSicilNo } from "layouts/pages/users/new-user/schemas/sicilNo";
 import getConfiguration from "confiuration";
 import { PcDto, PCTrackingApi, UserApi, UserAppDtoOnlyNameId } from "api/generated";
 import { useBusy } from "layouts/pages/hooks/useBusy";
@@ -17,10 +20,11 @@ function BasicInfo({ formData, readOnlyUserName }: any): JSX.Element {
     lastName: lastNameV,
     email: emailV,
     pCname: pCnameV,
+    sicilNo: sicilNoV,
     manager1: manager1V,
     manager2: manager2V,
   } = values;
-  const { setFieldValue } = useFormikContext();
+  const { setFieldValue, setFieldTouched } = useFormikContext();
   const [pcData, setPcData] = useState<PcDto[]>([]);
   const [managerData, setManagerData] = useState<UserAppDtoOnlyNameId[]>([]);
   const dispatchBusy = useBusy();
@@ -56,6 +60,16 @@ function BasicInfo({ formData, readOnlyUserName }: any): JSX.Element {
   const handleManagerChange = (field: string, label: string) => {
     const found = managerData.find((u) => `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() === label);
     setFieldValue(field, found?.id ?? "");
+  };
+
+  const handleSicilChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const digits = event.target.value.replace(/\D/g, "").slice(0, 8);
+    setFieldValue("sicilNo", digits);
+  };
+
+  const handleSicilBlur = (event: FocusEvent<HTMLInputElement>) => {
+    setFieldValue("sicilNo", normalizeSicilNo(event.target.value) ?? "");
+    setFieldTouched("sicilNo", true, false);
   };
 
   return (
@@ -116,7 +130,28 @@ function BasicInfo({ formData, readOnlyUserName }: any): JSX.Element {
             onChange={(v) => setFieldValue("pCname", v)}
           />
 
-          <div />
+          <div className="space-y-1.5">
+            <Label htmlFor="sicil-no" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Sicil Numarası
+            </Label>
+            <Input
+              id="sicil-no"
+              name="sicilNo"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={8}
+              placeholder="Örn. 110"
+              aria-label="Sicil Numarası"
+              value={sicilNoV ?? ""}
+              onChange={handleSicilChange}
+              onBlur={handleSicilBlur}
+            />
+            {errors.sicilNo && touched.sicilNo ? (
+              <p className="text-xs text-red-500">{errors.sicilNo}</p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground">Boş bırakılabilir. Girilen rakam 8 haneye tamamlanır.</p>
+            )}
+          </div>
 
           <ComboField
             id="combo-mgr1"

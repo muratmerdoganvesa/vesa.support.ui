@@ -54,6 +54,7 @@ let {
     userLevel,
     mainManagerUserAppId,
     pCname,
+    sicilNo,
     isTeamLeader,
     isKanbanAdmin,
   },
@@ -103,6 +104,7 @@ let initialValues: InitialValuesType = {
   [userLevel.name]: null,
   [mainManagerUserAppId.name]: null,
   [pCname.name]: "",
+  [sicilNo.name]: "",
   [isTeamLeader.name]:false,
   [isKanbanAdmin.name]: false,
 };

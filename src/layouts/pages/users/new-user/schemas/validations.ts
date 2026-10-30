@@ -17,7 +17,7 @@ import * as Yup from "yup";
 import checkout from "layouts/pages/users/new-user/schemas/form";
 
 const {
-  formField: { userName, firstName, lastName, email, password },
+  formField: { userName, firstName, lastName, email, password, sicilNo },
 } = checkout;
 
 const validations = [
@@ -27,6 +27,10 @@ const validations = [
     [firstName.name]: Yup.string().required(firstName.errorMsg),
     [lastName.name]: Yup.string().required(lastName.errorMsg),
     [email.name]: Yup.string().required(email.errorMsg).email(email.invalidMsg),
+    [sicilNo.name]: Yup.string()
+      .nullable()
+      .transform((value) => (value === "" ? null : value))
+      .matches(/^\d{1,8}$/, { message: sicilNo.errorMsg, excludeEmptyString: true }),
     // [password.name]: Yup.string().required(password.errorMsg).min(6, password.invalidMsg),
     // [password.name]: Yup.string().required(password.errorMsg).min(6, password.invalidMsg),
     // [repeatPassword.name]: Yup.string()
