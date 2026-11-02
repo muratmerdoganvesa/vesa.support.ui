@@ -103,7 +103,10 @@ import {
 
 import TaskList from "./components/TaskList";
 import EffortList from "./components/EffortList";
-import UserSearchCombobox, { getUserDisplayName } from "./components/UserSearchCombobox";
+import UserSearchCombobox, {
+  getUserDisplayName,
+  matchesUserSearchQuery,
+} from "./components/UserSearchCombobox";
 import { filterTicketSubjectsForCompany } from "./utils/filterTicketSubjectsForCompany";
 import {
   addTicketEffort,
@@ -328,23 +331,44 @@ const MultiUserSearchCombobox = ({
   onSearch,
   results,
   placeholder,
+  loading = false,
 }: {
   values: any[];
   onChange: (users: any[]) => void;
   onSearch: (q: string) => void;
   results: any[];
   placeholder: string;
+  loading?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filteredResults = useMemo(() => {
+    if (!query.trim()) return results;
+    return results.filter((user) => matchesUserSearchQuery(user, query));
+  }, [results, query]);
 
   const handleToggle = (user: any) => {
     const exists = values.some((v) => v.id === user.id);
     onChange(exists ? values.filter((v) => v.id !== user.id) : [...values, user]);
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setQuery("");
+      onSearch("");
+    }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    onSearch(value);
+  };
+
   return (
     <div className="flex flex-col gap-1.5">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <button
             type="button"
@@ -368,16 +392,23 @@ const MultiUserSearchCombobox = ({
           <div className="p-2 pb-1">
             <Input
               autoFocus
+              value={query}
               placeholder="İsim ile ara..."
-              onChange={(e) => onSearch(e.target.value)}
+              onChange={(e) => handleQueryChange(e.target.value)}
               className="h-8 rounded-lg border-slate-200 text-sm"
+              aria-label="Kullanıcı ara"
             />
           </div>
           <div className="max-h-64 overflow-y-auto p-1">
-            {results.length === 0 ? (
-              <p className="py-4 text-center text-xs text-slate-400">Aramak için yazın...</p>
+            {loading && (
+              <p className="py-3 text-center text-xs text-slate-400">Aranıyor...</p>
+            )}
+            {!loading && filteredResults.length === 0 ? (
+              <p className="py-4 text-center text-xs text-slate-400">
+                {query.trim() ? "Sonuç bulunamadı." : "Aramak için yazın..."}
+              </p>
             ) : (
-              results.map((user) => {
+              filteredResults.map((user) => {
                 const isSelected = values.some((v) => v.id === user.id);
                 return (
                   <button
@@ -396,17 +427,9 @@ const MultiUserSearchCombobox = ({
                     >
                       {isSelected && <Check className="h-2.5 w-2.5" />}
                     </div>
-                    {user.photo ? (
-                      <img
-                        src={`data:image/png;base64,${user.photo}`}
-                        alt={user.firstName}
-                        className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200"
-                      />
-                    ) : (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3e5d8f]/10 text-[#3e5d8f] text-xs font-semibold">
-                        {(user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")}
-                      </div>
-                    )}
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3e5d8f]/10 text-[#3e5d8f] text-xs font-semibold">
+                      {(user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")}
+                    </div>
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-slate-800 truncate">
                         {user.firstName} {user.lastName}
@@ -650,6 +673,9 @@ const AssignTimeline = ({
 
 function CreateRequest({ ...rest }: createTicketProps) {
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRequestIdRef = useRef(0);
   const { ticketId } = useParams();
   const { fromApr } = useParams();
 
@@ -1051,18 +1077,50 @@ function CreateRequest({ ...rest }: createTicketProps) {
   }
 };
 
-  const handleSearchByName = async (value: string) => {
-    if (value === "") {
-      setSearchByName([]);
-    } else {
-      dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const api = new UserApi(conf);
-      const data = await api.apiUserGetAllUsersWitNameAssignGet(value);
-      setSearchByName(data.data);
-      dispatchBusy({ isBusy: false });
+  const handleSearchByName = (value: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
+
+    const trimmed = value.trim();
+    if (trimmed === "") {
+      searchRequestIdRef.current += 1;
+      setSearchByName([]);
+      setUserSearchLoading(false);
+      return;
+    }
+
+    setUserSearchLoading(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      const requestId = ++searchRequestIdRef.current;
+      try {
+        const conf = getConfiguration();
+        const api = new UserApi(conf);
+        const data = await api.apiUserGetAllUsersWitNameAssignGet(trimmed);
+        if (requestId !== searchRequestIdRef.current) return;
+        // Fotoğrafları düşür — liste render'ını yavaşlatan base64 payload'ı kaldır
+        const users = (Array.isArray(data.data) ? data.data : []).map((user) => ({
+          ...user,
+          photo: undefined,
+        }));
+        setSearchByName(users);
+      } catch {
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchByName([]);
+      } finally {
+        if (requestId === searchRequestIdRef.current) {
+          setUserSearchLoading(false);
+        }
+      }
+    }, 300);
   };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   const fetchDetail = async () => {
     const conf = getConfiguration();
@@ -1617,6 +1675,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                         }}
                         onSearch={handleSearchByName}
                         results={searchByName}
+                        loading={userSearchLoading}
                         placeholder={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailInputProps.Kullanici")}
                         disabled={isOpen || !hasPerm}
                       />
@@ -2267,6 +2326,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           }}
                           onSearch={handleSearchByName}
                           results={searchByName}
+                          loading={userSearchLoading}
                           placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.KullaniciPlaceholder")}
                           disabled={!flagBoolean}
                         />
@@ -2314,6 +2374,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       }}
                       onSearch={handleSearchByName}
                       results={searchByName}
+                      loading={userSearchLoading}
                       placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.KullancilarPlaceholder")}
                     />
                   </div>

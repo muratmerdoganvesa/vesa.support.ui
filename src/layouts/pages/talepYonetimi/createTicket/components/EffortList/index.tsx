@@ -78,6 +78,7 @@ const EffortList = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
   const [sendingToManager, setSendingToManager] = useState(false);
+  const [sendError, setSendError] = useState("");
   const hoursRef = useRef<HTMLInputElement>(null);
   const invoiceHoursRef = useRef<HTMLInputElement>(null);
 
@@ -136,10 +137,35 @@ const EffortList = ({
   const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
   const rejectedByCustomer = isReturnedForEdit && Boolean(effortSendStatus?.customerApprovedByUserName);
 
+  const isInvoiceHoursMissing = (effort: TicketEffortListDto) =>
+    effort.invoiceHours === null ||
+    effort.invoiceHours === undefined ||
+    Number.isNaN(Number(effort.invoiceHours));
+
+  const hasMissingInvoiceHours = efforts.some(isInvoiceHoursMissing);
+  const canSendToEffortManager =
+    Boolean(onSendToEffortManager) &&
+    !isEffortEnter &&
+    !sendingToManager &&
+    efforts.length > 0 &&
+    !hasMissingInvoiceHours;
+
   const handleSendToEffortManager = async () => {
     if (!onSendToEffortManager || sendingToManager || isEffortEnter) return;
     if (effortSendStatus?.exists && !isReturnedForEdit) return;
+
+    if (efforts.length === 0) {
+      setSendError("Efor onayına göndermek için en az bir efor kaydı olmalıdır.");
+      return;
+    }
+
+    if (hasMissingInvoiceHours) {
+      setSendError("Efor onayına göndermeden önce tüm efor kayıtlarının fatura saati dolu olmalıdır.");
+      return;
+    }
+
     try {
+      setSendError("");
       setSendingToManager(true);
       await onSendToEffortManager();
     } finally {
@@ -340,7 +366,9 @@ const EffortList = ({
                         : "Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
                       : isEffortEnter
                         ? "Göndermek için önce efor girişini kapatın."
-                        : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
+                        : hasMissingInvoiceHours
+                          ? "Tüm efor kayıtlarının fatura saati dolu olmalıdır. Eksik kayıtları düzenleyip tekrar deneyin."
+                          : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
                 </p>
                 {isReturnedForEdit && effortSendStatus?.returnNote && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
@@ -349,11 +377,16 @@ const EffortList = ({
                       : `${effortSendStatus.effortManagerUserName ? `${effortSendStatus.effortManagerUserName}: ` : ""}${effortSendStatus.returnNote}`}
                   </p>
                 )}
+                {sendError && (
+                  <p className="mt-2 text-xs text-rose-500" role="alert">
+                    {sendError}
+                  </p>
+                )}
               </div>
               <Button
                 type="button"
                 onClick={() => void handleSendToEffortManager()}
-                disabled={isEffortEnter || sendingToManager || !onSendToEffortManager}
+                disabled={!canSendToEffortManager}
                 aria-label={isReturnedForEdit ? "Eforu tekrar onayına gönder" : "Efor onayına gönder"}
                 className="h-10 shrink-0 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
               >
@@ -580,9 +613,15 @@ const EffortList = ({
                     </TableCell>
                     {isDepartmentManager && (
                       <TableCell className="px-4 py-3">
-                        <span className="text-sm font-semibold text-slate-800 tabular-nums">
-                          {formatHours(effort.invoiceHours)}
-                        </span>
+                        {isInvoiceHoursMissing(effort) ? (
+                          <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600">
+                            Eksik
+                          </span>
+                        ) : (
+                          <span className="text-sm font-semibold text-slate-800 tabular-nums">
+                            {formatHours(effort.invoiceHours)}
+                          </span>
+                        )}
                       </TableCell>
                     )}
                     <TableCell className="px-4 py-3 max-w-[320px]">
