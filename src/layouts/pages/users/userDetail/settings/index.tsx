@@ -14,6 +14,7 @@ import form from "layouts/pages/users/new-user/schemas/form";
 import { Formik, Form } from "formik";
 import getConfiguration from "confiuration";
 import { CreateUserDto, UpdateUserDto, UserApi } from "api/generated";
+import { normalizeSicilNo } from "layouts/pages/users/new-user/schemas/sicilNo";
 import { useBusy } from "layouts/pages/hooks/useBusy";
 import { useAlert, AppAlertType as MessageBoxType } from "layouts/pages/hooks/useAlert";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +30,7 @@ function Settings(): JSX.Element {
   const urlParams = new URLSearchParams(window.location.search);
 
   const handleSubmit = async (values: any, actions: any) => {
+    values.sicilNo = normalizeSicilNo(values.sicilNo);
     if (formGudid) {
       dispatchBusy({ isBusy: true });
       const update = values as UpdateUserDto;
@@ -135,6 +137,7 @@ function Settings(): JSX.Element {
       userLevel: data.data.userLevel || null,
       mainManagerUserAppId: data.data.mainManagerUserAppId || null,
       pCname: data.data.pCname || "",
+      sicilNo: data.data.sicilNo || "",
       isTeamLeader: data.data.isTeamLeader || false,
       isKanbanAdmin: data.data.isKanbanAdmin || false,
     }));

@@ -117,7 +117,7 @@ const QuickUpdatePanel = ({ ticket, onClose, onUpdated, onBusyChange }: QuickUpd
         setStatusOptions(
           statData.filter((item) => {
             const id = Number(item.id);
-            return id !== 1 && id !== 2 && id !== 12;
+            return id !== 1 && id !== 2 && id !== 12 && id !== 13;
           })
         );
       } catch (error) {
@@ -168,8 +168,8 @@ const QuickUpdatePanel = ({ ticket, onClose, onUpdated, onBusyChange }: QuickUpd
   const visibleOptions = useMemo(() => {
     if (ticket.status == null) return statusOptions;
     const currentId = Number(ticket.status);
-    // Onay Sürecinde (12) seçenek listesinde gösterilmez
-    if (currentId === 12) return statusOptions;
+    // Onay Sürecinde (12) ve Efor Onayında (13) seçenek listesinde gösterilmez
+    if (currentId === 12 || currentId === 13) return statusOptions;
     if (statusOptions.some((item) => Number(item.id) === currentId)) return statusOptions;
     return [
       ...statusOptions,
