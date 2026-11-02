@@ -293,9 +293,9 @@ const EffortManagementDetailPage = () => {
 
             {detail.canAssignCustomerApproval && (
               <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <h2 className="text-sm font-semibold text-slate-800">Müşteri onayına sun</h2>
+                <h2 className="text-sm font-semibold text-slate-800">Talebi onaya sun</h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Talebin müşterisine bağlı bir kullanıcı seçin. Seçilen kişi yalnızca bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                  Talebin müşterisine bağlı kişiler veya vesacons.com kullanıcılarından birini seçin. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
                 </p>
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
                   <div className="flex flex-col gap-1.5">
@@ -307,7 +307,7 @@ const EffortManagementDetailPage = () => {
                       value={approvalSearch}
                       onChange={(event) => setApprovalSearch(event.target.value)}
                       placeholder="Ad veya e-posta"
-                      aria-label="Müşteri onay kullanıcısında ara"
+                      aria-label="Onay kullanıcısında ara"
                       className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
                     />
                   </div>
@@ -319,7 +319,7 @@ const EffortManagementDetailPage = () => {
                       id="approval-user"
                       value={approvalUserId}
                       onChange={(event) => setApprovalUserId(event.target.value)}
-                      aria-label="Müşteri onayına sunulacak kişiyi seç"
+                      aria-label="Onaya sunulacak kişiyi seç"
                       className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
                     >
                       <option value="">Kişi seçin</option>
@@ -340,7 +340,7 @@ const EffortManagementDetailPage = () => {
                     type="button"
                     onClick={() => void handleAssignApprovalUser()}
                     disabled={assigning || approvalUserId.trim() === ""}
-                    aria-label="Seçilen kişiyi müşteri onayına sun"
+                    aria-label="Seçilen kişiyi onaya sun"
                     className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
                   >
                     {assigning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -348,7 +348,7 @@ const EffortManagementDetailPage = () => {
                   </Button>
                 </div>
                 {approvalUsers.length === 0 && (
-                  <p className="mt-3 text-xs text-amber-700">Bu müşteriye bağlı seçilebilir kullanıcı yok.</p>
+                  <p className="mt-3 text-xs text-amber-700">Seçilebilir kullanıcı bulunamadı.</p>
                 )}
               </section>
             )}

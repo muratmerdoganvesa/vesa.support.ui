@@ -16,8 +16,21 @@ export const fetchTicketEfforts = async (
     isDepartmentManager: false,
     isEffortEnter: false,
     canEnterEffort: false,
+    isEffortLockedInApproval: false,
+    canCompleteEffort: false,
+    isEffortComplated: false,
     items: [],
   };
+};
+
+export const completeTicketEffortAccess = async (
+  ticketId: string
+): Promise<{ ticketId?: string; isEffortComplated?: boolean }> => {
+  const response = await axiosInstance.post<{ ticketId?: string; isEffortComplated?: boolean }>(
+    "/api/Ticket/CompleteTicketEffortAccess",
+    { ticketId }
+  );
+  return response.data ?? { ticketId, isEffortComplated: true };
 };
 
 export const setTicketEffortEnter = async (

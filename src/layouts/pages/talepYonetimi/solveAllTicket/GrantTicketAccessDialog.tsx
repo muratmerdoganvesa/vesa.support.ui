@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Trash2, X } from "lucide-react";
+import { CheckCircle2, Loader2, Lock, Trash2, X } from "lucide-react";
 
 import { UserApi } from "api/generated";
 import getConfiguration from "confiuration";
@@ -8,6 +8,12 @@ import { cn } from "lib/utils";
 import { useAlert } from "layouts/pages/hooks/useAlert";
 import { Switch } from "components/ui/switch";
 import { readEffortApiError, setTicketEffortEnter } from "../createTicket/api/ticketEffortApi";
+import { fetchEffortManagementByTicket } from "layouts/pages/effortManagement/api";
+import {
+  TicketEffortStatus,
+  type TicketEffortManagementStatusDto,
+} from "layouts/pages/effortManagement/types";
+import { formatDateTime } from "layouts/pages/effortManagement/shared";
 
 export interface GrantTicketAccessTicket {
   id: string;
@@ -34,6 +40,8 @@ interface AccessListItem {
   name: string;
   isPrimary: boolean;
   isActive: boolean;
+  isEffort?: boolean;
+  isEffortComplated?: boolean;
 }
 
 interface GrantTicketAccessPanelProps {
@@ -90,7 +98,17 @@ const GrantTicketAccessPanel = ({
   const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
   const [isEffortEnter, setIsEffortEnter] = useState(Boolean(ticket.isEffortEnter));
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
+  const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
+  const [effortStatusLoading, setEffortStatusLoading] = useState(false);
   const searchTimerRef = useRef<number | null>(null);
+
+  const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
+  const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
+  const isEffortProcessLocked =
+    Boolean(effortSendStatus?.exists) && !isReturnedForEdit;
+  const isMutating =
+    submitting || revokingUserId != null || effortEnterSaving || effortStatusLoading;
+  const isFormLocked = isEffortProcessLocked || isMutating;
 
   const loadAccessList = async () => {
     setListLoading(true);
@@ -106,6 +124,18 @@ const GrantTicketAccessPanel = ({
     }
   };
 
+  const loadEffortStatus = async () => {
+    setEffortStatusLoading(true);
+    try {
+      const status = await fetchEffortManagementByTicket(ticket.id);
+      setEffortSendStatus(status);
+    } catch {
+      setEffortSendStatus(null);
+    } finally {
+      setEffortStatusLoading(false);
+    }
+  };
+
   useEffect(() => {
     setIsEffortEnter(Boolean(ticket.isEffortEnter));
   }, [ticket.id, ticket.isEffortEnter]);
@@ -116,8 +146,11 @@ const GrantTicketAccessPanel = ({
   }, [submitting, revokingUserId, effortEnterSaving, onBusyChange]);
 
   useEffect(() => {
-    userInputRef.current?.focus();
+    if (!isEffortProcessLocked) {
+      userInputRef.current?.focus();
+    }
     void loadAccessList();
+    void loadEffortStatus();
   }, [ticket.id]);
 
   useEffect(() => {
@@ -132,7 +165,7 @@ const GrantTicketAccessPanel = ({
   };
 
   const handleToggleEffortEnter = async (next: boolean) => {
-    if (effortEnterSaving || submitting || revokingUserId) return;
+    if (isEffortProcessLocked || effortEnterSaving || submitting || revokingUserId) return;
     setEffortEnterSaving(true);
     try {
       const saved = await setTicketEffortEnter(ticket.id, next);
@@ -183,6 +216,16 @@ const GrantTicketAccessPanel = ({
   };
 
   const handleSubmit = async () => {
+    if (isEffortProcessLocked) {
+      dispatchAlert({
+        message: isCustomerApproved
+          ? "Efor süreci tamamlandı. Yeni efor isteği gönderilemez."
+          : "Efor onay sürecindeyken yeni efor isteği gönderilemez.",
+        type: "Warning",
+      });
+      return;
+    }
+
     if (submitting || !selectedUser?.id) {
       if (!selectedUser?.id) {
         dispatchAlert({ message: "Lütfen efor istenecek kişiyi seçiniz.", type: "Warning" });
@@ -219,7 +262,9 @@ const GrantTicketAccessPanel = ({
   };
 
   const handleRevoke = async (item: AccessListItem) => {
-    if (item.isPrimary || revokingUserId || submitting || effortEnterSaving) return;
+    if (item.isPrimary || isEffortProcessLocked || revokingUserId || submitting || effortEnterSaving) {
+      return;
+    }
 
     setRevokingUserId(item.userAppId);
     try {
@@ -283,13 +328,53 @@ const GrantTicketAccessPanel = ({
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-3">
+        {effortStatusLoading ? (
+          <div className="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5 text-[11px] text-slate-500">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Efor süreci kontrol ediliyor...
+          </div>
+        ) : isCustomerApproved ? (
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5">
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-900">
+              <Lock className="h-3.5 w-3.5" />
+              Efor süreci tamamlandı
+            </p>
+            <p className="mt-1 text-[11px] text-emerald-800">
+              {effortSendStatus?.customerApprovedByUserName || "Onaylayan"}
+              {effortSendStatus?.customerApprovedAt
+                ? ` · ${formatDateTime(effortSendStatus.customerApprovedAt)}`
+                : ""}
+            </p>
+            <p className="mt-1 text-[11px] text-emerald-700">
+              Onaylandıktan sonra efor isteği, efor girişi ve efor kayıtları değiştirilemez.
+            </p>
+          </div>
+        ) : isEffortProcessLocked ? (
+          <div className="rounded-lg border border-sky-100 bg-sky-50 px-3 py-2.5">
+            <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-900">
+              <Lock className="h-3.5 w-3.5" />
+              Efor onay sürecinde
+            </p>
+            <p className="mt-1 text-[11px] text-sky-800">
+              Durum: {effortSendStatus?.statusText || "Gönderildi"}
+              {effortSendStatus?.sentAt ? ` · ${formatDateTime(effortSendStatus.sentAt)}` : ""}
+            </p>
+            <p className="mt-1 text-[11px] text-sky-700">
+              Süreç tamamlanana veya düzenleme için geri gönderilene kadar efor isteği ve girişi
+              kilitlidir.
+            </p>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-slate-700">Efor girilebilir</p>
             <p className="text-[11px] text-slate-400">
-              {isEffortEnter
-                ? "Atanan ve efor istenen kişiler efor girebilir."
-                : "Kapalıyken efor eklenemez, silinemez ve güncellenemez."}
+              {isEffortProcessLocked
+                ? "Efor süreci kilitli. Giriş durumu değiştirilemez."
+                : isEffortEnter
+                  ? "Atanan ve efor istenen kişiler efor girebilir."
+                  : "Kapalıyken efor eklenemez, silinemez ve güncellenemez."}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -303,7 +388,7 @@ const GrantTicketAccessPanel = ({
             </span>
             <Switch
               checked={isEffortEnter}
-              disabled={effortEnterSaving || submitting || revokingUserId != null}
+              disabled={isFormLocked}
               onCheckedChange={(checked) => void handleToggleEffortEnter(checked)}
               aria-label="Efor girilebilir durumunu değiştir"
             />
@@ -316,7 +401,7 @@ const GrantTicketAccessPanel = ({
             ref={userInputRef}
             type="text"
             value={userQuery}
-            disabled={submitting}
+            disabled={isFormLocked}
             aria-label="Efor istenecek kişiyi ara"
             placeholder="Kullanıcı ara (örn. murat.merdogan)"
             onChange={(event) => handleUserQueryChange(event.target.value)}
@@ -324,7 +409,7 @@ const GrantTicketAccessPanel = ({
             className={cn(fieldClassName, "min-w-0")}
           />
           {userSearchLoading && <p className="text-[11px] text-slate-400">Aranıyor...</p>}
-          {!userSearchLoading && userResults.length > 0 && (
+          {!userSearchLoading && !isEffortProcessLocked && userResults.length > 0 && (
             <ul className="max-h-36 overflow-auto rounded-lg border border-slate-200 bg-white">
               {userResults.map((user) => (
                 <li key={user.id}>
@@ -342,7 +427,7 @@ const GrantTicketAccessPanel = ({
               ))}
             </ul>
           )}
-          {selectedUser && (
+          {selectedUser && !isEffortProcessLocked && (
             <p className="text-[11px] text-slate-500">
               Seçilen:{" "}
               <span className="font-medium text-[#3e5d8f]">{displayUserName(selectedUser)}</span>
@@ -356,7 +441,7 @@ const GrantTicketAccessPanel = ({
           <textarea
             ref={descriptionRef}
             value={description}
-            disabled={submitting}
+            disabled={isFormLocked}
             aria-label="Efor açıklaması"
             placeholder="Neden efor istiyorsunuz? (opsiyonel)"
             onChange={(event) => setDescription(event.target.value)}
@@ -377,20 +462,34 @@ const GrantTicketAccessPanel = ({
                   key={item.id}
                   className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1.5 text-sm text-slate-700"
                 >
-                  <span className="truncate font-medium">{item.name}</span>
-                  <button
-                    type="button"
-                    aria-label={`${item.name} efor isteğini kaldır`}
-                    disabled={submitting || revokingUserId != null || effortEnterSaving}
-                    onClick={() => handleRevoke(item)}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
-                  >
-                    {revokingUserId === item.userAppId ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-medium">{item.name}</span>
+                    {item.isEffortComplated ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Tamamlandı
+                      </span>
                     ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                        Bekliyor
+                      </span>
                     )}
-                  </button>
+                  </div>
+                  {!isEffortProcessLocked && (
+                    <button
+                      type="button"
+                      aria-label={`${item.name} efor isteğini kaldır`}
+                      disabled={isFormLocked}
+                      onClick={() => handleRevoke(item)}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                    >
+                      {revokingUserId === item.userAppId ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -407,16 +506,18 @@ const GrantTicketAccessPanel = ({
         >
           Kapat
         </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={submitting || revokingUserId != null || effortEnterSaving || !selectedUser?.id}
-          aria-busy={submitting}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#3e5d8f] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#324d7a] disabled:opacity-40"
-        >
-          {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Efor İste
-        </button>
+        {!isEffortProcessLocked && (
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isFormLocked || !selectedUser?.id}
+            aria-busy={submitting}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#3e5d8f] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#324d7a] disabled:opacity-40"
+          >
+            {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Efor İste
+          </button>
+        )}
       </div>
     </div>
   );

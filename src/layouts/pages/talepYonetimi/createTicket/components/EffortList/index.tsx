@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Clock, Loader2, Pencil, Plus, Send, Timer, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Pencil, Plus, Send, Timer, Trash2 } from "lucide-react";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Switch } from "components/ui/switch";
@@ -34,7 +34,11 @@ interface EffortListProps {
   isDepartmentManager?: boolean;
   isEffortEnter?: boolean;
   canEnterEffort?: boolean;
+  isEffortLockedInApproval?: boolean;
+  canCompleteEffort?: boolean;
+  isEffortComplated?: boolean;
   onEffortEnterChange?: (isEffortEnter: boolean) => Promise<void>;
+  onCompleteEffort?: () => Promise<void>;
   onAdd: (
     effortHours: number,
     description?: string | null,
@@ -62,7 +66,11 @@ const EffortList = ({
   isDepartmentManager = false,
   isEffortEnter = false,
   canEnterEffort = false,
+  isEffortLockedInApproval = false,
+  canCompleteEffort = false,
+  isEffortComplated = false,
   onEffortEnterChange,
+  onCompleteEffort,
   onAdd,
   onUpdate,
   onDelete,
@@ -77,6 +85,7 @@ const EffortList = ({
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
+  const [completingEffort, setCompletingEffort] = useState(false);
   const [sendingToManager, setSendingToManager] = useState(false);
   const [sendError, setSendError] = useState("");
   const hoursRef = useRef<HTMLInputElement>(null);
@@ -99,24 +108,37 @@ const EffortList = ({
     0
   );
 
+  const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
+  const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
+  const isProcessLocked =
+    isEffortLockedInApproval ||
+    (Boolean(effortSendStatus?.exists) && !isReturnedForEdit);
+  // Efor onay süreci / müşteri onayı: yönetici ve efor giren için kayıtlar kilitlenir.
+  // Efor giren kişi kendi sürecini tamamladıysa da ekleme/düzenleme kapanır.
+  const isEffortLocked =
+    isProcessLocked || (!isDepartmentManager && isEffortComplated);
+
   const canEditEffort = (effort: TicketEffortListDto) => {
+    if (isEffortLocked) return false;
     if (isDepartmentManager) return true;
     return Boolean(canEnterEffort && effort.isOwn);
   };
 
   const canEditActualHours = (effort: TicketEffortListDto) => {
+    if (isEffortLocked) return false;
     if (!effort.isOwn) return false;
     if (isDepartmentManager) return true;
     return Boolean(canEnterEffort);
   };
 
   const canDeleteEffort = (effort: TicketEffortListDto) => {
+    if (isEffortLocked) return false;
     if (isDepartmentManager) return true;
     if (!isEffortEnter) return false;
     return Boolean(canEnterEffort && effort.isOwn);
   };
 
-  const showEffortForm = isDepartmentManager || canEnterEffort;
+  const showEffortForm = !isEffortLocked && (isDepartmentManager || canEnterEffort);
   const editingLocksActualHours =
     Boolean(editingEffort) && !canEditActualHours(editingEffort!);
 
@@ -133,8 +155,6 @@ const EffortList = ({
     setEditInvoiceError("");
   }, [editOpen, editingEffort]);
 
-  const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
-  const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
   const rejectedByCustomer = isReturnedForEdit && Boolean(effortSendStatus?.customerApprovedByUserName);
 
   const isInvoiceHoursMissing = (effort: TicketEffortListDto) =>
@@ -174,12 +194,24 @@ const EffortList = ({
   };
 
   const handleToggleEffortEnter = async (next: boolean) => {
-    if (!onEffortEnterChange || effortEnterSaving) return;
+    if (!onEffortEnterChange || effortEnterSaving || isProcessLocked) return;
     try {
       setEffortEnterSaving(true);
       await onEffortEnterChange(next);
     } finally {
       setEffortEnterSaving(false);
+    }
+  };
+
+  const showCompleteEffortPanel = Boolean(canCompleteEffort || isEffortComplated);
+
+  const handleCompleteEffort = async () => {
+    if (!onCompleteEffort || completingEffort || isEffortComplated) return;
+    try {
+      setCompletingEffort(true);
+      await onCompleteEffort();
+    } finally {
+      setCompletingEffort(false);
     }
   };
 
@@ -304,9 +336,13 @@ const EffortList = ({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-800">Efor girilebilir</p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {isEffortEnter
-                  ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz. Başkalarının fiili saatini değiştiremezsiniz."
-                  : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
+                {isProcessLocked
+                  ? isCustomerApproved
+                    ? "Efor süreci tamamlandı. Efor girişi ve kayıtlar kalıcı olarak kilitlendi."
+                    : "Efor onay sürecinde. Düzenleme için geri gönderilene kadar efor girişi açılamaz; fiili saat, fatura saati ve açıklama değiştirilemez."
+                  : isEffortEnter
+                    ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz. Başkalarının fiili saatini değiştiremezsiniz."
+                    : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -320,7 +356,7 @@ const EffortList = ({
               </span>
               <Switch
                 checked={isEffortEnter}
-                disabled={effortEnterSaving || !onEffortEnterChange}
+                disabled={effortEnterSaving || isProcessLocked || !onEffortEnterChange}
                 onCheckedChange={(checked) => void handleToggleEffortEnter(checked)}
                 aria-label="Efor girilebilir durumunu değiştir"
               />
@@ -335,14 +371,22 @@ const EffortList = ({
                 {effortSendStatus?.customerApprovedByUserName || "Onaylayan"}
                 {effortSendStatus?.customerApprovedAt ? ` · ${formatDateTime(effortSendStatus.customerApprovedAt)}` : ""}
               </p>
+              <p className="mt-2 text-xs text-emerald-700">
+                Onaylandıktan sonra efor kayıtları değiştirilemez, silinemez veya güncellenemez.
+                Tekrar efor süreci başlatılamaz.
+              </p>
             </div>
-          ) : effortSendStatus?.exists && !isReturnedForEdit ? (
+          ) : isProcessLocked ? (
             <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4">
               <p className="text-sm font-semibold text-sky-900">Efor onayına gönderildi</p>
               <p className="mt-1 text-xs text-sky-800">
-                Durum: {effortSendStatus.statusText || "Gönderildi"}
-                {effortSendStatus.sentByUserName ? ` · Gönderen: ${effortSendStatus.sentByUserName}` : ""}
-                {effortSendStatus.sentAt ? ` · ${formatDateTime(effortSendStatus.sentAt)}` : ""}
+                Durum: {effortSendStatus?.statusText || "Gönderildi"}
+                {effortSendStatus?.sentByUserName ? ` · Gönderen: ${effortSendStatus.sentByUserName}` : ""}
+                {effortSendStatus?.sentAt ? ` · ${formatDateTime(effortSendStatus.sentAt)}` : ""}
+              </p>
+              <p className="mt-2 text-xs text-sky-700">
+                Onay sürecindeyken yönetici dahil kimse fiili saat, fatura saati veya açıklamayı
+                değiştiremez. Düzenleme yalnızca &quot;Düzenleme için geri gönderildi&quot; durumunda açılır.
               </p>
             </div>
           ) : (
@@ -402,9 +446,65 @@ const EffortList = ({
         </>
       )}
 
-      {!isDepartmentManager && !canEnterEffort && (
+      {!isDepartmentManager && isCustomerApproved && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
+          Efor süreci tamamlandı ve onaylandı. Fiili saat, fatura saati ve açıklama değiştirilemez;
+          ekleme, silme ve güncelleme yapılamaz.
+        </div>
+      )}
+
+      {!isDepartmentManager && !isCustomerApproved && isProcessLocked && (
+        <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3 text-sm text-sky-800">
+          Efor onay sürecinde. Fiili saat, fatura saati ve açıklama değiştirilemez; ekleme, silme ve
+          güncelleme yapılamaz.
+        </div>
+      )}
+
+      {!isDepartmentManager && !isProcessLocked && isEffortComplated && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
+          Eforunuz tamamlandı. Kayıtlarınız kilitlendi; ekleme, silme ve güncelleme yapılamaz.
+        </div>
+      )}
+
+      {!isDepartmentManager && !isEffortLocked && !canEnterEffort && (
         <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm text-amber-800">
           Efor girişi kapalı. Eklediğiniz eforları görüntüleyebilirsiniz; ekleme, silme ve güncelleme yapılamaz.
+        </div>
+      )}
+
+      {showCompleteEffortPanel && !isProcessLocked && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-800">
+              {isEffortComplated ? "Eforunuz tamamlandı" : "Efor tamamla"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {isEffortComplated
+                ? "Bu talep için efor girişi tamamlandı olarak işaretlendi. Kayıtlarınız kilitlendi; departman yöneticisi durumu görebilir."
+                : "Efor maddelerinizi girdikten sonra eforunuzu tamamladığınızı bildirin."}
+            </p>
+          </div>
+          {isEffortComplated ? (
+            <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Tamamlandı
+            </span>
+          ) : (
+            <Button
+              type="button"
+              onClick={() => void handleCompleteEffort()}
+              disabled={completingEffort || !onCompleteEffort}
+              aria-label="Eforum tamamladım"
+              className="h-10 shrink-0 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
+            >
+              {completingEffort ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              Eforum tamamladım
+            </Button>
+          )}
         </div>
       )}
 

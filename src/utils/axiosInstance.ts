@@ -27,6 +27,7 @@ const PUBLIC_ENDPOINTS = [
   '/api/ForgotPassword/forgot-password',
   '/api/ForgotPassword/verify-reset-code',
   '/api/ForgotPassword/change-pw',
+  '/api/TicketEffortManagement/mail-decision',
 ];
 
 const isPublicEndpoint = (url?: string): boolean =>
@@ -39,6 +40,7 @@ const isLoginPage = (): boolean => {
     currentPath.includes('/authentication/') ||
     currentPath.includes('/sign-in') ||
     currentPath.includes('/reset-password') ||
+    currentPath.includes('/effortMailDecision') ||
     currentHash.includes('/authentication/')
   );
 };

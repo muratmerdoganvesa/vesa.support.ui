@@ -134,6 +134,19 @@ export interface TicketEffortManagementEffortsDto {
   items?: TicketEffortManagementEffortItemDto[] | null;
 }
 
+export interface MailDecisionPreviewDto {
+  id?: string;
+  ticketNumber?: number;
+  title?: string | null;
+  customerName?: string | null;
+  status?: number;
+  statusText?: string | null;
+  canDecide?: boolean;
+  message?: string | null;
+  totalInvoiceHours?: number;
+  items?: TicketEffortManagementEffortItemDto[] | null;
+}
+
 export const effortStatusClassName = (status?: number | null): string => {
   if (status === TicketEffortStatus.SentToEffortManager) {
     return "bg-amber-50 text-amber-700 ring-amber-200";
