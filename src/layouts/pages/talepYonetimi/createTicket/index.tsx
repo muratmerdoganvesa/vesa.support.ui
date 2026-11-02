@@ -98,11 +98,30 @@ import {
   ShieldCheck,
   MessageSquare,
   Upload,
+  Timer,
 } from "lucide-react";
 
 import TaskList from "./components/TaskList";
-import UserSearchCombobox, { getUserDisplayName } from "./components/UserSearchCombobox";
+import EffortList from "./components/EffortList";
+import UserSearchCombobox, {
+  getUserDisplayName,
+  matchesUserSearchQuery,
+} from "./components/UserSearchCombobox";
 import { filterTicketSubjectsForCompany } from "./utils/filterTicketSubjectsForCompany";
+import {
+  addTicketEffort,
+  deleteTicketEffort,
+  fetchTicketEfforts,
+  readEffortApiError,
+  setTicketEffortEnter,
+  updateTicketEffort,
+} from "./api/ticketEffortApi";
+import type { TicketEffortListDto, TicketEffortListResponseDto } from "./types/ticketEffort.types";
+import {
+  fetchEffortManagementByTicket,
+  sendTicketEffortManagement,
+} from "layouts/pages/effortManagement/api";
+import type { TicketEffortManagementStatusDto } from "layouts/pages/effortManagement/types";
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -312,23 +331,44 @@ const MultiUserSearchCombobox = ({
   onSearch,
   results,
   placeholder,
+  loading = false,
 }: {
   values: any[];
   onChange: (users: any[]) => void;
   onSearch: (q: string) => void;
   results: any[];
   placeholder: string;
+  loading?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const filteredResults = useMemo(() => {
+    if (!query.trim()) return results;
+    return results.filter((user) => matchesUserSearchQuery(user, query));
+  }, [results, query]);
 
   const handleToggle = (user: any) => {
     const exists = values.some((v) => v.id === user.id);
     onChange(exists ? values.filter((v) => v.id !== user.id) : [...values, user]);
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setQuery("");
+      onSearch("");
+    }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    onSearch(value);
+  };
+
   return (
     <div className="flex flex-col gap-1.5">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <button
             type="button"
@@ -352,16 +392,23 @@ const MultiUserSearchCombobox = ({
           <div className="p-2 pb-1">
             <Input
               autoFocus
+              value={query}
               placeholder="İsim ile ara..."
-              onChange={(e) => onSearch(e.target.value)}
+              onChange={(e) => handleQueryChange(e.target.value)}
               className="h-8 rounded-lg border-slate-200 text-sm"
+              aria-label="Kullanıcı ara"
             />
           </div>
           <div className="max-h-64 overflow-y-auto p-1">
-            {results.length === 0 ? (
-              <p className="py-4 text-center text-xs text-slate-400">Aramak için yazın...</p>
+            {loading && (
+              <p className="py-3 text-center text-xs text-slate-400">Aranıyor...</p>
+            )}
+            {!loading && filteredResults.length === 0 ? (
+              <p className="py-4 text-center text-xs text-slate-400">
+                {query.trim() ? "Sonuç bulunamadı." : "Aramak için yazın..."}
+              </p>
             ) : (
-              results.map((user) => {
+              filteredResults.map((user) => {
                 const isSelected = values.some((v) => v.id === user.id);
                 return (
                   <button
@@ -380,17 +427,9 @@ const MultiUserSearchCombobox = ({
                     >
                       {isSelected && <Check className="h-2.5 w-2.5" />}
                     </div>
-                    {user.photo ? (
-                      <img
-                        src={`data:image/png;base64,${user.photo}`}
-                        alt={user.firstName}
-                        className="h-7 w-7 rounded-full object-cover ring-1 ring-slate-200"
-                      />
-                    ) : (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3e5d8f]/10 text-[#3e5d8f] text-xs font-semibold">
-                        {(user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")}
-                      </div>
-                    )}
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#3e5d8f]/10 text-[#3e5d8f] text-xs font-semibold">
+                      {(user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")}
+                    </div>
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-slate-800 truncate">
                         {user.firstName} {user.lastName}
@@ -634,6 +673,9 @@ const AssignTimeline = ({
 
 function CreateRequest({ ...rest }: createTicketProps) {
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchRequestIdRef = useRef(0);
   const { ticketId } = useParams();
   const { fromApr } = useParams();
 
@@ -724,6 +766,21 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [existingTasks, setExistingTasks] = useState<TicketTaskListDto[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
 
+  // ── Efor sekmesi state ─────────────────────────────────────────────────────
+  const [existingEfforts, setExistingEfforts] = useState<TicketEffortListDto[]>([]);
+  const [effortsLoading, setEffortsLoading] = useState(false);
+  const [isEffortDeptManager, setIsEffortDeptManager] = useState(false);
+  const [isEffortEnter, setIsEffortEnter] = useState(false);
+  const [canEnterEffort, setCanEnterEffort] = useState(false);
+  const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
+
+  const applyEffortResponse = (data: TicketEffortListResponseDto) => {
+    setExistingEfforts(data.items ?? []);
+    setIsEffortDeptManager(Boolean(data.isDepartmentManager));
+    setIsEffortEnter(Boolean(data.isEffortEnter));
+    setCanEnterEffort(Boolean(data.canEnterEffort));
+  };
+
   // ── Yönlendirme geçmişi collapsible ───────────────────────────────────────
   const [showHistory, setShowHistory] = useState(false);
 
@@ -735,6 +792,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
     { value: "1", label: "Görevler", icon: <CheckSquare className="w-3.5 h-3.5" /> },
     ...(isSolveTicket && !review
       ? [{ value: "2", label: t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailNavBarProps.TalepGuncelleme"), icon: <Settings2 className="w-3.5 h-3.5" /> }]
+      : []),
+    ...(isSolveTicket
+      ? [{ value: "3", label: "Efor Bilgisi", icon: <Timer className="w-3.5 h-3.5" /> }]
       : []),
   ];
 
@@ -837,7 +897,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
     const api = new TicketApi(conf);
     const data = await api.apiTicketTicketStatusGet();
     const statData = data.data as any;
-    setStatusData(statData.filter((item: any) => item.id !== 2 && item.id !== 1 && item.id !== 12));
+    setStatusData(statData.filter((item: any) => item.id !== 2 && item.id !== 1 && item.id !== 12 && item.id !== 13));
     dispatchBusy({ isBusy: false });
   };
 
@@ -1017,18 +1077,50 @@ function CreateRequest({ ...rest }: createTicketProps) {
   }
 };
 
-  const handleSearchByName = async (value: string) => {
-    if (value === "") {
-      setSearchByName([]);
-    } else {
-      dispatchBusy({ isBusy: true });
-      const conf = getConfiguration();
-      const api = new UserApi(conf);
-      const data = await api.apiUserGetAllUsersWitNameAssignGet(value);
-      setSearchByName(data.data);
-      dispatchBusy({ isBusy: false });
+  const handleSearchByName = (value: string) => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
+
+    const trimmed = value.trim();
+    if (trimmed === "") {
+      searchRequestIdRef.current += 1;
+      setSearchByName([]);
+      setUserSearchLoading(false);
+      return;
+    }
+
+    setUserSearchLoading(true);
+    searchTimeoutRef.current = setTimeout(async () => {
+      const requestId = ++searchRequestIdRef.current;
+      try {
+        const conf = getConfiguration();
+        const api = new UserApi(conf);
+        const data = await api.apiUserGetAllUsersWitNameAssignGet(trimmed);
+        if (requestId !== searchRequestIdRef.current) return;
+        // Fotoğrafları düşür — liste render'ını yavaşlatan base64 payload'ı kaldır
+        const users = (Array.isArray(data.data) ? data.data : []).map((user) => ({
+          ...user,
+          photo: undefined,
+        }));
+        setSearchByName(users);
+      } catch {
+        if (requestId !== searchRequestIdRef.current) return;
+        setSearchByName([]);
+      } finally {
+        if (requestId === searchRequestIdRef.current) {
+          setUserSearchLoading(false);
+        }
+      }
+    }, 300);
   };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    };
+  }, []);
 
   const fetchDetail = async () => {
     const conf = getConfiguration();
@@ -1096,6 +1188,37 @@ function CreateRequest({ ...rest }: createTicketProps) {
       }
     };
     fetchTasks();
+  }, [activeIndex, id]);
+
+  // ── Efor sekmesi açılınca efor kayıtlarını çek ─────────────────────────────
+  useEffect(() => {
+    if (activeIndex !== 3 || !id) return;
+    const loadEfforts = async () => {
+      try {
+        setEffortsLoading(true);
+        const data = await fetchTicketEfforts(id);
+        applyEffortResponse(data);
+        if (data.isDepartmentManager) {
+          try {
+            const status = await fetchEffortManagementByTicket(id);
+            setEffortSendStatus(status);
+          } catch (statusError) {
+            setEffortSendStatus(null);
+            dispatchAlert({
+              message: "Efor gönderim durumu alınamadı: " + readEffortApiError(statusError),
+              type: "Error",
+            });
+          }
+        } else {
+          setEffortSendStatus(null);
+        }
+      } catch (error) {
+        dispatchAlert({ message: "Efor kayıtları yüklenemedi: " + error, type: "Error" });
+      } finally {
+        setEffortsLoading(false);
+      }
+    };
+    loadEfforts();
   }, [activeIndex, id]);
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -1552,6 +1675,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                         }}
                         onSearch={handleSearchByName}
                         results={searchByName}
+                        loading={userSearchLoading}
                         placeholder={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailInputProps.Kullanici")}
                         disabled={isOpen || !hasPerm}
                       />
@@ -1995,6 +2119,109 @@ function CreateRequest({ ...rest }: createTicketProps) {
           )}
 
           {/* ─────────────────────────────────────────────────────────────── */}
+          {/* Tab 3: Efor Bilgisi (isSolveTicket)                            */}
+          {/* ─────────────────────────────────────────────────────────────── */}
+          {activeIndex === 3 && (
+            <div className="p-6">
+              {id ? (
+                <EffortList
+                  efforts={existingEfforts}
+                  loading={effortsLoading}
+                  isDepartmentManager={isEffortDeptManager}
+                  isEffortEnter={isEffortEnter}
+                  canEnterEffort={canEnterEffort}
+                  onEffortEnterChange={async (next) => {
+                    try {
+                      await setTicketEffortEnter(id, next);
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({
+                        message: next ? "Efor girişi açıldı." : "Efor girişi kapatıldı.",
+                        type: "Success",
+                      });
+                    } catch (error) {
+                      dispatchAlert({
+                        message: "Efor girilebilir durumu güncellenemedi: " + readEffortApiError(error),
+                        type: "Error",
+                      });
+                      throw error;
+                    }
+                  }}
+                  onAdd={async (effortHours, description, invoiceHours) => {
+                    try {
+                      await addTicketEffort(id, {
+                        effortHours,
+                        description: description ?? null,
+                        ...(invoiceHours !== undefined ? { invoiceHours } : {}),
+                      });
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({ message: "Efor kaydı eklendi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({ message: "Efor eklenemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                  onUpdate={async (effortId, effortHours, description, invoiceHours) => {
+                    try {
+                      await updateTicketEffort(id, effortId, {
+                        effortHours,
+                        description: description ?? null,
+                        ...(invoiceHours !== undefined ? { invoiceHours } : {}),
+                      });
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({ message: "Efor kaydı güncellendi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({ message: "Efor güncellenemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                  onDelete={async (effortId) => {
+                    try {
+                      await deleteTicketEffort(id, effortId);
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({ message: "Efor kaydı silindi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({ message: "Efor silinemedi: " + readEffortApiError(error), type: "Error" });
+                      throw error;
+                    }
+                  }}
+                  effortSendStatus={effortSendStatus}
+                  onSendToEffortManager={async () => {
+                    try {
+                      await sendTicketEffortManagement(id);
+                      const status = await fetchEffortManagementByTicket(id);
+                      setEffortSendStatus(status);
+                      setSelectedStatus({
+                        id: 13 as TicketStatus,
+                        name: "Efor Onayında",
+                        description: "Efor Onayında",
+                      });
+                      dispatchAlert({ message: "Efor, efor yöneticisine gönderildi.", type: "Success" });
+                    } catch (error) {
+                      dispatchAlert({
+                        message: "Efor gönderilemedi: " + readEffortApiError(error),
+                        type: "Error",
+                      });
+                      throw error;
+                    }
+                  }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-200 py-16 text-center">
+                  <Timer className="w-10 h-10 text-slate-300" />
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-slate-500">Efor girmek için önce talebi seçin</p>
+                    <p className="text-xs text-slate-400">Talep açıldıktan sonra bu sekmeden efor ekleyebilirsiniz.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ─────────────────────────────────────────────────────────────── */}
           {/* Tab 2: Talep Güncelleme (isSolveTicket)                        */}
           {/* ─────────────────────────────────────────────────────────────── */}
           {activeIndex === 2 && (
@@ -2099,6 +2326,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           }}
                           onSearch={handleSearchByName}
                           results={searchByName}
+                          loading={userSearchLoading}
                           placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.KullaniciPlaceholder")}
                           disabled={!flagBoolean}
                         />
@@ -2146,6 +2374,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       }}
                       onSearch={handleSearchByName}
                       results={searchByName}
+                      loading={userSearchLoading}
                       placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.KullancilarPlaceholder")}
                     />
                   </div>

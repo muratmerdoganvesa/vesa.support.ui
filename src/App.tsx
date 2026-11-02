@@ -142,6 +142,8 @@ const ActivityPeriodManagement = lazy(() => import("layouts/pages/activityPeriod
 const ActivityRuleManagement = lazy(() => import("layouts/pages/activityRuleManagement"));
 const ChatHome = lazy(() => import("layouts/pages/ai-page/chat-home"));
 const TicketProjectStatistics = lazy(() => import("layouts/pages/ticketProjects/components/ProjectStatisticsTab"));
+const EffortManagementPage = lazy(() => import("layouts/pages/effortManagement"));
+const EffortManagementDetailPage = lazy(() => import("layouts/pages/effortManagement/detail"));
 
 
 // import GeneralSidenav from "./examples/Sidenav/components/GeneralSidenav/GeneralSidenav";
@@ -313,6 +315,7 @@ export default function App() {
           <Route path="/profile/profile-overview" element={<Overview />} />
           <Route path="/profile/all-projects" element={<AllProjects />} />
       
+        
           <Route path="/" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="*" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
@@ -337,7 +340,8 @@ export default function App() {
             <Route path="/webEvents" element={<WebEvents />} />
             <Route path="/webEvents/detail" element={<WebEventsCE />} />
             <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
-
+           <Route path="/effortManagement" element={<EffortManagementPage />} />
+           <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}

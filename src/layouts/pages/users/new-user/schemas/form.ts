@@ -250,6 +250,12 @@ let form = {
       type: "text",
       errorMsg: "PC Name",
     },
+    sicilNo: {
+      name: "sicilNo",
+      label: "Sicil Numarası",
+      type: "text",
+      errorMsg: "Sicil numarası yalnızca rakam olmalıdır.",
+    },
     isTeamLeader: {
       name: "isTeamLeader",
       label: "Takım Lideri",

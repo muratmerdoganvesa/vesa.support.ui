@@ -12,6 +12,8 @@ export interface TicketEffortListDto {
 
 export interface TicketEffortListResponseDto {
   isDepartmentManager?: boolean;
+  isEffortEnter?: boolean;
+  canEnterEffort?: boolean;
   items?: TicketEffortListDto[] | null;
 }
 

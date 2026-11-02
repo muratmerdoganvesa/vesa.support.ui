@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronsUpDown, X } from "lucide-react";
 import { cn } from "lib/utils";
 import { Input } from "components/ui/input";
@@ -17,6 +17,36 @@ export const getUserDisplayName = (user: unknown): string => {
   return `${fn} ${ln}`.trim();
 };
 
+const foldTurkish = (value: string) =>
+  value
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ş/g, "s")
+    .replace(/ç/g, "c")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u");
+
+const getUserSearchText = (user: Record<string, unknown>) =>
+  foldTurkish(
+    [
+      typeof user.firstName === "string" ? user.firstName : "",
+      typeof user.lastName === "string" ? user.lastName : "",
+      typeof user.email === "string" ? user.email : "",
+      typeof user.userName === "string" ? user.userName : "",
+      typeof user.userAppName === "string" ? user.userAppName : "",
+    ]
+      .join(" ")
+      .trim()
+  );
+
+export const matchesUserSearchQuery = (user: unknown, query: string) => {
+  const normalizedQuery = foldTurkish(query.trim());
+  if (!normalizedQuery) return true;
+  if (!user || typeof user !== "object") return false;
+  return getUserSearchText(user as Record<string, unknown>).includes(normalizedQuery);
+};
+
 export interface UserSearchComboboxProps {
   value: any;
   onChange: (user: any | null) => void;
@@ -24,6 +54,7 @@ export interface UserSearchComboboxProps {
   results: any[];
   placeholder: string;
   disabled?: boolean;
+  loading?: boolean;
   /** Satır içi kullanım için tetikleyici sınıfları */
   triggerClassName?: string;
   /** false ise seçimi temizleme (X) gösterilmez — PATCH ile assigneeId null göndermemek için */
@@ -37,14 +68,34 @@ const UserSearchCombobox = ({
   results,
   placeholder,
   disabled,
+  loading = false,
   triggerClassName,
   allowClear = true,
 }: UserSearchComboboxProps) => {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const displayName = getUserDisplayName(value);
 
+  const filteredResults = useMemo(() => {
+    if (!query.trim()) return results;
+    return results.filter((user) => matchesUserSearchQuery(user, query));
+  }, [results, query]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setQuery("");
+      onSearch("");
+    }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    onSearch(value);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -88,23 +139,27 @@ const UserSearchCombobox = ({
         <div className="p-2 pb-1">
           <Input
             autoFocus
+            value={query}
             placeholder="İsim ile ara..."
-            onChange={(e) => onSearch(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             className="h-8 rounded-lg border-slate-200 text-sm"
+            aria-label="Kullanıcı ara"
           />
         </div>
         <div className="max-h-64 overflow-y-auto p-1">
-          {results.length === 0 ? (
+          {loading && (
+            <p className="py-3 text-center text-xs text-slate-400">Aranıyor...</p>
+          )}
+          {!loading && filteredResults.length === 0 ? (
             <p className="py-4 text-center text-xs text-slate-400">
-              Aramak için yazın...
+              {query.trim() ? "Sonuç bulunamadı." : "Aramak için yazın..."}
             </p>
           ) : (
-            results.map((user: Record<string, unknown>) => {
+            filteredResults.map((user: Record<string, unknown>) => {
               const id = String(user.id ?? "");
               const firstName = typeof user.firstName === "string" ? user.firstName : "";
               const lastName = typeof user.lastName === "string" ? user.lastName : "";
               const email = typeof user.email === "string" ? user.email : "";
-              const photo = user.photo;
               return (
                 <button
                   key={id}
@@ -112,20 +167,14 @@ const UserSearchCombobox = ({
                   onClick={() => {
                     onChange(user);
                     setOpen(false);
+                    setQuery("");
+                    onSearch("");
                   }}
                   className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-slate-50 transition-colors"
                 >
-                  {photo ? (
-                    <img
-                      src={`data:image/png;base64,${String(photo)}`}
-                      alt={firstName}
-                      className="h-8 w-8 rounded-full object-cover ring-1 ring-slate-200"
-                    />
-                  ) : (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 text-xs font-medium">
-                      {(firstName[0] ?? "") + (lastName[0] ?? "")}
-                    </div>
-                  )}
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 text-xs font-medium">
+                    {(firstName[0] ?? "") + (lastName[0] ?? "")}
+                  </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium text-slate-800 truncate">
                       {firstName} {lastName}

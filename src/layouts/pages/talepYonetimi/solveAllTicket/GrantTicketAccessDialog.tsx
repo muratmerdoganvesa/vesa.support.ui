@@ -6,6 +6,8 @@ import getConfiguration from "confiuration";
 import { axiosInstance } from "utils/axiosInstance";
 import { cn } from "lib/utils";
 import { useAlert } from "layouts/pages/hooks/useAlert";
+import { Switch } from "components/ui/switch";
+import { readEffortApiError, setTicketEffortEnter } from "../createTicket/api/ticketEffortApi";
 
 export interface GrantTicketAccessTicket {
   id: string;
@@ -14,6 +16,7 @@ export interface GrantTicketAccessTicket {
   status?: number | null;
   statusText?: string | null;
   ticketAssigneText?: string | null;
+  isEffortEnter?: boolean;
 }
 
 interface AssignUser {
@@ -37,6 +40,7 @@ interface GrantTicketAccessPanelProps {
   ticket: GrantTicketAccessTicket;
   onClose: () => void;
   onGranted: (ticketId: string) => void;
+  onEffortEnterChange: (ticketId: string, isEffortEnter: boolean) => void;
   onBusyChange: (busy: boolean) => void;
 }
 
@@ -69,6 +73,7 @@ const GrantTicketAccessPanel = ({
   ticket,
   onClose,
   onGranted,
+  onEffortEnterChange,
   onBusyChange,
 }: GrantTicketAccessPanelProps) => {
   const dispatchAlert = useAlert();
@@ -83,6 +88,8 @@ const GrantTicketAccessPanel = ({
   const [accessList, setAccessList] = useState<AccessListItem[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+  const [isEffortEnter, setIsEffortEnter] = useState(Boolean(ticket.isEffortEnter));
+  const [effortEnterSaving, setEffortEnterSaving] = useState(false);
   const searchTimerRef = useRef<number | null>(null);
 
   const loadAccessList = async () => {
@@ -100,9 +107,13 @@ const GrantTicketAccessPanel = ({
   };
 
   useEffect(() => {
-    onBusyChange(submitting || revokingUserId != null);
+    setIsEffortEnter(Boolean(ticket.isEffortEnter));
+  }, [ticket.id, ticket.isEffortEnter]);
+
+  useEffect(() => {
+    onBusyChange(submitting || revokingUserId != null || effortEnterSaving);
     return () => onBusyChange(false);
-  }, [submitting, revokingUserId, onBusyChange]);
+  }, [submitting, revokingUserId, effortEnterSaving, onBusyChange]);
 
   useEffect(() => {
     userInputRef.current?.focus();
@@ -116,8 +127,29 @@ const GrantTicketAccessPanel = ({
   }, []);
 
   const handleCancel = () => {
-    if (submitting || revokingUserId) return;
+    if (submitting || revokingUserId || effortEnterSaving) return;
     onClose();
+  };
+
+  const handleToggleEffortEnter = async (next: boolean) => {
+    if (effortEnterSaving || submitting || revokingUserId) return;
+    setEffortEnterSaving(true);
+    try {
+      const saved = await setTicketEffortEnter(ticket.id, next);
+      setIsEffortEnter(saved);
+      onEffortEnterChange(ticket.id, saved);
+      dispatchAlert({
+        message: saved ? "Efor girişi açıldı." : "Efor girişi kapatıldı.",
+        type: "Success",
+      });
+    } catch (error) {
+      dispatchAlert({
+        message: "Efor girilebilir durumu güncellenemedi: " + readEffortApiError(error),
+        type: "Error",
+      });
+    } finally {
+      setEffortEnterSaving(false);
+    }
   };
 
   const handleUserQueryChange = (value: string) => {
@@ -153,7 +185,7 @@ const GrantTicketAccessPanel = ({
   const handleSubmit = async () => {
     if (submitting || !selectedUser?.id) {
       if (!selectedUser?.id) {
-        dispatchAlert({ message: "Lütfen yetki verilecek kişiyi seçiniz.", type: "Warning" });
+        dispatchAlert({ message: "Lütfen efor istenecek kişiyi seçiniz.", type: "Warning" });
         userInputRef.current?.focus();
       }
       return;
@@ -168,7 +200,7 @@ const GrantTicketAccessPanel = ({
       });
 
       dispatchAlert({
-        message: `${displayUserName(selectedUser)} talebe erişim yetkisi verildi.`,
+        message: `${displayUserName(selectedUser)} kişisinden efor istendi.`,
         type: "Success",
       });
       setSelectedUser(null);
@@ -178,7 +210,7 @@ const GrantTicketAccessPanel = ({
       onGranted(ticket.id);
     } catch (error) {
       dispatchAlert({
-        message: "Yetki verilirken hata oluştu: " + formatRequestError(error),
+        message: "Efor istenirken hata oluştu: " + formatRequestError(error),
         type: "Error",
       });
     } finally {
@@ -187,7 +219,7 @@ const GrantTicketAccessPanel = ({
   };
 
   const handleRevoke = async (item: AccessListItem) => {
-    if (item.isPrimary || revokingUserId || submitting) return;
+    if (item.isPrimary || revokingUserId || submitting || effortEnterSaving) return;
 
     setRevokingUserId(item.userAppId);
     try {
@@ -195,11 +227,11 @@ const GrantTicketAccessPanel = ({
         ticketId: ticket.id,
         userAppId: item.userAppId,
       });
-      dispatchAlert({ message: `${item.name} için erişim yetkisi kaldırıldı.`, type: "Success" });
+      dispatchAlert({ message: `${item.name} için efor isteği kaldırıldı.`, type: "Success" });
       await loadAccessList();
     } catch (error) {
       dispatchAlert({
-        message: "Yetki kaldırılırken hata oluştu: " + formatRequestError(error),
+        message: "Efor isteği kaldırılırken hata oluştu: " + formatRequestError(error),
         type: "Error",
       });
     } finally {
@@ -232,7 +264,7 @@ const GrantTicketAccessPanel = ({
       <div className="flex items-start justify-between gap-3 px-4 pt-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight text-slate-900">
-            Yetki Ver · {ticketLabel}
+            Efor İste · {ticketLabel}
           </p>
           <p className="mt-0.5 truncate text-xs text-slate-500">
             {ticket.title || "Başlıksız talep"}
@@ -242,7 +274,7 @@ const GrantTicketAccessPanel = ({
         <button
           type="button"
           onClick={handleCancel}
-          disabled={submitting || revokingUserId != null}
+          disabled={submitting || revokingUserId != null || effortEnterSaving}
           aria-label="Vazgeç"
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
         >
@@ -251,14 +283,41 @@ const GrantTicketAccessPanel = ({
       </div>
 
       <div className="flex flex-col gap-3 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-700">Efor girilebilir</p>
+            <p className="text-[11px] text-slate-400">
+              {isEffortEnter
+                ? "Atanan ve efor istenen kişiler efor girebilir."
+                : "Kapalıyken efor eklenemez, silinemez ve güncellenemez."}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className={cn(
+                "text-[11px] font-semibold",
+                isEffortEnter ? "text-emerald-600" : "text-slate-400"
+              )}
+            >
+              {effortEnterSaving ? "Kaydediliyor" : isEffortEnter ? "Aktif" : "Pasif"}
+            </span>
+            <Switch
+              checked={isEffortEnter}
+              disabled={effortEnterSaving || submitting || revokingUserId != null}
+              onCheckedChange={(checked) => void handleToggleEffortEnter(checked)}
+              aria-label="Efor girilebilir durumunu değiştir"
+            />
+          </div>
+        </div>
+
         <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-xs font-semibold text-slate-700">Kişi seç</span>
+          <span className="text-xs font-semibold text-slate-700">Efor istenecek kişi</span>
           <input
             ref={userInputRef}
             type="text"
             value={userQuery}
             disabled={submitting}
-            aria-label="Yetki verilecek kişi ara"
+            aria-label="Efor istenecek kişiyi ara"
             placeholder="Kullanıcı ara (örn. murat.merdogan)"
             onChange={(event) => handleUserQueryChange(event.target.value)}
             onKeyDown={handleUserKeyDown}
@@ -298,19 +357,19 @@ const GrantTicketAccessPanel = ({
             ref={descriptionRef}
             value={description}
             disabled={submitting}
-            aria-label="Yetki açıklaması"
-            placeholder="Neden yetki veriyorsunuz? (opsiyonel)"
+            aria-label="Efor açıklaması"
+            placeholder="Neden efor istiyorsunuz? (opsiyonel)"
             onChange={(event) => setDescription(event.target.value)}
             className="h-14 w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm leading-5 text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-[#3e5d8f] focus:ring-2 focus:ring-[#3e5d8f]/10 disabled:bg-slate-50"
           />
         </label>
 
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
-          <p className="mb-1.5 text-xs font-semibold text-slate-700">Aktif erişim yetkileri</p>
+          <p className="mb-1.5 text-xs font-semibold text-slate-700">Efor istenen kişiler</p>
           {listLoading ? (
             <p className="text-[11px] text-slate-400">Yükleniyor...</p>
           ) : extraAccess.length === 0 ? (
-            <p className="text-[11px] text-slate-400">Henüz ek kişi yetkisi yok.</p>
+            <p className="text-[11px] text-slate-400">Henüz efor istenen kişi yok.</p>
           ) : (
             <ul className="flex flex-col gap-1">
               {extraAccess.map((item) => (
@@ -321,8 +380,8 @@ const GrantTicketAccessPanel = ({
                   <span className="truncate font-medium">{item.name}</span>
                   <button
                     type="button"
-                    aria-label={`${item.name} yetkisini kaldır`}
-                    disabled={submitting || revokingUserId != null}
+                    aria-label={`${item.name} efor isteğini kaldır`}
+                    disabled={submitting || revokingUserId != null || effortEnterSaving}
                     onClick={() => handleRevoke(item)}
                     className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
                   >
@@ -337,18 +396,13 @@ const GrantTicketAccessPanel = ({
             </ul>
           )}
         </div>
-
-        <p className="text-[11px] leading-relaxed text-slate-500">
-          Asıl atama değişmez. Seçilen kişi talebi listede görür. Bu işlemi yalnızca talebin
-          atandığı departmanın yöneticisi yapabilir.
-        </p>
       </div>
 
       <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-4 py-2.5">
         <button
           type="button"
           onClick={handleCancel}
-          disabled={submitting || revokingUserId != null}
+          disabled={submitting || revokingUserId != null || effortEnterSaving}
           className="h-9 rounded-lg border border-rose-200 px-4 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-40"
         >
           Kapat
@@ -356,12 +410,12 @@ const GrantTicketAccessPanel = ({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={submitting || revokingUserId != null || !selectedUser?.id}
+          disabled={submitting || revokingUserId != null || effortEnterSaving || !selectedUser?.id}
           aria-busy={submitting}
           className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#3e5d8f] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#324d7a] disabled:opacity-40"
         >
           {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Yetki Ver
+          Efor İste
         </button>
       </div>
     </div>
