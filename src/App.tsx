@@ -315,8 +315,7 @@ export default function App() {
           <Route path="/profile/profile-overview" element={<Overview />} />
           <Route path="/profile/all-projects" element={<AllProjects />} />
       
-          <Route path="/effortManagement" element={<EffortManagementPage />} />
-          <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
+        
           <Route path="/" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="*" element={<Navigate to="/profile/profile-overview" replace />} />
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
@@ -341,7 +340,8 @@ export default function App() {
             <Route path="/webEvents" element={<WebEvents />} />
             <Route path="/webEvents/detail" element={<WebEventsCE />} />
             <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
-
+           <Route path="/effortManagement" element={<EffortManagementPage />} />
+           <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}
