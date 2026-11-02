@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -41,6 +41,7 @@ const InfoItem = ({ label, value }: { label: string; value?: string | number | n
 const EffortManagementDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const approvalSectionRef = useRef<HTMLElement | null>(null);
   const [detail, setDetail] = useState<TicketEffortManagementDetailDto | null>(null);
   const [efforts, setEfforts] = useState<TicketEffortManagementEffortsDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +90,15 @@ const EffortManagementDetailPage = () => {
     };
     void run();
   }, [id]);
+
+  useEffect(() => {
+    if (loading || !detail?.canDecideCustomerApproval) return;
+    if (window.location.hash !== "#approve") return;
+    const timer = window.setTimeout(() => {
+      approvalSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [loading, detail?.canDecideCustomerApproval]);
 
   const handleClaim = async () => {
     if (!id || claiming) return;
@@ -235,7 +245,11 @@ const EffortManagementDetailPage = () => {
         ) : detail && (
           <>
             {detail.canDecideCustomerApproval && (
-              <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm shadow-slate-200/50">
+              <section
+                ref={approvalSectionRef}
+                id="approve"
+                className="scroll-mt-24 rounded-2xl border border-violet-100 bg-white p-5 shadow-sm shadow-slate-200/50"
+              >
                 <h2 className="text-sm font-semibold text-slate-800">Müşteri onayı</h2>
                 <p className="mt-1 text-xs text-slate-500">
                   Fatura saatlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner.

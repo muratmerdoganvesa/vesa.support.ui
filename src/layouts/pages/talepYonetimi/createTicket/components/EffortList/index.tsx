@@ -103,6 +103,12 @@ const EffortList = ({
     return Boolean(canEnterEffort && effort.isOwn);
   };
 
+  const canEditActualHours = (effort: TicketEffortListDto) => {
+    if (!effort.isOwn) return false;
+    if (isDepartmentManager) return true;
+    return Boolean(canEnterEffort);
+  };
+
   const canDeleteEffort = (effort: TicketEffortListDto) => {
     if (isDepartmentManager) return true;
     if (!isEffortEnter) return false;
@@ -110,6 +116,8 @@ const EffortList = ({
   };
 
   const showEffortForm = isDepartmentManager || canEnterEffort;
+  const editingLocksActualHours =
+    Boolean(editingEffort) && !canEditActualHours(editingEffort!);
 
   useEffect(() => {
     if (!editOpen || !editingEffort) return;
@@ -198,10 +206,19 @@ const EffortList = ({
   const handleUpdate = async () => {
     if (!editingEffort?.id) return;
 
-    const parsed = Number(editHours.replace(",", "."));
-    if (!editHours.trim() || Number.isNaN(parsed) || parsed <= 0) {
+    const allowActualHoursEdit = canEditActualHours(editingEffort);
+    const parsed = allowActualHoursEdit
+      ? Number(editHours.replace(",", "."))
+      : Number(editingEffort.effortHours);
+
+    if (allowActualHoursEdit && (!editHours.trim() || Number.isNaN(parsed) || parsed <= 0)) {
       setEditHoursError("Geçerli bir fiili saat giriniz.");
       editHoursRef.current?.focus();
+      return;
+    }
+
+    if (!allowActualHoursEdit && (Number.isNaN(parsed) || parsed <= 0)) {
+      setEditHoursError("Fiili saat kaydı geçersiz.");
       return;
     }
 
@@ -262,8 +279,8 @@ const EffortList = ({
               <p className="text-sm font-semibold text-slate-800">Efor girilebilir</p>
               <p className="mt-0.5 text-xs text-slate-500">
                 {isEffortEnter
-                  ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz."
-                  : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz."}
+                  ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz. Başkalarının fiili saatini değiştiremezsiniz."
+                  : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -636,11 +653,13 @@ const EffortList = ({
           <DialogHeader>
             <DialogTitle>Efor Güncelle</DialogTitle>
             <DialogDescription id="effort-edit-desc">
-              {isDepartmentManager
-                ? "Fiili saat ve fatura saati farklı olabilir. Fatura saati 0 girilebilir."
-                : editingEffort?.userAppName
-                  ? `${editingEffort.userAppName} kaydını düzenliyorsunuz.`
-                  : "Fiili saat ve açıklamayı güncelleyin."}
+              {editingLocksActualHours
+                ? "Bu kaydın fiili saati yalnızca giren kişi tarafından değiştirilebilir. Fatura saati ve açıklamayı güncelleyebilirsiniz."
+                : isDepartmentManager
+                  ? "Fiili saat ve fatura saati farklı olabilir. Fatura saati 0 girilebilir."
+                  : editingEffort?.userAppName
+                    ? `${editingEffort.userAppName} kaydını düzenliyorsunuz.`
+                    : "Fiili saat ve açıklamayı güncelleyin."}
             </DialogDescription>
           </DialogHeader>
 
@@ -660,7 +679,10 @@ const EffortList = ({
                 step="0.25"
                 inputMode="decimal"
                 value={editHours}
+                disabled={editingLocksActualHours}
+                readOnly={editingLocksActualHours}
                 onChange={(event) => {
+                  if (editingLocksActualHours) return;
                   setEditHours(event.target.value);
                   if (editHoursError) setEditHoursError("");
                 }}
@@ -670,9 +692,21 @@ const EffortList = ({
                     void handleUpdate();
                   }
                 }}
-                aria-label="Güncellenecek fiili saat"
-                className="rounded-xl border-slate-200 h-10"
+                aria-label={
+                  editingLocksActualHours
+                    ? "Fiili saat salt okunur"
+                    : "Güncellenecek fiili saat"
+                }
+                className={cn(
+                  "rounded-xl border-slate-200 h-10",
+                  editingLocksActualHours && "bg-slate-50 text-slate-500 cursor-not-allowed"
+                )}
               />
+              {editingLocksActualHours && (
+                <p className="text-xs text-slate-400 ml-1">
+                  Efor istenen kişinin girdiği fiili saat değiştirilemez.
+                </p>
+              )}
               {editHoursError && <p className="text-xs text-rose-500 ml-1">{editHoursError}</p>}
             </div>
 
