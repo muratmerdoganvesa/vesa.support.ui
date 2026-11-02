@@ -6,6 +6,7 @@ import type {
   TicketEffortManagementEffortsDto,
   TicketEffortManagementListResultDto,
   TicketEffortManagementStatusDto,
+  TicketEffortManagementUserOptionDto,
 } from "./types";
 
 export { readEffortApiError };
@@ -98,6 +99,38 @@ export const returnEffortManagement = async (
   const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
     `/api/TicketEffortManagement/${id}/return`,
     { note }
+  );
+  return response.data;
+};
+
+export const fetchEffortApprovalUsers = async (
+  id: string
+): Promise<TicketEffortManagementUserOptionDto[]> => {
+  const response = await axiosInstance.get<TicketEffortManagementUserOptionDto[]>(
+    `/api/TicketEffortManagement/${id}/approval-users`
+  );
+  return response.data ?? [];
+};
+
+export const assignCustomerApprovalUser = async (
+  id: string,
+  userAppId: string
+): Promise<TicketEffortManagementStatusDto> => {
+  const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
+    `/api/TicketEffortManagement/${id}/customer-approval-user`,
+    { userAppId }
+  );
+  return response.data;
+};
+
+export const decideCustomerApproval = async (
+  id: string,
+  approve: boolean,
+  note?: string
+): Promise<TicketEffortManagementStatusDto> => {
+  const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
+    `/api/TicketEffortManagement/${id}/customer-decision`,
+    { approve, note: note?.trim() || null }
   );
   return response.data;
 };

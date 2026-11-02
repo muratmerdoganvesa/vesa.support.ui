@@ -21,6 +21,9 @@ export interface TicketEffortManagementStatusDto {
   effortManagerAssignedAt?: string | null;
   returnNote?: string | null;
   returnedAt?: string | null;
+  customerApprovedByUserId?: string | null;
+  customerApprovedByUserName?: string | null;
+  customerApprovedAt?: string | null;
 }
 
 export interface TicketEffortManagementListItemDto {
@@ -40,11 +43,21 @@ export interface TicketEffortManagementListItemDto {
   status?: number;
   statusText?: string | null;
   effortManagerUserName?: string | null;
+  customerApprovedByUserId?: string | null;
+  customerApprovedByUserName?: string | null;
+  customerApprovedAt?: string | null;
 }
 
 export interface TicketEffortManagementListResultDto {
   count?: number;
+  canViewAllRecords?: boolean;
   items?: TicketEffortManagementListItemDto[] | null;
+}
+
+export interface TicketEffortManagementUserOptionDto {
+  id?: string | null;
+  name?: string | null;
+  email?: string | null;
 }
 
 export interface TicketEffortManagementCustomerOptionDto {
@@ -85,6 +98,12 @@ export interface TicketEffortManagementDetailDto {
   claimedByCurrentUser?: boolean;
   returnNote?: string | null;
   returnedAt?: string | null;
+  customerApprovedByUserId?: string | null;
+  customerApprovedByUserName?: string | null;
+  customerApprovedAt?: string | null;
+  canAssignCustomerApproval?: boolean;
+  canDecideCustomerApproval?: boolean;
+  canViewActualHours?: boolean;
   comments?: TicketEffortManagementCommentDto[] | null;
 }
 
@@ -109,6 +128,7 @@ export interface TicketEffortManagementEffortItemDto {
 
 export interface TicketEffortManagementEffortsDto {
   ticketId?: string;
+  canViewActualHours?: boolean;
   totalEffortHours?: number;
   totalInvoiceHours?: number;
   items?: TicketEffortManagementEffortItemDto[] | null;
@@ -120,6 +140,9 @@ export const effortStatusClassName = (status?: number | null): string => {
   }
   if (status === TicketEffortStatus.UnderReview) {
     return "bg-sky-50 text-sky-700 ring-sky-200";
+  }
+  if (status === TicketEffortStatus.WaitingCustomerApproval) {
+    return "bg-violet-50 text-violet-700 ring-violet-200";
   }
   if (status === TicketEffortStatus.CustomerApproved) {
     return "bg-emerald-50 text-emerald-700 ring-emerald-200";

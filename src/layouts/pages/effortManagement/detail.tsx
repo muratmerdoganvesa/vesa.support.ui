@@ -14,7 +14,10 @@ import {
   TableRow,
 } from "components/ui/table";
 import {
+  assignCustomerApprovalUser,
   claimEffortManagement,
+  decideCustomerApproval,
+  fetchEffortApprovalUsers,
   fetchEffortManagementDetail,
   fetchEffortManagementEfforts,
   readEffortApiError,
@@ -22,7 +25,11 @@ import {
 } from "./api";
 import { EffortStatusBadge, formatDateTime, formatHours } from "./shared";
 import { TicketEffortStatus } from "./types";
-import type { TicketEffortManagementDetailDto, TicketEffortManagementEffortsDto } from "./types";
+import type {
+  TicketEffortManagementDetailDto,
+  TicketEffortManagementEffortsDto,
+  TicketEffortManagementUserOptionDto,
+} from "./types";
 
 const InfoItem = ({ label, value }: { label: string; value?: string | number | null }) => (
   <div className="flex flex-col gap-1">
@@ -40,6 +47,13 @@ const EffortManagementDetailPage = () => {
   const [claiming, setClaiming] = useState(false);
   const [returnNote, setReturnNote] = useState("");
   const [returning, setReturning] = useState(false);
+  const [approvalUsers, setApprovalUsers] = useState<TicketEffortManagementUserOptionDto[]>([]);
+  const [approvalUserId, setApprovalUserId] = useState("");
+  const [approvalSearch, setApprovalSearch] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [rejectNote, setRejectNote] = useState("");
+  const [approving, setApproving] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const [error, setError] = useState("");
 
   const load = async (recordId: string) => {
@@ -49,6 +63,13 @@ const EffortManagementDetailPage = () => {
     ]);
     setDetail(detailData);
     setEfforts(effortData);
+    setApprovalUserId(detailData.customerApprovedByUserId ?? "");
+    if (detailData.canAssignCustomerApproval) {
+      const users = await fetchEffortApprovalUsers(recordId);
+      setApprovalUsers(users);
+      return;
+    }
+    setApprovalUsers([]);
   };
 
   useEffect(() => {
@@ -103,9 +124,68 @@ const EffortManagementDetailPage = () => {
     }
   };
 
+  const handleAssignApprovalUser = async () => {
+    if (!id || assigning || approvalUserId.trim() === "") return;
+    try {
+      setAssigning(true);
+      setError("");
+      await assignCustomerApprovalUser(id, approvalUserId);
+      await load(id);
+    } catch (assignError) {
+      setError(readEffortApiError(assignError));
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!id || approving || rejecting) return;
+    try {
+      setApproving(true);
+      setError("");
+      await decideCustomerApproval(id, true);
+      setRejectNote("");
+      await load(id);
+    } catch (approveError) {
+      setError(readEffortApiError(approveError));
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!id || approving || rejecting) return;
+    const note = rejectNote.trim();
+    if (!note) {
+      setError("Red nedeni zorunludur.");
+      return;
+    }
+    try {
+      setRejecting(true);
+      setError("");
+      await decideCustomerApproval(id, false, note);
+      setRejectNote("");
+      await load(id);
+    } catch (rejectError) {
+      setError(readEffortApiError(rejectError));
+    } finally {
+      setRejecting(false);
+    }
+  };
+
   const handleBack = () => {
     navigate("/effortManagement");
   };
+
+  const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
+  const rejectedByCustomer =
+    detail?.status === TicketEffortStatus.ReturnedToDepartment && Boolean(detail.customerApprovedByUserName);
+  const filteredApprovalUsers = approvalUsers.filter((user) => {
+    const term = approvalSearch.trim().toLocaleLowerCase("tr");
+    if (!term) return true;
+    const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
+    return label.includes(term);
+  });
 
   return (
     <DashboardLayout>
@@ -154,6 +234,111 @@ const EffortManagementDetailPage = () => {
           </div>
         ) : detail && (
           <>
+            {detail.canDecideCustomerApproval && (
+              <section className="rounded-2xl border border-violet-100 bg-white p-5 shadow-sm shadow-slate-200/50">
+                <h2 className="text-sm font-semibold text-slate-800">Müşteri onayı</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Fatura saatlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner.
+                </p>
+                <label htmlFor="reject-note" className="mt-4 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Red nedeni
+                </label>
+                <Textarea
+                  id="reject-note"
+                  value={rejectNote}
+                  onChange={(event) => setRejectNote(event.target.value)}
+                  placeholder="Reddediyorsanız nedenini yazın"
+                  aria-label="Red nedeni"
+                  rows={3}
+                  className="mt-1.5 rounded-xl border-slate-200"
+                />
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void handleApprove()}
+                    disabled={approving || rejecting}
+                    aria-label="Eforu onaylıyorum"
+                    className="h-10 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
+                  >
+                    {approving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Onaylıyorum
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void handleReject()}
+                    disabled={approving || rejecting || rejectNote.trim() === ""}
+                    aria-label="Eforu red ediyorum"
+                    className="h-10 rounded-xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                  >
+                    {rejecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Red ediyorum
+                  </Button>
+                </div>
+              </section>
+            )}
+
+            {detail.canAssignCustomerApproval && (
+              <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
+                <h2 className="text-sm font-semibold text-slate-800">Müşteri onayına sun</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Talebin müşterisine bağlı bir kullanıcı seçin. Seçilen kişi yalnızca bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                </p>
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="approval-user-search" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Kişide ara
+                    </label>
+                    <input
+                      id="approval-user-search"
+                      value={approvalSearch}
+                      onChange={(event) => setApprovalSearch(event.target.value)}
+                      placeholder="Ad veya e-posta"
+                      aria-label="Müşteri onay kullanıcısında ara"
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="approval-user" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Onaya sunulacak kişi
+                    </label>
+                    <select
+                      id="approval-user"
+                      value={approvalUserId}
+                      onChange={(event) => setApprovalUserId(event.target.value)}
+                      aria-label="Müşteri onayına sunulacak kişiyi seç"
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+                    >
+                      <option value="">Kişi seçin</option>
+                      {approvalUserId &&
+                        !filteredApprovalUsers.some((user) => user.id === approvalUserId) &&
+                        detail.customerApprovedByUserName && (
+                          <option value={approvalUserId}>{detail.customerApprovedByUserName}</option>
+                        )}
+                      {filteredApprovalUsers.map((user) => (
+                        <option key={user.id} value={user.id ?? ""}>
+                          {user.name || user.email || "—"}
+                          {user.email ? ` · ${user.email}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => void handleAssignApprovalUser()}
+                    disabled={assigning || approvalUserId.trim() === ""}
+                    aria-label="Seçilen kişiyi müşteri onayına sun"
+                    className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
+                  >
+                    {assigning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Onaya sun
+                  </Button>
+                </div>
+                {approvalUsers.length === 0 && (
+                  <p className="mt-3 text-xs text-amber-700">Bu müşteriye bağlı seçilebilir kullanıcı yok.</p>
+                )}
+              </section>
+            )}
+
             {detail.canReturn && (
               <section className="rounded-2xl border border-rose-100 bg-white p-5 shadow-sm shadow-slate-200/50">
                 <h2 className="text-sm font-semibold text-slate-800">Eforu geri gönder</h2>
@@ -185,15 +370,34 @@ const EffortManagementDetailPage = () => {
               </section>
             )}
 
+            {detail.status === TicketEffortStatus.CustomerApproved && (
+              <section className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
+                <p className="text-sm font-semibold text-emerald-900">Efor onaylandı</p>
+                <p className="mt-1 text-xs text-emerald-800">
+                  {detail.customerApprovedByUserName || "Onaylayan"}
+                  {detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}
+                </p>
+              </section>
+            )}
+
             {detail.status === TicketEffortStatus.ReturnedToDepartment && (
               <section className="rounded-2xl border border-rose-100 bg-rose-50 px-5 py-4">
-                <p className="text-sm font-semibold text-rose-900">Düzenleme için geri gönderildi</p>
+                <p className="text-sm font-semibold text-rose-900">
+                  {rejectedByCustomer ? "Müşteri reddetti" : "Düzenleme için geri gönderildi"}
+                </p>
                 <p className="mt-1 text-xs text-rose-800">
-                  {detail.effortManagerUserName || "Efor yöneticisi"}
+                  {rejectedByCustomer
+                    ? detail.customerApprovedByUserName
+                    : detail.effortManagerUserName || "Efor yöneticisi"}
                   {detail.returnedAt ? ` · ${formatDateTime(detail.returnedAt)}` : ""}
                 </p>
+                {rejectedByCustomer && (
+                  <p className="mt-1 text-xs text-rose-800">Süreç departman yöneticisine döndü.</p>
+                )}
                 {detail.returnNote && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-rose-950">{detail.returnNote}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-rose-950">
+                    {rejectedByCustomer ? `Red nedeni: ${detail.returnNote}` : detail.returnNote}
+                  </p>
                 )}
               </section>
             )}
@@ -214,7 +418,16 @@ const EffortManagementDetailPage = () => {
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Efor durumu</span>
                 <EffortStatusBadge status={detail.status} label={detail.statusText} />
               </div>
-              {detail.effortManagerUserName && (
+              {detail.status === TicketEffortStatus.WaitingCustomerApproval && detail.customerApprovedByUserName && (
+                <InfoItem label="Onaya sunulan" value={detail.customerApprovedByUserName} />
+              )}
+              {detail.status === TicketEffortStatus.CustomerApproved && (
+                <InfoItem
+                  label="Onay kaydı"
+                  value={`${detail.customerApprovedByUserName || "—"}${detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}`}
+                />
+              )}
+              {canViewActualHours && detail.effortManagerUserName && (
                 <InfoItem
                   label="İnceleyen"
                   value={`${detail.effortManagerUserName}${detail.effortManagerAssignedAt ? ` · ${formatDateTime(detail.effortManagerAssignedAt)}` : ""}`}
@@ -262,12 +475,16 @@ const EffortManagementDetailPage = () => {
 
             <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-                <h2 className="text-sm font-semibold text-slate-800">Efor kayıtları</h2>
+                <h2 className="text-sm font-semibold text-slate-800">
+                  {canViewActualHours ? "Efor kayıtları" : "Yapılacak işler"}
+                </h2>
                 <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                  <span>
-                    Toplam fiili saat{" "}
-                    <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
-                  </span>
+                  {canViewActualHours && (
+                    <span>
+                      Toplam fiili saat{" "}
+                      <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
+                    </span>
+                  )}
                   <span>
                     Toplam fatura saati{" "}
                     <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
@@ -280,21 +497,29 @@ const EffortManagementDetailPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-100 hover:bg-transparent">
-                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Personel</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Fiili saat</TableHead>
+                      {canViewActualHours && (
+                        <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Personel</TableHead>
+                      )}
+                      {canViewActualHours && (
+                        <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Fiili saat</TableHead>
+                      )}
                       <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Fatura saati</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Açıklama</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Yapılacak iş</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Tarih</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(efforts?.items ?? []).map((effort) => (
                       <TableRow key={effort.id} className="border-slate-100">
-                        <TableCell>
-                          <p className="text-sm font-medium text-slate-800">{effort.userAppName || "—"}</p>
-                          {effort.userTitle && <p className="text-xs text-slate-400">{effort.userTitle}</p>}
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-700">{formatHours(effort.effortHours)}</TableCell>
+                        {canViewActualHours && (
+                          <TableCell>
+                            <p className="text-sm font-medium text-slate-800">{effort.userAppName || "—"}</p>
+                            {effort.userTitle && <p className="text-xs text-slate-400">{effort.userTitle}</p>}
+                          </TableCell>
+                        )}
+                        {canViewActualHours && (
+                          <TableCell className="text-sm text-slate-700">{formatHours(effort.effortHours)}</TableCell>
+                        )}
                         <TableCell className="text-sm text-slate-700">{formatHours(effort.invoiceHours)}</TableCell>
                         <TableCell className="max-w-[320px] text-sm text-slate-600">{effort.description || "—"}</TableCell>
                         <TableCell className="text-sm text-slate-600">{formatDateTime(effort.createdDate)}</TableCell>

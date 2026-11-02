@@ -125,6 +125,8 @@ const EffortList = ({
   }, [editOpen, editingEffort]);
 
   const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
+  const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
+  const rejectedByCustomer = isReturnedForEdit && Boolean(effortSendStatus?.customerApprovedByUserName);
 
   const handleSendToEffortManager = async () => {
     if (!onSendToEffortManager || sendingToManager || isEffortEnter) return;
@@ -283,7 +285,15 @@ const EffortList = ({
             </div>
           </div>
 
-          {effortSendStatus?.exists && !isReturnedForEdit ? (
+          {isCustomerApproved ? (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
+              <p className="text-sm font-semibold text-emerald-900">Efor onaylandı</p>
+              <p className="mt-1 text-xs text-emerald-800">
+                {effortSendStatus?.customerApprovedByUserName || "Onaylayan"}
+                {effortSendStatus?.customerApprovedAt ? ` · ${formatDateTime(effortSendStatus.customerApprovedAt)}` : ""}
+              </p>
+            </div>
+          ) : effortSendStatus?.exists && !isReturnedForEdit ? (
             <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4">
               <p className="text-sm font-semibold text-sky-900">Efor onayına gönderildi</p>
               <p className="mt-1 text-xs text-sky-800">
@@ -296,21 +306,30 @@ const EffortList = ({
             <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-800">
-                  {isReturnedForEdit ? "Düzenleme için geri gönderildi" : "Efor onayına gönder"}
+                  {rejectedByCustomer
+                    ? "Müşteri reddetti"
+                    : isReturnedForEdit
+                      ? "Düzenleme için geri gönderildi"
+                      : "Efor onayına gönder"}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {isReturnedForEdit
+                  {rejectedByCustomer
                     ? isEffortEnter
-                      ? "Efor girişi yeniden açıldı. Düzeltmeleri yaptıktan sonra girişi kapatıp tekrar gönderin."
-                      : "Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
-                    : isEffortEnter
-                      ? "Göndermek için önce efor girişini kapatın."
-                      : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
+                      ? "Süreç size döndü. Efor girişi yeniden açıldı. Düzeltmeleri yaptıktan sonra girişi kapatıp tekrar gönderin."
+                      : "Süreç size döndü. Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
+                    : isReturnedForEdit
+                      ? isEffortEnter
+                        ? "Efor girişi yeniden açıldı. Düzeltmeleri yaptıktan sonra girişi kapatıp tekrar gönderin."
+                        : "Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
+                      : isEffortEnter
+                        ? "Göndermek için önce efor girişini kapatın."
+                        : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
                 </p>
                 {isReturnedForEdit && effortSendStatus?.returnNote && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                    {effortSendStatus.effortManagerUserName ? `${effortSendStatus.effortManagerUserName}: ` : ""}
-                    {effortSendStatus.returnNote}
+                    {rejectedByCustomer
+                      ? `${effortSendStatus.customerApprovedByUserName}: ${effortSendStatus.returnNote}`
+                      : `${effortSendStatus.effortManagerUserName ? `${effortSendStatus.effortManagerUserName}: ` : ""}${effortSendStatus.returnNote}`}
                   </p>
                 )}
               </div>

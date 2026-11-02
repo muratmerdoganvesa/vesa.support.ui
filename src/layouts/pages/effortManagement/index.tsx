@@ -20,6 +20,7 @@ import {
   readEffortApiError,
 } from "./api";
 import { EffortStatusBadge, formatDateTime } from "./shared";
+import { TicketEffortStatus } from "./types";
 import type { TicketEffortManagementCustomerOptionDto, TicketEffortManagementListItemDto } from "./types";
 
 const PAGE_SIZE = 20;
@@ -29,7 +30,7 @@ const statusOptions = [
   { value: "1", label: "Efor yöneticisine gönderildi" },
   { value: "2", label: "İncelemede" },
   { value: "3", label: "Müşteri onayı bekliyor" },
-  { value: "4", label: "Müşteri onayladı" },
+  { value: "4", label: "Efor onaylandı" },
   { value: "5", label: "Müşteri reddetti" },
   { value: "6", label: "Düzenleme için geri gönderildi" },
 ];
@@ -114,6 +115,7 @@ const EffortManagementPage = () => {
   const [customerId, setCustomerId] = useState("");
   const [customers, setCustomers] = useState<TicketEffortManagementCustomerOptionDto[]>([]);
   const [rows, setRows] = useState<TicketEffortManagementListItemDto[]>([]);
+  const [canViewAllRecords, setCanViewAllRecords] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -135,10 +137,12 @@ const EffortManagementPage = () => {
           fetchEffortManagementCustomers(),
         ]);
         setRows(list.items ?? []);
+        setCanViewAllRecords(list.canViewAllRecords !== false);
         setTotalCount(list.count ?? 0);
         setCustomers(customerOptions);
       } catch (loadError) {
         setRows([]);
+        setCanViewAllRecords(true);
         setTotalCount(0);
         setError(readEffortApiError(loadError));
       } finally {
@@ -168,7 +172,9 @@ const EffortManagementPage = () => {
         <header>
           <h1 className="text-xl font-bold leading-tight text-slate-800">Efor Yönetimi</h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            Efor onayına gönderilen talepler ve mevcut fiili / fatura saatleri.
+            {canViewAllRecords
+              ? "Efor onayına gönderilen talepler. Müşteri onayına sunulan kişiyi kayıttan seçebilirsiniz."
+              : "Onayınıza sunulan talepler. Fatura saatlerini ve yapılacak işleri bu listeden açabilirsiniz."}
           </p>
         </header>
 
@@ -272,6 +278,9 @@ const EffortManagementPage = () => {
                   <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Müşteri</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Departman yöneticisi</TableHead>
                   <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Gönderim</TableHead>
+                  {canViewAllRecords && (
+                    <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Müşteri onayı</TableHead>
+                  )}
                   <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Durum</TableHead>
                 </TableRow>
               </TableHeader>
@@ -301,6 +310,14 @@ const EffortManagementPage = () => {
                     <TableCell className="text-sm text-slate-600">{row.customerName || "—"}</TableCell>
                     <TableCell className="text-sm text-slate-600">{row.departmentManagerName || row.sentByUserName || "—"}</TableCell>
                     <TableCell className="text-sm text-slate-600">{formatDateTime(row.sentAt)}</TableCell>
+                    {canViewAllRecords && (
+                      <TableCell className="text-sm text-slate-600">
+                        <p>{row.customerApprovedByUserName || "—"}</p>
+                        {row.status === TicketEffortStatus.CustomerApproved && row.customerApprovedAt && (
+                          <p className="text-xs text-slate-400">{formatDateTime(row.customerApprovedAt)}</p>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <EffortStatusBadge status={row.status} label={row.statusText} />
                     </TableCell>

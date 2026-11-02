@@ -767,6 +767,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
     ...(isSolveTicket && !review
       ? [{ value: "2", label: t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailNavBarProps.TalepGuncelleme"), icon: <Settings2 className="w-3.5 h-3.5" /> }]
       : []),
+    ...(isSolveTicket
+      ? [{ value: "3", label: "Efor Bilgisi", icon: <Timer className="w-3.5 h-3.5" /> }]
+      : []),
   ];
 
   const showTabs = true;
@@ -868,7 +871,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
     const api = new TicketApi(conf);
     const data = await api.apiTicketTicketStatusGet();
     const statData = data.data as any;
-    setStatusData(statData.filter((item: any) => item.id !== 2 && item.id !== 1 && item.id !== 12));
+    setStatusData(statData.filter((item: any) => item.id !== 2 && item.id !== 1 && item.id !== 12 && item.id !== 13));
     dispatchBusy({ isBusy: false });
   };
 
@@ -2132,6 +2135,11 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       await sendTicketEffortManagement(id);
                       const status = await fetchEffortManagementByTicket(id);
                       setEffortSendStatus(status);
+                      setSelectedStatus({
+                        id: 13 as TicketStatus,
+                        name: "Efor Onayında",
+                        description: "Efor Onayında",
+                      });
                       dispatchAlert({ message: "Efor, efor yöneticisine gönderildi.", type: "Success" });
                     } catch (error) {
                       dispatchAlert({
