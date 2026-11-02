@@ -76,7 +76,7 @@ interface ColumnDef {
   className?: string;
 }
 
-/** Efor İste yalnızca bu ticket departmanında gösterilir. */
+/** Şimdilik Efor İste yalnızca bu ticket departmanında gösterilir. */
 const EFFORT_REQUEST_DEPARTMENT_ID = "1FF822C6-0FBC-4D12-AA20-E0A0D9D8AEC3";
 
 const isEffortRequestDepartment = (ticketDepartmentId?: string | null): boolean =>
@@ -630,7 +630,8 @@ function SolveAllTicket() {
               )}
             </Popover>
 
-            {isEffortRequestDepartment(row.original.ticketDepartmentId) && (
+            {row.original.canGrantTicketAccess === true &&
+              isEffortRequestDepartment(row.original.ticketDepartmentId) && (
               <Popover
                 open={grantAccessTicket?.id === row.original.id}
                 onOpenChange={(nextOpen) => {
