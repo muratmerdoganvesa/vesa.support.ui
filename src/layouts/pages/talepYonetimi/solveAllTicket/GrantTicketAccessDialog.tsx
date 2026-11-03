@@ -100,7 +100,9 @@ const GrantTicketAccessPanel = ({
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
   const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
   const [effortStatusLoading, setEffortStatusLoading] = useState(false);
+  const [userInputFocused, setUserInputFocused] = useState(false);
   const searchTimerRef = useRef<number | null>(null);
+  const searchRequestIdRef = useRef(0);
 
   const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
   const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
@@ -147,7 +149,8 @@ const GrantTicketAccessPanel = ({
 
   useEffect(() => {
     if (!isEffortProcessLocked) {
-      userInputRef.current?.focus();
+      // preventScroll: popover üstte kesilmesin / sayfa kaymasın
+      userInputRef.current?.focus({ preventScroll: true });
     }
     void loadAccessList();
     void loadEffortStatus();
@@ -156,8 +159,19 @@ const GrantTicketAccessPanel = ({
   useEffect(() => {
     return () => {
       if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current);
+      searchRequestIdRef.current += 1;
     };
   }, []);
+
+  const clearUserSearch = () => {
+    if (searchTimerRef.current) {
+      window.clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
+    searchRequestIdRef.current += 1;
+    setUserResults([]);
+    setUserSearchLoading(false);
+  };
 
   const handleCancel = () => {
     if (submitting || revokingUserId || effortEnterSaving) return;
@@ -191,28 +205,41 @@ const GrantTicketAccessPanel = ({
     if (searchTimerRef.current) window.clearTimeout(searchTimerRef.current);
     const query = value.trim();
     if (!query) {
-      setUserResults([]);
-      setUserSearchLoading(false);
+      clearUserSearch();
       return;
     }
+    const requestId = ++searchRequestIdRef.current;
     searchTimerRef.current = window.setTimeout(async () => {
       setUserSearchLoading(true);
       try {
         const api = new UserApi(getConfiguration());
         const response = await api.apiUserGetAllUsersWitNameAssignGet(query);
+        if (requestId !== searchRequestIdRef.current) return;
         setUserResults((response.data ?? []) as AssignUser[]);
       } catch {
+        if (requestId !== searchRequestIdRef.current) return;
         setUserResults([]);
       } finally {
-        setUserSearchLoading(false);
+        if (requestId === searchRequestIdRef.current) {
+          setUserSearchLoading(false);
+        }
       }
     }, 300);
   };
 
   const handleSelectUser = (user: AssignUser) => {
+    clearUserSearch();
     setSelectedUser(user);
     setUserQuery(displayUserName(user));
-    setUserResults([]);
+    setUserInputFocused(false);
+  };
+
+  const handleUserInputBlur = () => {
+    // Sonuç satırına tıklamada blur önce gelir; onMouseDown preventDefault ile seçim korunur
+    window.setTimeout(() => {
+      setUserInputFocused(false);
+      clearUserSearch();
+    }, 150);
   };
 
   const handleSubmit = async () => {
@@ -405,16 +432,25 @@ const GrantTicketAccessPanel = ({
             aria-label="Efor istenecek kişiyi ara"
             placeholder="Kullanıcı ara (örn. murat.merdogan)"
             onChange={(event) => handleUserQueryChange(event.target.value)}
+            onFocus={() => setUserInputFocused(true)}
+            onBlur={handleUserInputBlur}
             onKeyDown={handleUserKeyDown}
             className={cn(fieldClassName, "min-w-0")}
           />
-          {userSearchLoading && <p className="text-[11px] text-slate-400">Aranıyor...</p>}
-          {!userSearchLoading && !isEffortProcessLocked && userResults.length > 0 && (
+          {userInputFocused && userSearchLoading && (
+            <p className="text-[11px] text-slate-400">Aranıyor...</p>
+          )}
+          {userInputFocused &&
+            !userSearchLoading &&
+            !selectedUser &&
+            !isEffortProcessLocked &&
+            userResults.length > 0 && (
             <ul className="max-h-36 overflow-auto rounded-lg border border-slate-200 bg-white">
               {userResults.map((user) => (
                 <li key={user.id}>
                   <button
                     type="button"
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => handleSelectUser(user)}
                     className="w-full px-2.5 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-50"
                   >

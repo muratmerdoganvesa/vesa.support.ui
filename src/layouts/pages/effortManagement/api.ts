@@ -136,6 +136,17 @@ export const decideCustomerApproval = async (
   return response.data;
 };
 
+export const managerApproveEffort = async (
+  id: string,
+  note: string
+): Promise<TicketEffortManagementStatusDto> => {
+  const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
+    `/api/TicketEffortManagement/${id}/manager-approve`,
+    { note: note.trim() }
+  );
+  return response.data;
+};
+
 export const fetchMailDecisionPreview = async (
   token: string
 ): Promise<MailDecisionPreviewDto> => {

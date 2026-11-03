@@ -555,9 +555,14 @@ function SolveAllTicket() {
                   align="start"
                   side="bottom"
                   sideOffset={8}
-                  collisionPadding={12}
-                  style={{ width: "min(920px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
-                  className="z-[1300] w-[920px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                  collisionPadding={{ top: 80, right: 16, bottom: 16, left: 16 }}
+                  sticky="always"
+                  style={{
+                    width: "min(920px, calc(100vw - 1.5rem))",
+                    maxWidth: "calc(100vw - 1.5rem)",
+                    maxHeight: "var(--radix-popover-content-available-height)",
+                  }}
+                  className="z-[1300] w-[920px]! max-w-[calc(100vw-1.5rem)]! overflow-y-auto p-0 shadow-lg"
                   onOpenAutoFocus={(event) => event.preventDefault()}
                   onInteractOutside={(event) => {
                     if (quickUpdateBusy) event.preventDefault();
@@ -603,9 +608,14 @@ function SolveAllTicket() {
                   align="start"
                   side="bottom"
                   sideOffset={8}
-                  collisionPadding={12}
-                  style={{ width: "min(520px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
-                  className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                  collisionPadding={{ top: 80, right: 16, bottom: 16, left: 16 }}
+                  sticky="always"
+                  style={{
+                    width: "min(520px, calc(100vw - 1.5rem))",
+                    maxWidth: "calc(100vw - 1.5rem)",
+                    maxHeight: "var(--radix-popover-content-available-height)",
+                  }}
+                  className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! overflow-y-auto p-0 shadow-lg"
                   onOpenAutoFocus={(event) => event.preventDefault()}
                   onInteractOutside={(event) => {
                     if (submitApprovalBusy) event.preventDefault();
@@ -652,9 +662,14 @@ function SolveAllTicket() {
                     align="start"
                     side="bottom"
                     sideOffset={8}
-                    collisionPadding={12}
-                    style={{ width: "min(520px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
-                    className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                    collisionPadding={{ top: 80, right: 16, bottom: 16, left: 16 }}
+                    sticky="always"
+                    style={{
+                      width: "min(520px, calc(100vw - 1.5rem))",
+                      maxWidth: "calc(100vw - 1.5rem)",
+                      maxHeight: "var(--radix-popover-content-available-height)",
+                    }}
+                    className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! overflow-y-auto p-0 shadow-lg"
                     onOpenAutoFocus={(event) => event.preventDefault()}
                     onInteractOutside={(event) => {
                       if (grantAccessBusy) event.preventDefault();

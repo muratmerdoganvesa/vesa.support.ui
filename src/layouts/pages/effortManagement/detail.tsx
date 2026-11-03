@@ -20,6 +20,7 @@ import {
   fetchEffortApprovalUsers,
   fetchEffortManagementDetail,
   fetchEffortManagementEfforts,
+  managerApproveEffort,
   readEffortApiError,
   returnEffortManagement,
 } from "./api";
@@ -53,8 +54,10 @@ const EffortManagementDetailPage = () => {
   const [approvalSearch, setApprovalSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
+  const [managerApproveNote, setManagerApproveNote] = useState("");
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [managerApproving, setManagerApproving] = useState(false);
   const [error, setError] = useState("");
 
   const load = async (recordId: string) => {
@@ -160,6 +163,26 @@ const EffortManagementDetailPage = () => {
       setError(readEffortApiError(approveError));
     } finally {
       setApproving(false);
+    }
+  };
+
+  const handleManagerApprove = async () => {
+    if (!id || managerApproving || assigning) return;
+    const note = managerApproveNote.trim();
+    if (!note) {
+      setError("Onay açıklaması zorunludur.");
+      return;
+    }
+    try {
+      setManagerApproving(true);
+      setError("");
+      await managerApproveEffort(id, note);
+      setManagerApproveNote("");
+      await load(id);
+    } catch (managerApproveError) {
+      setError(readEffortApiError(managerApproveError));
+    } finally {
+      setManagerApproving(false);
     }
   };
 
@@ -291,64 +314,107 @@ const EffortManagementDetailPage = () => {
               </section>
             )}
 
-            {detail.canAssignCustomerApproval && (
+            {(detail.canAssignCustomerApproval || detail.canManagerApprove) && (
               <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <h2 className="text-sm font-semibold text-slate-800">Talebi onaya sun</h2>
+                <h2 className="text-sm font-semibold text-slate-800">Onay işlemi</h2>
                 <p className="mt-1 text-xs text-slate-500">
-                  Talebin müşterisine bağlı kişiler veya vesacons.com kullanıcılarından birini seçin. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                  Başkasına onaya sunabilir veya efor yöneticisi olarak açıklama yazıp kendiniz onaylayabilirsiniz.
                 </p>
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="approval-user-search" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Kişide ara
-                    </label>
-                    <input
-                      id="approval-user-search"
-                      value={approvalSearch}
-                      onChange={(event) => setApprovalSearch(event.target.value)}
-                      placeholder="Ad veya e-posta"
-                      aria-label="Onay kullanıcısında ara"
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="approval-user" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Onaya sunulacak kişi
-                    </label>
-                    <select
-                      id="approval-user"
-                      value={approvalUserId}
-                      onChange={(event) => setApprovalUserId(event.target.value)}
-                      aria-label="Onaya sunulacak kişiyi seç"
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+
+                {detail.canManagerApprove && (
+                  <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+                    <h3 className="text-sm font-semibold text-slate-800">Kendim onaylıyorum</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Kimseye göndermeden onaylamak için açıklama yazın. Onay sonrası talep tekrar açık olur.
+                    </p>
+                    <label
+                      htmlFor="manager-approve-note"
+                      className="mt-3 block text-[10px] font-bold uppercase tracking-widest text-slate-400"
                     >
-                      <option value="">Kişi seçin</option>
-                      {approvalUserId &&
-                        !filteredApprovalUsers.some((user) => user.id === approvalUserId) &&
-                        detail.customerApprovedByUserName && (
-                          <option value={approvalUserId}>{detail.customerApprovedByUserName}</option>
-                        )}
-                      {filteredApprovalUsers.map((user) => (
-                        <option key={user.id} value={user.id ?? ""}>
-                          {user.name || user.email || "—"}
-                          {user.email ? ` · ${user.email}` : ""}
-                        </option>
-                      ))}
-                    </select>
+                      Onay açıklaması
+                    </label>
+                    <Textarea
+                      id="manager-approve-note"
+                      value={managerApproveNote}
+                      onChange={(event) => setManagerApproveNote(event.target.value)}
+                      placeholder="Neden doğrudan onayladığınızı yazın"
+                      aria-label="Onay açıklaması"
+                      rows={3}
+                      className="mt-1.5 rounded-xl border-slate-200 bg-white"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => void handleManagerApprove()}
+                      disabled={managerApproving || assigning || managerApproveNote.trim() === ""}
+                      aria-label="Açıklama ile kendim onaylıyorum"
+                      className="mt-3 h-10 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
+                    >
+                      {managerApproving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      Kendim onaylıyorum
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => void handleAssignApprovalUser()}
-                    disabled={assigning || approvalUserId.trim() === ""}
-                    aria-label="Seçilen kişiyi onaya sun"
-                    className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
-                  >
-                    {assigning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    Onaya sun
-                  </Button>
-                </div>
-                {approvalUsers.length === 0 && (
-                  <p className="mt-3 text-xs text-amber-700">Seçilebilir kullanıcı bulunamadı.</p>
+                )}
+
+                {detail.canAssignCustomerApproval && (
+                  <div className={detail.canManagerApprove ? "mt-5 border-t border-slate-100 pt-5" : "mt-4"}>
+                    <h3 className="text-sm font-semibold text-slate-800">Talebi onaya sun</h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Talebin müşterisine bağlı kişiler veya vesacons.com kullanıcılarından birini seçin. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                    </p>
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="approval-user-search" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                          Kişide ara
+                        </label>
+                        <input
+                          id="approval-user-search"
+                          value={approvalSearch}
+                          onChange={(event) => setApprovalSearch(event.target.value)}
+                          placeholder="Ad veya e-posta"
+                          aria-label="Onay kullanıcısında ara"
+                          className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="approval-user" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                          Onaya sunulacak kişi
+                        </label>
+                        <select
+                          id="approval-user"
+                          value={approvalUserId}
+                          onChange={(event) => setApprovalUserId(event.target.value)}
+                          aria-label="Onaya sunulacak kişiyi seç"
+                          className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+                        >
+                          <option value="">Kişi seçin</option>
+                          {approvalUserId &&
+                            !filteredApprovalUsers.some((user) => user.id === approvalUserId) &&
+                            detail.customerApprovedByUserName && (
+                              <option value={approvalUserId}>{detail.customerApprovedByUserName}</option>
+                            )}
+                          {filteredApprovalUsers.map((user) => (
+                            <option key={user.id} value={user.id ?? ""}>
+                              {user.name || user.email || "—"}
+                              {user.email ? ` · ${user.email}` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => void handleAssignApprovalUser()}
+                        disabled={assigning || managerApproving || approvalUserId.trim() === ""}
+                        aria-label="Seçilen kişiyi onaya sun"
+                        className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
+                      >
+                        {assigning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                        Onaya sun
+                      </Button>
+                    </div>
+                    {approvalUsers.length === 0 && (
+                      <p className="mt-3 text-xs text-amber-700">Seçilebilir kullanıcı bulunamadı.</p>
+                    )}
+                  </div>
                 )}
               </section>
             )}
@@ -391,6 +457,11 @@ const EffortManagementDetailPage = () => {
                   {detail.customerApprovedByUserName || "Onaylayan"}
                   {detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}
                 </p>
+                {detail.returnNote && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-950">
+                    Onay açıklaması: {detail.returnNote}
+                  </p>
+                )}
               </section>
             )}
 

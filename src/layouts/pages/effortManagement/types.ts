@@ -103,6 +103,7 @@ export interface TicketEffortManagementDetailDto {
   customerApprovedAt?: string | null;
   canAssignCustomerApproval?: boolean;
   canDecideCustomerApproval?: boolean;
+  canManagerApprove?: boolean;
   canViewActualHours?: boolean;
   comments?: TicketEffortManagementCommentDto[] | null;
 }
