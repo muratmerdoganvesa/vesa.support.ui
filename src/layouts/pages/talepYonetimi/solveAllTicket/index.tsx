@@ -65,6 +65,19 @@ import QuickUpdatePanel, { QuickUpdateTicket } from "./QuickUpdateDialog";
 import SubmitForApprovalPanel, { SubmitForApprovalTicket } from "./SubmitForApprovalDialog";
 import GrantTicketAccessPanel, { GrantTicketAccessTicket } from "./GrantTicketAccessDialog";
 
+// Geçici UI kısıtı: yakında tüm departmanlara açılacak; şimdilik yalnızca Fiori + yönetici.
+const EFFORT_REQUEST_DEPARTMENT_ID = "1FF822C6-0FBC-4D12-AA20-E0A0D9D8AEC3";
+
+const canShowEffortRequest = (row: {
+  canGrantTicketAccess?: boolean;
+  ticketDepartmentId?: string | null;
+}): boolean => {
+  if (row.canGrantTicketAccess !== true) return false;
+  const deptId = row.ticketDepartmentId?.trim();
+  if (!deptId) return false;
+  return deptId.toUpperCase() === EFFORT_REQUEST_DEPARTMENT_ID;
+};
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -634,7 +647,7 @@ function SolveAllTicket() {
               )}
             </Popover>
 
-            {row.original.canGrantTicketAccess === true && (
+            {canShowEffortRequest(row.original) && (
               <Popover
                 open={grantAccessTicket?.id === row.original.id}
                 onOpenChange={(nextOpen) => {
