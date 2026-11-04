@@ -16,8 +16,47 @@ export const fetchTicketEfforts = async (
     isDepartmentManager: false,
     isEffortEnter: false,
     canEnterEffort: false,
+    isEffortLockedInApproval: false,
+    canCompleteEffort: false,
+    isEffortComplated: false,
+    canApproveEffortAsManager: false,
+    pendingEffortApprovalWorkflowHeadId: null,
     items: [],
   };
+};
+
+export const completeTicketEffortAccess = async (
+  ticketId: string
+): Promise<{
+  ticketId?: string;
+  isEffortComplated?: boolean;
+  approvalStarted?: boolean;
+  queued?: boolean;
+}> => {
+  const response = await axiosInstance.post<{
+    ticketId?: string;
+    isEffortComplated?: boolean;
+    approvalStarted?: boolean;
+    queued?: boolean;
+  }>("/api/Ticket/CompleteTicketEffortAccess", { ticketId });
+  return response.data ?? { ticketId, isEffortComplated: true };
+};
+
+export const approveEffortAsManager = async (
+  ticketId: string
+): Promise<{
+  ticketId?: string;
+  approved?: boolean;
+  sentToEffortManager?: boolean;
+  nextManagerStarted?: boolean;
+}> => {
+  const response = await axiosInstance.post<{
+    ticketId?: string;
+    approved?: boolean;
+    sentToEffortManager?: boolean;
+    nextManagerStarted?: boolean;
+  }>("/api/Ticket/ApproveEffortAsManager", { ticketId });
+  return response.data ?? { ticketId, approved: true };
 };
 
 export const setTicketEffortEnter = async (

@@ -1,6 +1,7 @@
 import { axiosInstance } from "utils/axiosInstance";
 import { readEffortApiError } from "layouts/pages/talepYonetimi/createTicket/api/ticketEffortApi";
 import type {
+  MailDecisionPreviewDto,
   TicketEffortManagementCustomerOptionDto,
   TicketEffortManagementDetailDto,
   TicketEffortManagementEffortsDto,
@@ -131,6 +132,39 @@ export const decideCustomerApproval = async (
   const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
     `/api/TicketEffortManagement/${id}/customer-decision`,
     { approve, note: note?.trim() || null }
+  );
+  return response.data;
+};
+
+export const managerApproveEffort = async (
+  id: string,
+  note: string
+): Promise<TicketEffortManagementStatusDto> => {
+  const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
+    `/api/TicketEffortManagement/${id}/manager-approve`,
+    { note: note.trim() }
+  );
+  return response.data;
+};
+
+export const fetchMailDecisionPreview = async (
+  token: string
+): Promise<MailDecisionPreviewDto> => {
+  const response = await axiosInstance.get<MailDecisionPreviewDto>(
+    "/api/TicketEffortManagement/mail-decision",
+    { params: { token } }
+  );
+  return response.data;
+};
+
+export const decideCustomerApprovalByMail = async (
+  token: string,
+  approve: boolean,
+  note?: string
+): Promise<TicketEffortManagementStatusDto> => {
+  const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
+    "/api/TicketEffortManagement/mail-decision",
+    { token, approve, note: note?.trim() || null }
   );
   return response.data;
 };

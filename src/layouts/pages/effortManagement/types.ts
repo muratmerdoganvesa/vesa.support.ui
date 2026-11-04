@@ -103,6 +103,7 @@ export interface TicketEffortManagementDetailDto {
   customerApprovedAt?: string | null;
   canAssignCustomerApproval?: boolean;
   canDecideCustomerApproval?: boolean;
+  canManagerApprove?: boolean;
   canViewActualHours?: boolean;
   comments?: TicketEffortManagementCommentDto[] | null;
 }
@@ -130,6 +131,19 @@ export interface TicketEffortManagementEffortsDto {
   ticketId?: string;
   canViewActualHours?: boolean;
   totalEffortHours?: number;
+  totalInvoiceHours?: number;
+  items?: TicketEffortManagementEffortItemDto[] | null;
+}
+
+export interface MailDecisionPreviewDto {
+  id?: string;
+  ticketNumber?: number;
+  title?: string | null;
+  customerName?: string | null;
+  status?: number;
+  statusText?: string | null;
+  canDecide?: boolean;
+  message?: string | null;
   totalInvoiceHours?: number;
   items?: TicketEffortManagementEffortItemDto[] | null;
 }

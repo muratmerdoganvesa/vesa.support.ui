@@ -173,7 +173,7 @@ const EffortManagementPage = () => {
           <h1 className="text-xl font-bold leading-tight text-slate-800">Efor Yönetimi</h1>
           <p className="mt-0.5 text-sm text-slate-500">
             {canViewAllRecords
-              ? "Efor onayına gönderilen talepler. Müşteri onayına sunulan kişiyi kayıttan seçebilirsiniz."
+              ? "Efor onayına gönderilen talepler. Onaya sunulacak kişiyi kayıttan seçebilirsiniz."
               : "Onayınıza sunulan talepler. Fatura saatlerini ve yapılacak işleri bu listeden açabilirsiniz."}
           </p>
         </header>

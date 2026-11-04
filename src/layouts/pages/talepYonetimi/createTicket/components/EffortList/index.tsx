@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Clock, Loader2, Pencil, Plus, Send, Timer, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Loader2, Pencil, Plus, Send, Timer, Trash2 } from "lucide-react";
 import { Button } from "components/ui/button";
 import { Input } from "components/ui/input";
 import { Switch } from "components/ui/switch";
@@ -34,7 +34,12 @@ interface EffortListProps {
   isDepartmentManager?: boolean;
   isEffortEnter?: boolean;
   canEnterEffort?: boolean;
+  isEffortLockedInApproval?: boolean;
+  canCompleteEffort?: boolean;
+  isEffortComplated?: boolean;
+  canApproveEffortAsManager?: boolean;
   onEffortEnterChange?: (isEffortEnter: boolean) => Promise<void>;
+  onCompleteEffort?: () => Promise<void>;
   onAdd: (
     effortHours: number,
     description?: string | null,
@@ -62,7 +67,12 @@ const EffortList = ({
   isDepartmentManager = false,
   isEffortEnter = false,
   canEnterEffort = false,
+  isEffortLockedInApproval = false,
+  canCompleteEffort = false,
+  isEffortComplated = false,
+  canApproveEffortAsManager = false,
   onEffortEnterChange,
+  onCompleteEffort,
   onAdd,
   onUpdate,
   onDelete,
@@ -77,8 +87,11 @@ const EffortList = ({
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
+  const [completingEffort, setCompletingEffort] = useState(false);
   const [sendingToManager, setSendingToManager] = useState(false);
   const [sendError, setSendError] = useState("");
+  const completingEffortRef = useRef(false);
+  const sendingToManagerRef = useRef(false);
   const hoursRef = useRef<HTMLInputElement>(null);
   const invoiceHoursRef = useRef<HTMLInputElement>(null);
 
@@ -99,24 +112,37 @@ const EffortList = ({
     0
   );
 
+  const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
+  const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
+  const isProcessLocked =
+    isEffortLockedInApproval ||
+    (Boolean(effortSendStatus?.exists) && !isReturnedForEdit);
+  // Efor onay süreci / müşteri onayı: yönetici ve efor giren için kayıtlar kilitlenir.
+  // Efor giren kişi kendi sürecini tamamladıysa da ekleme/düzenleme kapanır.
+  const isEffortLocked =
+    isProcessLocked || (!isDepartmentManager && isEffortComplated);
+
   const canEditEffort = (effort: TicketEffortListDto) => {
+    if (isEffortLocked) return false;
     if (isDepartmentManager) return true;
     return Boolean(canEnterEffort && effort.isOwn);
   };
 
   const canEditActualHours = (effort: TicketEffortListDto) => {
+    if (isEffortLocked) return false;
     if (!effort.isOwn) return false;
     if (isDepartmentManager) return true;
     return Boolean(canEnterEffort);
   };
 
   const canDeleteEffort = (effort: TicketEffortListDto) => {
+    if (isEffortLocked) return false;
     if (isDepartmentManager) return true;
     if (!isEffortEnter) return false;
     return Boolean(canEnterEffort && effort.isOwn);
   };
 
-  const showEffortForm = isDepartmentManager || canEnterEffort;
+  const showEffortForm = !isEffortLocked && (isDepartmentManager || canEnterEffort);
   const editingLocksActualHours =
     Boolean(editingEffort) && !canEditActualHours(editingEffort!);
 
@@ -133,8 +159,6 @@ const EffortList = ({
     setEditInvoiceError("");
   }, [editOpen, editingEffort]);
 
-  const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
-  const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
   const rejectedByCustomer = isReturnedForEdit && Boolean(effortSendStatus?.customerApprovedByUserName);
 
   const isInvoiceHoursMissing = (effort: TicketEffortListDto) =>
@@ -143,16 +167,18 @@ const EffortList = ({
     Number.isNaN(Number(effort.invoiceHours));
 
   const hasMissingInvoiceHours = efforts.some(isInvoiceHoursMissing);
+  const isManagerWorkflowApprove = canApproveEffortAsManager;
   const canSendToEffortManager =
     Boolean(onSendToEffortManager) &&
-    !isEffortEnter &&
     !sendingToManager &&
     efforts.length > 0 &&
-    !hasMissingInvoiceHours;
+    !hasMissingInvoiceHours &&
+    (isManagerWorkflowApprove || (!isEffortEnter && (!effortSendStatus?.exists || isReturnedForEdit)));
 
   const handleSendToEffortManager = async () => {
-    if (!onSendToEffortManager || sendingToManager || isEffortEnter) return;
-    if (effortSendStatus?.exists && !isReturnedForEdit) return;
+    if (!onSendToEffortManager || sendingToManager || sendingToManagerRef.current) return;
+    if (!isManagerWorkflowApprove && isEffortEnter) return;
+    if (!isManagerWorkflowApprove && effortSendStatus?.exists && !isReturnedForEdit) return;
 
     if (efforts.length === 0) {
       setSendError("Efor onayına göndermek için en az bir efor kaydı olmalıdır.");
@@ -166,20 +192,36 @@ const EffortList = ({
 
     try {
       setSendError("");
+      sendingToManagerRef.current = true;
       setSendingToManager(true);
       await onSendToEffortManager();
     } finally {
+      sendingToManagerRef.current = false;
       setSendingToManager(false);
     }
   };
 
   const handleToggleEffortEnter = async (next: boolean) => {
-    if (!onEffortEnterChange || effortEnterSaving) return;
+    if (!onEffortEnterChange || effortEnterSaving || isProcessLocked) return;
     try {
       setEffortEnterSaving(true);
       await onEffortEnterChange(next);
     } finally {
       setEffortEnterSaving(false);
+    }
+  };
+
+  const showCompleteEffortPanel = Boolean(canCompleteEffort || isEffortComplated);
+
+  const handleCompleteEffort = async () => {
+    if (!onCompleteEffort || completingEffort || completingEffortRef.current || isEffortComplated) return;
+    try {
+      completingEffortRef.current = true;
+      setCompletingEffort(true);
+      await onCompleteEffort();
+    } finally {
+      completingEffortRef.current = false;
+      setCompletingEffort(false);
     }
   };
 
@@ -304,9 +346,13 @@ const EffortList = ({
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-800">Efor girilebilir</p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {isEffortEnter
-                  ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz. Başkalarının fiili saatini değiştiremezsiniz."
-                  : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
+                {isProcessLocked
+                  ? isCustomerApproved
+                    ? "Efor süreci tamamlandı. Efor girişi ve kayıtlar kalıcı olarak kilitlendi."
+                    : "Efor onay sürecinde. Düzenleme için geri gönderilene kadar efor girişi açılamaz; fiili saat, fatura saati ve açıklama değiştirilemez."
+                  : isEffortEnter
+                    ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz. Başkalarının fiili saatini değiştiremezsiniz."
+                    : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
@@ -320,7 +366,7 @@ const EffortList = ({
               </span>
               <Switch
                 checked={isEffortEnter}
-                disabled={effortEnterSaving || !onEffortEnterChange}
+                disabled={effortEnterSaving || isProcessLocked || !onEffortEnterChange}
                 onCheckedChange={(checked) => void handleToggleEffortEnter(checked)}
                 aria-label="Efor girilebilir durumunu değiştir"
               />
@@ -335,14 +381,22 @@ const EffortList = ({
                 {effortSendStatus?.customerApprovedByUserName || "Onaylayan"}
                 {effortSendStatus?.customerApprovedAt ? ` · ${formatDateTime(effortSendStatus.customerApprovedAt)}` : ""}
               </p>
+              <p className="mt-2 text-xs text-emerald-700">
+                Onaylandıktan sonra efor kayıtları değiştirilemez, silinemez veya güncellenemez.
+                Tekrar efor süreci başlatılamaz.
+              </p>
             </div>
-          ) : effortSendStatus?.exists && !isReturnedForEdit ? (
+          ) : isProcessLocked ? (
             <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-4">
               <p className="text-sm font-semibold text-sky-900">Efor onayına gönderildi</p>
               <p className="mt-1 text-xs text-sky-800">
-                Durum: {effortSendStatus.statusText || "Gönderildi"}
-                {effortSendStatus.sentByUserName ? ` · Gönderen: ${effortSendStatus.sentByUserName}` : ""}
-                {effortSendStatus.sentAt ? ` · ${formatDateTime(effortSendStatus.sentAt)}` : ""}
+                Durum: {effortSendStatus?.statusText || "Gönderildi"}
+                {effortSendStatus?.sentByUserName ? ` · Gönderen: ${effortSendStatus.sentByUserName}` : ""}
+                {effortSendStatus?.sentAt ? ` · ${formatDateTime(effortSendStatus.sentAt)}` : ""}
+              </p>
+              <p className="mt-2 text-xs text-sky-700">
+                Onay sürecindeyken yönetici dahil kimse fiili saat, fatura saati veya açıklamayı
+                değiştiremez. Düzenleme yalnızca &quot;Düzenleme için geri gönderildi&quot; durumunda açılır.
               </p>
             </div>
           ) : (
@@ -353,7 +407,9 @@ const EffortList = ({
                     ? "Müşteri reddetti"
                     : isReturnedForEdit
                       ? "Düzenleme için geri gönderildi"
-                      : "Efor onayına gönder"}
+                      : isManagerWorkflowApprove
+                        ? "Efor onayını tamamla"
+                        : "Efor onayına gönder"}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {rejectedByCustomer
@@ -364,11 +420,15 @@ const EffortList = ({
                       ? isEffortEnter
                         ? "Efor girişi yeniden açıldı. Düzeltmeleri yaptıktan sonra girişi kapatıp tekrar gönderin."
                         : "Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
-                      : isEffortEnter
-                        ? "Göndermek için önce efor girişini kapatın."
-                        : hasMissingInvoiceHours
-                          ? "Tüm efor kayıtlarının fatura saati dolu olmalıdır. Eksik kayıtları düzenleyip tekrar deneyin."
-                          : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
+                      : isManagerWorkflowApprove
+                        ? hasMissingInvoiceHours
+                          ? "Alt çalışanlarınızın fatura saatlerini doldurduktan sonra onaylayabilirsiniz. Yalnızca kendi ekibinizin eforlarını görürsünüz."
+                          : "Fatura saatlerini kontrol ettikten sonra efor onayını tamamlayın. Tüm yöneticiler bitince efor yöneticisine iletilir."
+                        : isEffortEnter
+                          ? "Göndermek için önce efor girişini kapatın."
+                          : hasMissingInvoiceHours
+                            ? "Tüm efor kayıtlarının fatura saati dolu olmalıdır. Eksik kayıtları düzenleyip tekrar deneyin."
+                            : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
                 </p>
                 {isReturnedForEdit && effortSendStatus?.returnNote && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
@@ -387,7 +447,13 @@ const EffortList = ({
                 type="button"
                 onClick={() => void handleSendToEffortManager()}
                 disabled={!canSendToEffortManager}
-                aria-label={isReturnedForEdit ? "Eforu tekrar onayına gönder" : "Efor onayına gönder"}
+                aria-label={
+                  isReturnedForEdit
+                    ? "Eforu tekrar onayına gönder"
+                    : isManagerWorkflowApprove
+                      ? "Efor onayını tamamla"
+                      : "Efor onayına gönder"
+                }
                 className="h-10 shrink-0 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
               >
                 {sendingToManager ? (
@@ -395,16 +461,77 @@ const EffortList = ({
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-                {isReturnedForEdit ? "Tekrar gönder" : "Efor Onayına Gönder"}
+                {isReturnedForEdit
+                  ? "Tekrar gönder"
+                  : isManagerWorkflowApprove
+                    ? "Onayı Tamamla"
+                    : "Efor Onayına Gönder"}
               </Button>
             </div>
           )}
         </>
       )}
 
-      {!isDepartmentManager && !canEnterEffort && (
+      {!isDepartmentManager && isCustomerApproved && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
+          Efor süreci tamamlandı ve onaylandı. Fiili saat, fatura saati ve açıklama değiştirilemez;
+          ekleme, silme ve güncelleme yapılamaz.
+        </div>
+      )}
+
+      {!isDepartmentManager && !isCustomerApproved && isProcessLocked && (
+        <div className="rounded-2xl border border-sky-100 bg-sky-50 px-5 py-3 text-sm text-sky-800">
+          Efor onay sürecinde. Fiili saat, fatura saati ve açıklama değiştirilemez; ekleme, silme ve
+          güncelleme yapılamaz.
+        </div>
+      )}
+
+      {!isDepartmentManager && !isProcessLocked && isEffortComplated && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
+          Eforunuz departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi; ekleme, silme ve
+          güncelleme yapılamaz.
+        </div>
+      )}
+
+      {!isDepartmentManager && !isEffortLocked && !canEnterEffort && (
         <div className="rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm text-amber-800">
           Efor girişi kapalı. Eklediğiniz eforları görüntüleyebilirsiniz; ekleme, silme ve güncelleme yapılamaz.
+        </div>
+      )}
+
+      {showCompleteEffortPanel && !isProcessLocked && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-800">
+              {isEffortComplated ? "Eforunuz tamamlandı" : "Efor tamamla"}
+            </p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {isEffortComplated
+                ? "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi."
+                : "Efor maddelerinizi girdikten sonra tamamlayın; eforunuz otomatik olarak departman yöneticinizin onayına gider."}
+            </p>
+          </div>
+          {isEffortComplated ? (
+            <span className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-50 px-4 text-sm font-semibold text-emerald-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Tamamlandı
+            </span>
+          ) : (
+            <Button
+              type="button"
+              onClick={() => void handleCompleteEffort()}
+              disabled={completingEffort || !onCompleteEffort}
+              aria-label="Eforum tamamladım"
+              className="h-10 shrink-0 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
+            >
+              {completingEffort ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              Eforum tamamladım
+            </Button>
+          )}
         </div>
       )}
 
