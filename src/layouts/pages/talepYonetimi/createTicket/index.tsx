@@ -110,6 +110,7 @@ import UserSearchCombobox, {
 import { filterTicketSubjectsForCompany } from "./utils/filterTicketSubjectsForCompany";
 import {
   addTicketEffort,
+  approveEffortAsManager,
   completeTicketEffortAccess,
   deleteTicketEffort,
   fetchTicketEfforts,
@@ -743,7 +744,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newSelectedFiles, setNewSelectedFiles] = useState<File[]>([]);
   const [newCommentBody, setNewCommentBody] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() => (location.state?.openEffortTab ? 3 : 0));
 
   const [teamData, setTeamData] = useState<TicketTeamListDto[]>([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -785,6 +786,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [isEffortLockedInApproval, setIsEffortLockedInApproval] = useState(false);
   const [canCompleteEffort, setCanCompleteEffort] = useState(false);
   const [isEffortComplated, setIsEffortComplated] = useState(false);
+  const [canApproveEffortAsManager, setCanApproveEffortAsManager] = useState(false);
   const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
 
   const applyEffortResponse = (data: TicketEffortListResponseDto) => {
@@ -795,6 +797,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
     setIsEffortLockedInApproval(Boolean(data.isEffortLockedInApproval));
     setCanCompleteEffort(Boolean(data.canCompleteEffort));
     setIsEffortComplated(Boolean(data.isEffortComplated));
+    setCanApproveEffortAsManager(Boolean(data.canApproveEffortAsManager));
   };
 
   // ── Yönlendirme geçmişi collapsible ───────────────────────────────────────
@@ -1123,10 +1126,12 @@ function CreateRequest({ ...rest }: createTicketProps) {
         const data = await api.apiUserGetAllUsersWitNameAssignGet(trimmed);
         if (requestId !== searchRequestIdRef.current) return;
         // Fotoğrafları düşür — liste render'ını yavaşlatan base64 payload'ı kaldır
-        const users = (Array.isArray(data.data) ? data.data : []).map((user) => ({
-          ...user,
-          photo: undefined,
-        }));
+        const users = (Array.isArray(data.data) ? data.data : []).map(
+          (user): UserAppDto => ({
+            ...user,
+            photo: null,
+          }),
+        );
         setSearchByName(users);
       } catch {
         if (requestId !== searchRequestIdRef.current) return;
@@ -1156,7 +1161,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
       api.apiTicketTicketPrioritiesGet(),
       userApi.apiUserUserCompanyGet(),
     ]);
-    const subjects = (subjectData.data as subjectHelp[]) ?? [];
+    const subjects = (subjectData.data as unknown as subjectHelp[]) ?? [];
     setsubjectHelp(filterTicketSubjectsForCompany(subjects, userCompany.data?.workCompanyId));
     setSlaPlan(slaData.data as any);
     setTicketType(typeData.data as any);
@@ -2162,6 +2167,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   isEffortLockedInApproval={isEffortLockedInApproval}
                   canCompleteEffort={canCompleteEffort}
                   isEffortComplated={isEffortComplated}
+                  canApproveEffortAsManager={canApproveEffortAsManager}
                   onEffortEnterChange={async (next) => {
                     try {
                       await setTicketEffortEnter(id, next);
@@ -2185,7 +2191,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       const data = await fetchTicketEfforts(id);
                       applyEffortResponse(data);
                       dispatchAlert({
-                        message: "Eforunuz tamamlandı olarak işaretlendi.",
+                        message: "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu.",
                         type: "Success",
                       });
                     } catch (error) {
@@ -2213,13 +2219,15 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   }}
                   onUpdate={async (effortId, effortHours, description, invoiceHours) => {
                     try {
-                      await updateTicketEffort(id, effortId, {
+                      const updated = await updateTicketEffort(id, effortId, {
                         effortHours,
                         description: description ?? null,
                         ...(invoiceHours !== undefined ? { invoiceHours } : {}),
                       });
-                      const data = await fetchTicketEfforts(id);
-                      applyEffortResponse(data);
+                      // Tam listeyi yeniden çekme — fatura saati güncellemesinde gecikmeye yol açıyordu
+                      setExistingEfforts((prev) =>
+                        prev.map((item) => (item.id === effortId ? { ...item, ...updated } : item))
+                      );
                       dispatchAlert({ message: "Efor kaydı güncellendi.", type: "Success" });
                     } catch (error) {
                       dispatchAlert({ message: "Efor güncellenemedi: " + readEffortApiError(error), type: "Error" });
@@ -2240,6 +2248,34 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   effortSendStatus={effortSendStatus}
                   onSendToEffortManager={async () => {
                     try {
+                      if (canApproveEffortAsManager) {
+                        const result = await approveEffortAsManager(id);
+                        const data = await fetchTicketEfforts(id);
+                        applyEffortResponse(data);
+                        try {
+                          const status = await fetchEffortManagementByTicket(id);
+                          setEffortSendStatus(status);
+                          if (status?.exists) {
+                            setIsEffortLockedInApproval(true);
+                            setCanEnterEffort(false);
+                            setSelectedStatus({
+                              id: 13 as TicketStatus,
+                              name: "Efor Onayında",
+                              description: "Efor Onayında",
+                            });
+                          }
+                        } catch {
+                          /* status optional until gate met */
+                        }
+                        dispatchAlert({
+                          message: result.sentToEffortManager
+                            ? "Tüm departman onayları tamamlandı; efor efor yöneticisine gönderildi."
+                            : "Efor onayınız tamamlandı. Diğer kişilerin efor / yönetici onayları tamamlanana kadar efor yöneticisine gönderilmez.",
+                          type: "Success",
+                        });
+                        return;
+                      }
+
                       await sendTicketEffortManagement(id);
                       const status = await fetchEffortManagementByTicket(id);
                       setEffortSendStatus(status);

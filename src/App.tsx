@@ -322,11 +322,11 @@ export default function App() {
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
-             <Route path="/crmModul" element={<CrmModulPage />} />
+            <Route path="/crmModul" element={<CrmModulPage />} />
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-  
+         
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}

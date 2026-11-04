@@ -37,6 +37,7 @@ interface EffortListProps {
   isEffortLockedInApproval?: boolean;
   canCompleteEffort?: boolean;
   isEffortComplated?: boolean;
+  canApproveEffortAsManager?: boolean;
   onEffortEnterChange?: (isEffortEnter: boolean) => Promise<void>;
   onCompleteEffort?: () => Promise<void>;
   onAdd: (
@@ -69,6 +70,7 @@ const EffortList = ({
   isEffortLockedInApproval = false,
   canCompleteEffort = false,
   isEffortComplated = false,
+  canApproveEffortAsManager = false,
   onEffortEnterChange,
   onCompleteEffort,
   onAdd,
@@ -88,6 +90,8 @@ const EffortList = ({
   const [completingEffort, setCompletingEffort] = useState(false);
   const [sendingToManager, setSendingToManager] = useState(false);
   const [sendError, setSendError] = useState("");
+  const completingEffortRef = useRef(false);
+  const sendingToManagerRef = useRef(false);
   const hoursRef = useRef<HTMLInputElement>(null);
   const invoiceHoursRef = useRef<HTMLInputElement>(null);
 
@@ -163,16 +167,18 @@ const EffortList = ({
     Number.isNaN(Number(effort.invoiceHours));
 
   const hasMissingInvoiceHours = efforts.some(isInvoiceHoursMissing);
+  const isManagerWorkflowApprove = canApproveEffortAsManager;
   const canSendToEffortManager =
     Boolean(onSendToEffortManager) &&
-    !isEffortEnter &&
     !sendingToManager &&
     efforts.length > 0 &&
-    !hasMissingInvoiceHours;
+    !hasMissingInvoiceHours &&
+    (isManagerWorkflowApprove || (!isEffortEnter && (!effortSendStatus?.exists || isReturnedForEdit)));
 
   const handleSendToEffortManager = async () => {
-    if (!onSendToEffortManager || sendingToManager || isEffortEnter) return;
-    if (effortSendStatus?.exists && !isReturnedForEdit) return;
+    if (!onSendToEffortManager || sendingToManager || sendingToManagerRef.current) return;
+    if (!isManagerWorkflowApprove && isEffortEnter) return;
+    if (!isManagerWorkflowApprove && effortSendStatus?.exists && !isReturnedForEdit) return;
 
     if (efforts.length === 0) {
       setSendError("Efor onayına göndermek için en az bir efor kaydı olmalıdır.");
@@ -186,9 +192,11 @@ const EffortList = ({
 
     try {
       setSendError("");
+      sendingToManagerRef.current = true;
       setSendingToManager(true);
       await onSendToEffortManager();
     } finally {
+      sendingToManagerRef.current = false;
       setSendingToManager(false);
     }
   };
@@ -206,11 +214,13 @@ const EffortList = ({
   const showCompleteEffortPanel = Boolean(canCompleteEffort || isEffortComplated);
 
   const handleCompleteEffort = async () => {
-    if (!onCompleteEffort || completingEffort || isEffortComplated) return;
+    if (!onCompleteEffort || completingEffort || completingEffortRef.current || isEffortComplated) return;
     try {
+      completingEffortRef.current = true;
       setCompletingEffort(true);
       await onCompleteEffort();
     } finally {
+      completingEffortRef.current = false;
       setCompletingEffort(false);
     }
   };
@@ -397,7 +407,9 @@ const EffortList = ({
                     ? "Müşteri reddetti"
                     : isReturnedForEdit
                       ? "Düzenleme için geri gönderildi"
-                      : "Efor onayına gönder"}
+                      : isManagerWorkflowApprove
+                        ? "Efor onayını tamamla"
+                        : "Efor onayına gönder"}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {rejectedByCustomer
@@ -408,11 +420,15 @@ const EffortList = ({
                       ? isEffortEnter
                         ? "Efor girişi yeniden açıldı. Düzeltmeleri yaptıktan sonra girişi kapatıp tekrar gönderin."
                         : "Düzeltmeler tamam. Eforu tekrar efor yöneticisine gönderebilirsiniz."
-                      : isEffortEnter
-                        ? "Göndermek için önce efor girişini kapatın."
-                        : hasMissingInvoiceHours
-                          ? "Tüm efor kayıtlarının fatura saati dolu olmalıdır. Eksik kayıtları düzenleyip tekrar deneyin."
-                          : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
+                      : isManagerWorkflowApprove
+                        ? hasMissingInvoiceHours
+                          ? "Alt çalışanlarınızın fatura saatlerini doldurduktan sonra onaylayabilirsiniz. Yalnızca kendi ekibinizin eforlarını görürsünüz."
+                          : "Fatura saatlerini kontrol ettikten sonra efor onayını tamamlayın. Tüm yöneticiler bitince efor yöneticisine iletilir."
+                        : isEffortEnter
+                          ? "Göndermek için önce efor girişini kapatın."
+                          : hasMissingInvoiceHours
+                            ? "Tüm efor kayıtlarının fatura saati dolu olmalıdır. Eksik kayıtları düzenleyip tekrar deneyin."
+                            : "Efor girişleri kapalı. Fatura saatlerini kontrol ettikten sonra efor yöneticisine gönderebilirsiniz."}
                 </p>
                 {isReturnedForEdit && effortSendStatus?.returnNote && (
                   <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
@@ -431,7 +447,13 @@ const EffortList = ({
                 type="button"
                 onClick={() => void handleSendToEffortManager()}
                 disabled={!canSendToEffortManager}
-                aria-label={isReturnedForEdit ? "Eforu tekrar onayına gönder" : "Efor onayına gönder"}
+                aria-label={
+                  isReturnedForEdit
+                    ? "Eforu tekrar onayına gönder"
+                    : isManagerWorkflowApprove
+                      ? "Efor onayını tamamla"
+                      : "Efor onayına gönder"
+                }
                 className="h-10 shrink-0 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
               >
                 {sendingToManager ? (
@@ -439,7 +461,11 @@ const EffortList = ({
                 ) : (
                   <Send className="h-3.5 w-3.5" />
                 )}
-                {isReturnedForEdit ? "Tekrar gönder" : "Efor Onayına Gönder"}
+                {isReturnedForEdit
+                  ? "Tekrar gönder"
+                  : isManagerWorkflowApprove
+                    ? "Onayı Tamamla"
+                    : "Efor Onayına Gönder"}
               </Button>
             </div>
           )}
@@ -462,7 +488,8 @@ const EffortList = ({
 
       {!isDepartmentManager && !isProcessLocked && isEffortComplated && (
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
-          Eforunuz tamamlandı. Kayıtlarınız kilitlendi; ekleme, silme ve güncelleme yapılamaz.
+          Eforunuz departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi; ekleme, silme ve
+          güncelleme yapılamaz.
         </div>
       )}
 
@@ -480,8 +507,8 @@ const EffortList = ({
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               {isEffortComplated
-                ? "Bu talep için efor girişi tamamlandı olarak işaretlendi. Kayıtlarınız kilitlendi; departman yöneticisi durumu görebilir."
-                : "Efor maddelerinizi girdikten sonra eforunuzu tamamladığınızı bildirin."}
+                ? "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi."
+                : "Efor maddelerinizi girdikten sonra tamamlayın; eforunuz otomatik olarak departman yöneticinizin onayına gider."}
             </p>
           </div>
           {isEffortComplated ? (
