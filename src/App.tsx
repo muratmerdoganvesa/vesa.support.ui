@@ -144,6 +144,7 @@ const ChatHome = lazy(() => import("layouts/pages/ai-page/chat-home"));
 const TicketProjectStatistics = lazy(() => import("layouts/pages/ticketProjects/components/ProjectStatisticsTab"));
 const EffortManagementPage = lazy(() => import("layouts/pages/effortManagement"));
 const EffortManagementDetailPage = lazy(() => import("layouts/pages/effortManagement/detail"));
+const EffortMailDecisionPage = lazy(() => import("layouts/pages/effortManagement/mailDecision"));
 
 
 // import GeneralSidenav from "./examples/Sidenav/components/GeneralSidenav/GeneralSidenav";
@@ -321,11 +322,11 @@ export default function App() {
           <Route path="/activityCenter" element={<ActivityCenterPage />} />
           <Route path="/activityRuleManagement" element={<ActivityRuleManagement />} />
           <Route path="/activityPeriodManagement" element={<ActivityPeriodManagement />} />
-             <Route path="/crmModul" element={<CrmModulPage />} />
+            <Route path="/crmModul" element={<CrmModulPage />} />
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-    
+         
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
@@ -340,8 +341,9 @@ export default function App() {
             <Route path="/webEvents" element={<WebEvents />} />
             <Route path="/webEvents/detail" element={<WebEventsCE />} />
             <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
-           <Route path="/effortManagement" element={<EffortManagementPage />} />
-           <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
+            <Route path="/effortManagement" element={<EffortManagementPage />} />
+            <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
+            <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}

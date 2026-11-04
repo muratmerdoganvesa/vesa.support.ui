@@ -14,6 +14,7 @@ interface MessageBoxProps {
   setNumberManDay?: (numberManDay: number) => void;
   canEditManDay?: boolean;
   lastnumberManDay?: number;
+  hideManDay?: boolean;
   isMsp?: boolean;
   mspClientId?: string | null;
   customerRefName?: string | null;
@@ -29,6 +30,7 @@ function MessageBox({
   setNumberManDay,
   canEditManDay,
   lastnumberManDay,
+  hideManDay,
   isMsp,
   mspClientId,
   customerRefName,
@@ -99,7 +101,7 @@ function MessageBox({
               ) : null}
             </div>
           ) : null}
-          {type === "approve" ? (
+          {type === "approve" && !hideManDay ? (
             <>
               <span style={contentStyle}>Adam/Gün</span>
               <Input

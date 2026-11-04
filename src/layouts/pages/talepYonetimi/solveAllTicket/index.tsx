@@ -65,6 +65,19 @@ import QuickUpdatePanel, { QuickUpdateTicket } from "./QuickUpdateDialog";
 import SubmitForApprovalPanel, { SubmitForApprovalTicket } from "./SubmitForApprovalDialog";
 import GrantTicketAccessPanel, { GrantTicketAccessTicket } from "./GrantTicketAccessDialog";
 
+/** Geçici: Efor İste yalnızca bu departmanda; tüm departmanlara yetki verilince kaldırılacak. */
+const EFFORT_REQUEST_ALLOWED_DEPARTMENT_ID = "1FF822C6-0FBC-4D12-AA20-E0A0D9D8AEC3";
+
+const canShowEffortRequest = (row: {
+  canGrantTicketAccess?: boolean;
+  ticketDepartmentId?: string | null;
+}): boolean => {
+  if (row.canGrantTicketAccess !== true) return false;
+  const departmentId = row.ticketDepartmentId?.trim();
+  if (!departmentId) return false;
+  return departmentId.toUpperCase() === EFFORT_REQUEST_ALLOWED_DEPARTMENT_ID;
+};
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -75,12 +88,6 @@ interface ColumnDef {
   cell?: (props: { row: any; value: any; columnId: string }) => React.ReactNode;
   className?: string;
 }
-
-/** Efor İste yalnızca bu ticket departmanında gösterilir. */
-const EFFORT_REQUEST_DEPARTMENT_ID = "1FF822C6-0FBC-4D12-AA20-E0A0D9D8AEC3";
-
-const isEffortRequestDepartment = (ticketDepartmentId?: string | null): boolean =>
-  String(ticketDepartmentId ?? "").toUpperCase() === EFFORT_REQUEST_DEPARTMENT_ID;
 
 // ---------------------------------------------------------------------------
 // Primitive sub-components (identical to allTickets)
@@ -561,9 +568,14 @@ function SolveAllTicket() {
                   align="start"
                   side="bottom"
                   sideOffset={8}
-                  collisionPadding={12}
-                  style={{ width: "min(920px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
-                  className="z-[1300] w-[920px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                  collisionPadding={{ top: 80, right: 16, bottom: 16, left: 16 }}
+                  sticky="always"
+                  style={{
+                    width: "min(920px, calc(100vw - 1.5rem))",
+                    maxWidth: "calc(100vw - 1.5rem)",
+                    maxHeight: "var(--radix-popover-content-available-height)",
+                  }}
+                  className="z-[1300] w-[920px]! max-w-[calc(100vw-1.5rem)]! overflow-y-auto p-0 shadow-lg"
                   onOpenAutoFocus={(event) => event.preventDefault()}
                   onInteractOutside={(event) => {
                     if (quickUpdateBusy) event.preventDefault();
@@ -609,9 +621,14 @@ function SolveAllTicket() {
                   align="start"
                   side="bottom"
                   sideOffset={8}
-                  collisionPadding={12}
-                  style={{ width: "min(520px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
-                  className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                  collisionPadding={{ top: 80, right: 16, bottom: 16, left: 16 }}
+                  sticky="always"
+                  style={{
+                    width: "min(520px, calc(100vw - 1.5rem))",
+                    maxWidth: "calc(100vw - 1.5rem)",
+                    maxHeight: "var(--radix-popover-content-available-height)",
+                  }}
+                  className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! overflow-y-auto p-0 shadow-lg"
                   onOpenAutoFocus={(event) => event.preventDefault()}
                   onInteractOutside={(event) => {
                     if (submitApprovalBusy) event.preventDefault();
@@ -630,7 +647,7 @@ function SolveAllTicket() {
               )}
             </Popover>
 
-            {isEffortRequestDepartment(row.original.ticketDepartmentId) && (
+            {canShowEffortRequest(row.original) && (
               <Popover
                 open={grantAccessTicket?.id === row.original.id}
                 onOpenChange={(nextOpen) => {
@@ -658,9 +675,14 @@ function SolveAllTicket() {
                     align="start"
                     side="bottom"
                     sideOffset={8}
-                    collisionPadding={12}
-                    style={{ width: "min(520px, calc(100vw - 1.5rem))", maxWidth: "calc(100vw - 1.5rem)" }}
-                    className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! p-0 shadow-lg"
+                    collisionPadding={{ top: 80, right: 16, bottom: 16, left: 16 }}
+                    sticky="always"
+                    style={{
+                      width: "min(520px, calc(100vw - 1.5rem))",
+                      maxWidth: "calc(100vw - 1.5rem)",
+                      maxHeight: "var(--radix-popover-content-available-height)",
+                    }}
+                    className="z-[1300] w-[520px]! max-w-[calc(100vw-1.5rem)]! overflow-y-auto p-0 shadow-lg"
                     onOpenAutoFocus={(event) => event.preventDefault()}
                     onInteractOutside={(event) => {
                       if (grantAccessBusy) event.preventDefault();

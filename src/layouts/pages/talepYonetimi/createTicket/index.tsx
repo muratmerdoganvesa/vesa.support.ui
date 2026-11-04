@@ -110,6 +110,8 @@ import UserSearchCombobox, {
 import { filterTicketSubjectsForCompany } from "./utils/filterTicketSubjectsForCompany";
 import {
   addTicketEffort,
+  approveEffortAsManager,
+  completeTicketEffortAccess,
   deleteTicketEffort,
   fetchTicketEfforts,
   readEffortApiError,
@@ -332,6 +334,7 @@ const MultiUserSearchCombobox = ({
   results,
   placeholder,
   loading = false,
+  disabled = false,
 }: {
   values: any[];
   onChange: (users: any[]) => void;
@@ -339,6 +342,7 @@ const MultiUserSearchCombobox = ({
   results: any[];
   placeholder: string;
   loading?: boolean;
+  disabled?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -349,11 +353,13 @@ const MultiUserSearchCombobox = ({
   }, [results, query]);
 
   const handleToggle = (user: any) => {
+    if (disabled) return;
     const exists = values.some((v) => v.id === user.id);
     onChange(exists ? values.filter((v) => v.id !== user.id) : [...values, user]);
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (disabled) return;
     setOpen(nextOpen);
     if (!nextOpen) {
       setQuery("");
@@ -368,14 +374,17 @@ const MultiUserSearchCombobox = ({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Popover open={open} onOpenChange={handleOpenChange}>
+      <Popover open={disabled ? false : open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <button
             type="button"
+            disabled={disabled}
+            aria-disabled={disabled}
             className={cn(
               "flex h-9 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm",
               "focus:outline-none focus:border-[#3e5d8f]/40 focus:ring-2 focus:ring-[#3e5d8f]/8",
-              "transition-all duration-150 hover:border-slate-300 hover:bg-slate-50/50"
+              "transition-all duration-150 hover:border-slate-300 hover:bg-slate-50/50",
+              "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
             )}
           >
             <span className={cn("truncate", values.length === 0 && "text-slate-400")}>
@@ -453,14 +462,16 @@ const MultiUserSearchCombobox = ({
               className="gap-1 pr-1 text-xs font-normal bg-[#3e5d8f]/8 text-[#3e5d8f] border border-[#3e5d8f]/15 hover:bg-[#3e5d8f]/12"
             >
               {getUserDisplayName(user) || `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()}
-              <button
-                type="button"
-                onClick={() => handleToggle(user)}
-                aria-label="Kaldır"
-                className="ml-0.5 rounded-full hover:bg-[#3e5d8f]/20 transition-colors"
-              >
-                <X className="h-3 w-3" />
-              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => handleToggle(user)}
+                  aria-label="Kaldır"
+                  className="ml-0.5 rounded-full hover:bg-[#3e5d8f]/20 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
             </Badge>
           ))}
         </div>
@@ -733,7 +744,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [newSelectedFiles, setNewSelectedFiles] = useState<File[]>([]);
   const [newCommentBody, setNewCommentBody] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() => (location.state?.openEffortTab ? 3 : 0));
 
   const [teamData, setTeamData] = useState<TicketTeamListDto[]>([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -772,6 +783,10 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [isEffortDeptManager, setIsEffortDeptManager] = useState(false);
   const [isEffortEnter, setIsEffortEnter] = useState(false);
   const [canEnterEffort, setCanEnterEffort] = useState(false);
+  const [isEffortLockedInApproval, setIsEffortLockedInApproval] = useState(false);
+  const [canCompleteEffort, setCanCompleteEffort] = useState(false);
+  const [isEffortComplated, setIsEffortComplated] = useState(false);
+  const [canApproveEffortAsManager, setCanApproveEffortAsManager] = useState(false);
   const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
 
   const applyEffortResponse = (data: TicketEffortListResponseDto) => {
@@ -779,6 +794,10 @@ function CreateRequest({ ...rest }: createTicketProps) {
     setIsEffortDeptManager(Boolean(data.isDepartmentManager));
     setIsEffortEnter(Boolean(data.isEffortEnter));
     setCanEnterEffort(Boolean(data.canEnterEffort));
+    setIsEffortLockedInApproval(Boolean(data.isEffortLockedInApproval));
+    setCanCompleteEffort(Boolean(data.canCompleteEffort));
+    setIsEffortComplated(Boolean(data.isEffortComplated));
+    setCanApproveEffortAsManager(Boolean(data.canApproveEffortAsManager));
   };
 
   // ── Yönlendirme geçmişi collapsible ───────────────────────────────────────
@@ -840,6 +859,13 @@ function CreateRequest({ ...rest }: createTicketProps) {
 
   const handleAssignTicket = async () => {
     try {
+      if (Number(selectedStatus?.id) === 13) {
+        dispatchAlert({
+          message: "Efor onayındaki talep güncellenemez. Onay süreci tamamlanana kadar talep güncelleme yapılamaz.",
+          type: "Warning",
+        });
+        return;
+      }
       dispatchBusy({ isBusy: true });
       ticketForm.ticketComment = [];
       const conf = getConfiguration();
@@ -1100,10 +1126,12 @@ function CreateRequest({ ...rest }: createTicketProps) {
         const data = await api.apiUserGetAllUsersWitNameAssignGet(trimmed);
         if (requestId !== searchRequestIdRef.current) return;
         // Fotoğrafları düşür — liste render'ını yavaşlatan base64 payload'ı kaldır
-        const users = (Array.isArray(data.data) ? data.data : []).map((user) => ({
-          ...user,
-          photo: undefined,
-        }));
+        const users = (Array.isArray(data.data) ? data.data : []).map(
+          (user): UserAppDto => ({
+            ...user,
+            photo: null,
+          }),
+        );
         setSearchByName(users);
       } catch {
         if (requestId !== searchRequestIdRef.current) return;
@@ -1133,7 +1161,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
       api.apiTicketTicketPrioritiesGet(),
       userApi.apiUserUserCompanyGet(),
     ]);
-    const subjects = (subjectData.data as subjectHelp[]) ?? [];
+    const subjects = (subjectData.data as unknown as subjectHelp[]) ?? [];
     setsubjectHelp(filterTicketSubjectsForCompany(subjects, userCompany.data?.workCompanyId));
     setSlaPlan(slaData.data as any);
     setTicketType(typeData.data as any);
@@ -1198,19 +1226,17 @@ function CreateRequest({ ...rest }: createTicketProps) {
         setEffortsLoading(true);
         const data = await fetchTicketEfforts(id);
         applyEffortResponse(data);
-        if (data.isDepartmentManager) {
-          try {
-            const status = await fetchEffortManagementByTicket(id);
-            setEffortSendStatus(status);
-          } catch (statusError) {
-            setEffortSendStatus(null);
+        try {
+          const status = await fetchEffortManagementByTicket(id);
+          setEffortSendStatus(status);
+        } catch (statusError) {
+          setEffortSendStatus(null);
+          if (data.isDepartmentManager) {
             dispatchAlert({
               message: "Efor gönderim durumu alınamadı: " + readEffortApiError(statusError),
               type: "Error",
             });
           }
-        } else {
-          setEffortSendStatus(null);
         }
       } catch (error) {
         dispatchAlert({ message: "Efor kayıtları yüklenemedi: " + error, type: "Error" });
@@ -1534,13 +1560,21 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const statusComboboxOptions = useMemo((): ComboboxOption[] => {
     const base = toOpts(statusData, "id", "description");
     if (!selectedStatus) return base;
-    // Onay Sürecinde (12) listede gösterilmez
-    if (Number(selectedStatus.id) === 12) return base;
     const idStr = String(selectedStatus.id);
+    const currentId = Number(selectedStatus.id);
+    // Onay Sürecinde (12) / Efor Onayında (13) seçilemez; kilitliyken yalnızca mevcut durumu göstermek için eklenir
+    if (currentId === 12 || currentId === 13) {
+      const fallbackLabel = selectedStatus.description ?? selectedStatus.name ?? idStr;
+      return [{ value: idStr, label: fallbackLabel }];
+    }
     if (base.some((o) => o.value === idStr)) return base;
     const fallbackLabel = selectedStatus.description ?? selectedStatus.name ?? idStr;
     return [...base, { value: idStr, label: fallbackLabel }];
   }, [statusData, selectedStatus]);
+
+  // Efor Onayında (13): Talep Güncelleme tabında işlem yapılamaz
+  const isEffortApprovalLocked = Number(selectedStatus?.id) === 13;
+  const canUpdateAssignment = canEdit && !isEffortApprovalLocked;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -2130,6 +2164,10 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   isDepartmentManager={isEffortDeptManager}
                   isEffortEnter={isEffortEnter}
                   canEnterEffort={canEnterEffort}
+                  isEffortLockedInApproval={isEffortLockedInApproval}
+                  canCompleteEffort={canCompleteEffort}
+                  isEffortComplated={isEffortComplated}
+                  canApproveEffortAsManager={canApproveEffortAsManager}
                   onEffortEnterChange={async (next) => {
                     try {
                       await setTicketEffortEnter(id, next);
@@ -2142,6 +2180,23 @@ function CreateRequest({ ...rest }: createTicketProps) {
                     } catch (error) {
                       dispatchAlert({
                         message: "Efor girilebilir durumu güncellenemedi: " + readEffortApiError(error),
+                        type: "Error",
+                      });
+                      throw error;
+                    }
+                  }}
+                  onCompleteEffort={async () => {
+                    try {
+                      await completeTicketEffortAccess(id);
+                      const data = await fetchTicketEfforts(id);
+                      applyEffortResponse(data);
+                      dispatchAlert({
+                        message: "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu.",
+                        type: "Success",
+                      });
+                    } catch (error) {
+                      dispatchAlert({
+                        message: "Efor tamamlanamadı: " + readEffortApiError(error),
                         type: "Error",
                       });
                       throw error;
@@ -2164,13 +2219,15 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   }}
                   onUpdate={async (effortId, effortHours, description, invoiceHours) => {
                     try {
-                      await updateTicketEffort(id, effortId, {
+                      const updated = await updateTicketEffort(id, effortId, {
                         effortHours,
                         description: description ?? null,
                         ...(invoiceHours !== undefined ? { invoiceHours } : {}),
                       });
-                      const data = await fetchTicketEfforts(id);
-                      applyEffortResponse(data);
+                      // Tam listeyi yeniden çekme — fatura saati güncellemesinde gecikmeye yol açıyordu
+                      setExistingEfforts((prev) =>
+                        prev.map((item) => (item.id === effortId ? { ...item, ...updated } : item))
+                      );
                       dispatchAlert({ message: "Efor kaydı güncellendi.", type: "Success" });
                     } catch (error) {
                       dispatchAlert({ message: "Efor güncellenemedi: " + readEffortApiError(error), type: "Error" });
@@ -2191,9 +2248,39 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   effortSendStatus={effortSendStatus}
                   onSendToEffortManager={async () => {
                     try {
+                      if (canApproveEffortAsManager) {
+                        const result = await approveEffortAsManager(id);
+                        const data = await fetchTicketEfforts(id);
+                        applyEffortResponse(data);
+                        try {
+                          const status = await fetchEffortManagementByTicket(id);
+                          setEffortSendStatus(status);
+                          if (status?.exists) {
+                            setIsEffortLockedInApproval(true);
+                            setCanEnterEffort(false);
+                            setSelectedStatus({
+                              id: 13 as TicketStatus,
+                              name: "Efor Onayında",
+                              description: "Efor Onayında",
+                            });
+                          }
+                        } catch {
+                          /* status optional until gate met */
+                        }
+                        dispatchAlert({
+                          message: result.sentToEffortManager
+                            ? "Tüm departman onayları tamamlandı; efor efor yöneticisine gönderildi."
+                            : "Efor onayınız tamamlandı. Diğer kişilerin efor / yönetici onayları tamamlanana kadar efor yöneticisine gönderilmez.",
+                          type: "Success",
+                        });
+                        return;
+                      }
+
                       await sendTicketEffortManagement(id);
                       const status = await fetchEffortManagementByTicket(id);
                       setEffortSendStatus(status);
+                      setIsEffortLockedInApproval(true);
+                      setCanEnterEffort(false);
                       setSelectedStatus({
                         id: 13 as TicketStatus,
                         name: "Efor Onayında",
@@ -2227,6 +2314,19 @@ function CreateRequest({ ...rest }: createTicketProps) {
           {activeIndex === 2 && (
             <div className="p-6 flex flex-col gap-5">
 
+              {isEffortApprovalLocked && (
+                <div
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <p className="text-sm font-semibold text-amber-900">Efor onayında</p>
+                  <p className="mt-0.5 text-xs text-amber-800/80">
+                    Bu talep efor onay sürecinde. Onay tamamlanana kadar talep güncelleme yapılamaz.
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 {/* General assignment settings */}
@@ -2244,7 +2344,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           setSelectedDepartment(found ?? null);
                         }}
                         placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.Departman")}
-                        disabled={!flagBoolean}
+                        disabled={!flagBoolean || isEffortApprovalLocked}
                       />
                     </FormField>
 
@@ -2257,6 +2357,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           setSelectedStatus(found ?? null);
                         }}
                         placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.Status")}
+                        disabled={isEffortApprovalLocked}
                       />
                     </FormField>
 
@@ -2265,7 +2366,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
                         type="date"
                         value={formatDateForInput(selectedDate)}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="rounded-xl border-slate-200 bg-white focus-visible:border-[#3e5d8f]/40 focus-visible:ring-2 focus-visible:ring-[#3e5d8f]/8"
+                        disabled={isEffortApprovalLocked}
+                        className="rounded-xl border-slate-200 bg-white focus-visible:border-[#3e5d8f]/40 focus-visible:ring-2 focus-visible:ring-[#3e5d8f]/8 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                       />
                     </FormField>
 
@@ -2281,6 +2383,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           setSelectedProject(found ?? null);
                         }}
                         placeholder="Proje Seçiniz"
+                        disabled={isEffortApprovalLocked}
                       />
                     </FormField>
                   </div>
@@ -2306,7 +2409,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                         id="showMenu"
                         checked={checkBox}
                         onCheckedChange={(checked) => setCheckBox(Boolean(checked))}
-                        disabled={!flagBoolean}
+                        disabled={!flagBoolean || isEffortApprovalLocked}
                         className="data-[state=checked]:bg-[#3e5d8f] data-[state=checked]:border-[#3e5d8f]"
                       />
                       <Label htmlFor="showMenu" className="text-sm text-slate-600 cursor-pointer font-medium">
@@ -2328,7 +2431,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           results={searchByName}
                           loading={userSearchLoading}
                           placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.KullaniciPlaceholder")}
-                          disabled={!flagBoolean}
+                          disabled={!flagBoolean || isEffortApprovalLocked}
                         />
                       </FormField>
                     ) : (
@@ -2341,6 +2444,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                             setSelectedTeam(found ?? null);
                           }}
                           placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.TakimPlaceholder")}
+                          disabled={isEffortApprovalLocked}
                         />
                       </FormField>
                     )}
@@ -2359,7 +2463,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
                     placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.GuncellemeNedeniPlaceholder")}
                     onChange={(e) => setassingDesc(e.target.value)}
                     rows={5}
-                    className="rounded-xl border-slate-200 bg-white focus-visible:border-[#3e5d8f]/40 focus-visible:ring-2 focus-visible:ring-[#3e5d8f]/8 resize-none"
+                    disabled={isEffortApprovalLocked}
+                    className="rounded-xl border-slate-200 bg-white focus-visible:border-[#3e5d8f]/40 focus-visible:ring-2 focus-visible:ring-[#3e5d8f]/8 resize-none disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-50"
                   />
 
                   <div>
@@ -2376,19 +2481,20 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       results={searchByName}
                       loading={userSearchLoading}
                       placeholder={t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.KullancilarPlaceholder")}
+                      disabled={isEffortApprovalLocked}
                     />
                   </div>
                 </div>
               </SectionCard>
 
               {/* Tab 2 action buttons */}
-              {canEdit && (
+              {canUpdateAssignment && (
                 <div className="flex items-center justify-end gap-2.5">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/solveAllTicket/")}
-                    disabled={!canEdit}
+                    disabled={!canUpdateAssignment}
                     className="h-9 rounded-xl border-rose-200 text-rose-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 px-5 transition-all"
                   >
                     {t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.Iptal")}
@@ -2396,10 +2502,23 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   <Button
                     size="sm"
                     onClick={handleAssignTicket}
-                    disabled={!canEdit}
+                    disabled={!canUpdateAssignment}
                     className="h-9 rounded-xl bg-[#3e5d8f] hover:bg-[#324d7a] text-white px-6 font-semibold shadow-md shadow-[#3e5d8f]/20 transition-all hover:shadow-lg hover:shadow-[#3e5d8f]/25"
                   >
                     {t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.Kaydet")}
+                  </Button>
+                </div>
+              )}
+
+              {isEffortApprovalLocked && (
+                <div className="flex items-center justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/solveAllTicket/")}
+                    className="h-9 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 px-5 transition-all"
+                  >
+                    {t("ns1:TicketDetailPage.GenelAtalamalar.InputProps.Iptal")}
                   </Button>
                 </div>
               )}

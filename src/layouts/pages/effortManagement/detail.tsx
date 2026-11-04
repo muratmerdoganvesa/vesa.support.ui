@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Loader2, RotateCcw, Send } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { Button } from "components/ui/button";
@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/ui/tabs";
 import {
   assignCustomerApprovalUser,
   claimEffortManagement,
@@ -20,6 +21,7 @@ import {
   fetchEffortApprovalUsers,
   fetchEffortManagementDetail,
   fetchEffortManagementEfforts,
+  managerApproveEffort,
   readEffortApiError,
   returnEffortManagement,
 } from "./api";
@@ -30,6 +32,8 @@ import type {
   TicketEffortManagementEffortsDto,
   TicketEffortManagementUserOptionDto,
 } from "./types";
+
+type ApprovalActionTab = "submit" | "self-approve" | "return";
 
 const InfoItem = ({ label, value }: { label: string; value?: string | number | null }) => (
   <div className="flex flex-col gap-1">
@@ -53,8 +57,11 @@ const EffortManagementDetailPage = () => {
   const [approvalSearch, setApprovalSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
+  const [managerApproveNote, setManagerApproveNote] = useState("");
   const [approving, setApproving] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  const [managerApproving, setManagerApproving] = useState(false);
+  const [approvalActionTab, setApprovalActionTab] = useState<ApprovalActionTab>("submit");
   const [error, setError] = useState("");
 
   const load = async (recordId: string) => {
@@ -163,6 +170,26 @@ const EffortManagementDetailPage = () => {
     }
   };
 
+  const handleManagerApprove = async () => {
+    if (!id || managerApproving || assigning) return;
+    const note = managerApproveNote.trim();
+    if (!note) {
+      setError("Onay açıklaması zorunludur.");
+      return;
+    }
+    try {
+      setManagerApproving(true);
+      setError("");
+      await managerApproveEffort(id, note);
+      setManagerApproveNote("");
+      await load(id);
+    } catch (managerApproveError) {
+      setError(readEffortApiError(managerApproveError));
+    } finally {
+      setManagerApproving(false);
+    }
+  };
+
   const handleReject = async () => {
     if (!id || approving || rejecting) return;
     const note = rejectNote.trim();
@@ -196,6 +223,39 @@ const EffortManagementDetailPage = () => {
     const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
     return label.includes(term);
   });
+  const canShowApprovalActions =
+    Boolean(detail?.canAssignCustomerApproval) ||
+    Boolean(detail?.canManagerApprove) ||
+    Boolean(detail?.canReturn);
+  const approvalActionTabs: {
+    value: ApprovalActionTab;
+    label: string;
+    icon: ReactNode;
+  }[] = [];
+  if (detail?.canAssignCustomerApproval) {
+    approvalActionTabs.push({
+      value: "submit",
+      label: "Talebi Onaya Sun",
+      icon: <Send className="w-3.5 h-3.5" />,
+    });
+  }
+  if (detail?.canManagerApprove) {
+    approvalActionTabs.push({
+      value: "self-approve",
+      label: "Kendim Onaylıyorum",
+      icon: <BadgeCheck className="w-3.5 h-3.5" />,
+    });
+  }
+  if (detail?.canReturn) {
+    approvalActionTabs.push({
+      value: "return",
+      label: "Eforu Geri Gönder",
+      icon: <RotateCcw className="w-3.5 h-3.5" />,
+    });
+  }
+  const activeApprovalActionTab = approvalActionTabs.some((tab) => tab.value === approvalActionTab)
+    ? approvalActionTab
+    : (approvalActionTabs[0]?.value ?? "submit");
 
   return (
     <DashboardLayout>
@@ -291,96 +351,172 @@ const EffortManagementDetailPage = () => {
               </section>
             )}
 
-            {detail.canAssignCustomerApproval && (
-              <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <h2 className="text-sm font-semibold text-slate-800">Müşteri onayına sun</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Talebin müşterisine bağlı bir kullanıcı seçin. Seçilen kişi yalnızca bu talebi, fatura saatlerini ve yapılacak işleri görür.
-                </p>
-                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="approval-user-search" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Kişide ara
-                    </label>
-                    <input
-                      id="approval-user-search"
-                      value={approvalSearch}
-                      onChange={(event) => setApprovalSearch(event.target.value)}
-                      placeholder="Ad veya e-posta"
-                      aria-label="Müşteri onay kullanıcısında ara"
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="approval-user" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Onaya sunulacak kişi
-                    </label>
-                    <select
-                      id="approval-user"
-                      value={approvalUserId}
-                      onChange={(event) => setApprovalUserId(event.target.value)}
-                      aria-label="Müşteri onayına sunulacak kişiyi seç"
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
-                    >
-                      <option value="">Kişi seçin</option>
-                      {approvalUserId &&
-                        !filteredApprovalUsers.some((user) => user.id === approvalUserId) &&
-                        detail.customerApprovedByUserName && (
-                          <option value={approvalUserId}>{detail.customerApprovedByUserName}</option>
-                        )}
-                      {filteredApprovalUsers.map((user) => (
-                        <option key={user.id} value={user.id ?? ""}>
-                          {user.name || user.email || "—"}
-                          {user.email ? ` · ${user.email}` : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => void handleAssignApprovalUser()}
-                    disabled={assigning || approvalUserId.trim() === ""}
-                    aria-label="Seçilen kişiyi müşteri onayına sun"
-                    className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
-                  >
-                    {assigning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    Onaya sun
-                  </Button>
-                </div>
-                {approvalUsers.length === 0 && (
-                  <p className="mt-3 text-xs text-amber-700">Bu müşteriye bağlı seçilebilir kullanıcı yok.</p>
-                )}
-              </section>
-            )}
+            {canShowApprovalActions && (
+              <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_4px_40px_rgba(62,93,143,0.08)]">
+                <div className="h-[3px] bg-gradient-to-r from-[#3e5d8f] via-[#5272a8] to-[#8aaad4]" />
 
-            {detail.canReturn && (
-              <section className="rounded-2xl border border-rose-100 bg-white p-5 shadow-sm shadow-slate-200/50">
-                <h2 className="text-sm font-semibold text-slate-800">Eforu geri gönder</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Tüm eforu kabul etmek zorunda değilsiniz. Notu yazın; efor girişi yeniden açılır ve departman yöneticisi düzeltip tekrar gönderir.
-                </p>
-                <label htmlFor="return-note" className="mt-4 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Geri gönderme notu
-                </label>
-                <Textarea
-                  id="return-note"
-                  value={returnNote}
-                  onChange={(event) => setReturnNote(event.target.value)}
-                  placeholder="Neden geri gönderildiğini ve neyin düzeltilmesi gerektiğini yazın"
-                  aria-label="Geri gönderme notu"
-                  rows={3}
-                  className="mt-1.5 rounded-xl border-slate-200"
-                />
-                <Button
-                  type="button"
-                  onClick={() => void handleReturn()}
-                  disabled={returning || returnNote.trim() === ""}
-                  aria-label="Eforu düzenleme için geri gönder"
-                  className="mt-3 h-10 rounded-xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                <Tabs
+                  value={activeApprovalActionTab}
+                  onValueChange={(value) => setApprovalActionTab(value as ApprovalActionTab)}
                 >
-                  {returning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Geri gönder
-                </Button>
+                  <div className="border-b border-slate-100/80 px-6 pt-5 pb-0">
+                    <h2 className="text-[15px] font-bold tracking-tight text-slate-900">Onay işlemleri</h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Talebi onaya sunabilir, kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.
+                    </p>
+
+                    <TabsList variant="line" aria-label="Onay işlemleri" className="mt-4 h-10 gap-1">
+                      {approvalActionTabs.map((tab) => (
+                        <TabsTrigger
+                          key={tab.value}
+                          value={tab.value}
+                          className="gap-2 px-5 text-[13px] font-medium transition-all data-[state=active]:font-semibold data-[state=active]:text-[#3e5d8f]"
+                        >
+                          {tab.icon}
+                          {tab.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                  </div>
+
+                  {detail.canAssignCustomerApproval && (
+                    <TabsContent value="submit" className="mt-0 outline-none">
+                      <div className="flex flex-col gap-4 p-6">
+                        <p className="text-xs text-slate-500">
+                          Talebin müşterisine bağlı kişiler veya vesacons.com kullanıcılarından birini seçin. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                        </p>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
+                          <div className="flex flex-col gap-1.5">
+                            <label htmlFor="approval-user-search" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              Kişide ara
+                            </label>
+                            <input
+                              id="approval-user-search"
+                              value={approvalSearch}
+                              onChange={(event) => setApprovalSearch(event.target.value)}
+                              placeholder="Ad veya e-posta"
+                              aria-label="Onay kullanıcısında ara"
+                              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label htmlFor="approval-user" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              Onaya sunulacak kişi
+                            </label>
+                            <select
+                              id="approval-user"
+                              value={approvalUserId}
+                              onChange={(event) => setApprovalUserId(event.target.value)}
+                              aria-label="Onaya sunulacak kişiyi seç"
+                              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#3e5d8f]"
+                            >
+                              <option value="">Kişi seçin</option>
+                              {approvalUserId &&
+                                !filteredApprovalUsers.some((user) => user.id === approvalUserId) &&
+                                detail.customerApprovedByUserName && (
+                                  <option value={approvalUserId}>{detail.customerApprovedByUserName}</option>
+                                )}
+                              {filteredApprovalUsers.map((user) => (
+                                <option key={user.id} value={user.id ?? ""}>
+                                  {user.name || user.email || "—"}
+                                  {user.email ? ` · ${user.email}` : ""}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={() => void handleAssignApprovalUser()}
+                            disabled={assigning || managerApproving || approvalUserId.trim() === ""}
+                            aria-label="Seçilen kişiyi onaya sun"
+                            className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
+                          >
+                            {assigning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            Onaya sun
+                          </Button>
+                        </div>
+                        {approvalUsers.length === 0 && (
+                          <p className="text-xs text-amber-700">Seçilebilir kullanıcı bulunamadı.</p>
+                        )}
+                      </div>
+                    </TabsContent>
+                  )}
+
+                  {detail.canManagerApprove && (
+                    <TabsContent value="self-approve" className="mt-0 outline-none">
+                      <div className="flex flex-col gap-4 p-6">
+                        <p className="text-xs text-slate-500">
+                          Kimseye göndermeden onaylamak için açıklama yazın. Onay sonrası talep tekrar açık olur.
+                        </p>
+                        <div>
+                          <label
+                            htmlFor="manager-approve-note"
+                            className="block text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                          >
+                            Onay açıklaması
+                          </label>
+                          <Textarea
+                            id="manager-approve-note"
+                            value={managerApproveNote}
+                            onChange={(event) => setManagerApproveNote(event.target.value)}
+                            placeholder="Neden doğrudan onayladığınızı yazın"
+                            aria-label="Onay açıklaması"
+                            rows={3}
+                            className="mt-1.5 rounded-xl border-slate-200"
+                          />
+                        </div>
+                        <div>
+                          <Button
+                            type="button"
+                            onClick={() => void handleManagerApprove()}
+                            disabled={managerApproving || assigning || managerApproveNote.trim() === ""}
+                            aria-label="Açıklama ile kendim onaylıyorum"
+                            className="h-10 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
+                          >
+                            {managerApproving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            Kendim onaylıyorum
+                          </Button>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  )}
+
+                  {detail.canReturn && (
+                    <TabsContent value="return" className="mt-0 outline-none">
+                      <div className="flex flex-col gap-4 p-6">
+                        <p className="text-xs text-slate-500">
+                          Tüm eforu kabul etmek zorunda değilsiniz. Notu yazın; efor girişi yeniden açılır ve departman yöneticisi düzeltip tekrar gönderir.
+                        </p>
+                        <div>
+                          <label htmlFor="return-note" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            Geri gönderme notu
+                          </label>
+                          <Textarea
+                            id="return-note"
+                            value={returnNote}
+                            onChange={(event) => setReturnNote(event.target.value)}
+                            placeholder="Neden geri gönderildiğini ve neyin düzeltilmesi gerektiğini yazın"
+                            aria-label="Geri gönderme notu"
+                            rows={3}
+                            className="mt-1.5 rounded-xl border-slate-200"
+                          />
+                        </div>
+                        <div>
+                          <Button
+                            type="button"
+                            onClick={() => void handleReturn()}
+                            disabled={returning || returnNote.trim() === ""}
+                            aria-label="Eforu düzenleme için geri gönder"
+                            className="h-10 rounded-xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                          >
+                            {returning && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            Geri gönder
+                          </Button>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  )}
+                </Tabs>
               </section>
             )}
 
@@ -391,6 +527,11 @@ const EffortManagementDetailPage = () => {
                   {detail.customerApprovedByUserName || "Onaylayan"}
                   {detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}
                 </p>
+                {detail.returnNote && (
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-950">
+                    Onay açıklaması: {detail.returnNote}
+                  </p>
+                )}
               </section>
             )}
 

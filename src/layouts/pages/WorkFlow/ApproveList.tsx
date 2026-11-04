@@ -25,6 +25,10 @@ import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import MessageBox from "../Components/MessageBox";
 import emails from "../../../approvers.json";
 import {
+  approveEffortAsManager,
+  readEffortApiError,
+} from "layouts/pages/talepYonetimi/createTicket/api/ticketEffortApi";
+import {
   Send,
   Clock,
   CheckCircle2,
@@ -152,6 +156,7 @@ function ApproveList() {
   const [selectedIsMsp, setSelectedIsMsp] = useState(false);
   const [selectedMspClientId, setSelectedMspClientId] = useState<string | null>(null);
   const [selectedCustomerRefName, setSelectedCustomerRefName] = useState<string | null>(null);
+  const [selectedIsEffortApproval, setSelectedIsEffortApproval] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
   const [ticketNumberFilter, setTicketNumberFilter] = useState("");
   const customerFilterRef = useRef("");
@@ -198,10 +203,20 @@ function ApproveList() {
     return data;
   }
 
-  async function goTicketDetail(headId: any) {
+  const isEffortApprovalWorkFlow = (workFlowInfo?: string) =>
+    typeof workFlowInfo === "string" &&
+    workFlowInfo.trim().toLocaleLowerCase("tr-TR").startsWith("efor onayı:");
+
+  async function goTicketDetail(headId: any, workFlowInfo?: string) {
     let api = new ApproveItemsApi(configuration);
     var res = await api.apiApproveItemsGetTicketIdGetTicketIdGet(headId);
     sessionStorage.setItem("ticketId", res.data);
+    if (isEffortApprovalWorkFlow(workFlowInfo)) {
+      navigate("/solveAllTicket/solveTicket", {
+        state: { ticketId: res.data, fromApr: true, openEffortTab: true },
+      });
+      return;
+    }
     navigate("/tickets/detail/", {
       state: { ticketId: res.data, fromApr: true },
     });
@@ -278,11 +293,55 @@ function ApproveList() {
     setSelectedRows(selectedRowsData);
   };
 
+  async function approveEffortRow(row: ApproveItemsDto): Promise<void> {
+    const headId = row.workFlowItem?.workflowHead?.id;
+    if (!headId) {
+      throw new Error("Efor onayı için talep bilgisi bulunamadı.");
+    }
+
+    const api = new ApproveItemsApi(configuration);
+    const ticketRes = await api.apiApproveItemsGetTicketIdGetTicketIdGet(headId);
+    const ticketId = ticketRes.data;
+    if (!ticketId) {
+      throw new Error("Efor onayı için talep bulunamadı.");
+    }
+
+    const result = await approveEffortAsManager(ticketId);
+    const message = result.sentToEffortManager
+      ? "Tüm departman onayları tamamlandı; efor efor yöneticisine gönderildi."
+      : "Efor onayınız tamamlandı. Diğer kişilerin efor / yönetici onayları tamamlanana kadar efor yöneticisine gönderilmez.";
+
+    await getApproveDetail(selectedStatus!);
+    await getApproveList();
+    dispatchAlert({ message, type: "Success" });
+  }
+
   function multipleApprove() {
     console.log("Selected Rows:", selectedRows);
     selectedRows.forEach((row) => {
       if (row) {
+        const workFlowInfo = row.workFlowItem?.workflowHead?.workFlowInfo;
+        const isEffortApproval = isEffortApprovalWorkFlow(workFlowInfo);
+
         dispatchBusy({ isBusy: true });
+
+        if (isEffortApproval) {
+          void approveEffortRow(row)
+            .catch((error: unknown) => {
+              dispatchAlert({
+                message: readEffortApiError(error) || "Efor onayı tamamlanamadı.",
+                type: "Warning",
+              });
+              const headId = row.workFlowItem?.workflowHead?.id;
+              if (headId) void goTicketDetail(headId, workFlowInfo);
+            })
+            .finally(() => {
+              dispatchBusy({ isBusy: false });
+            });
+          setSelectedRows([]);
+          return;
+        }
+
         var workFlowApi = new WorkFlowApi(configuration);
         let contiuneDto: WorkFlowContiuneApiDto = {};
         contiuneDto.approveItem = row.id;
@@ -348,7 +407,30 @@ function ApproveList() {
   }
 
   function onApprove(obj: any): void {
+    const workFlowInfo = obj?.original?.workFlowItem?.workflowHead?.workFlowInfo;
+    const isEffortApproval = isEffortApprovalWorkFlow(workFlowInfo);
+
     dispatchBusy({ isBusy: true });
+
+    // Efor onayı: solveTicket "Onayı Tamamla" ile aynı endpoint
+    if (isEffortApproval) {
+      void approveEffortRow(obj.original as ApproveItemsDto)
+        .catch((error: unknown) => {
+          dispatchAlert({
+            message:
+              readEffortApiError(error) ||
+              "Efor onayı tamamlanamadı. Fatura saatlerini Efor Bilgisi sekmesinden doldurup tekrar deneyin.",
+            type: "Warning",
+          });
+          const headId = obj?.original?.workFlowItem?.workflowHead?.id;
+          if (headId) void goTicketDetail(headId, workFlowInfo);
+        })
+        .finally(() => {
+          dispatchBusy({ isBusy: false });
+        });
+      return;
+    }
+
     var workFlowApi = new WorkFlowApi(configuration);
     let contiuneDto: WorkFlowContiuneApiDto = {};
     contiuneDto.approveItem = obj.original.id;
@@ -362,10 +444,20 @@ function ApproveList() {
       .apiWorkFlowContiunePost(contiuneDto)
       .then(async (response) => {
         await getApproveDetail(selectedStatus!);
-        dispatchAlert({ message: "Onay Başarılı", type: "Success" });
+        dispatchAlert({
+          message: "Onay Başarılı",
+          type: "Success",
+        });
       })
-      .catch((error) => {
-        dispatchAlert({ message: "Bir hata oluştu", type: "Warning" });
+      .catch((error: any) => {
+        const apiMessage =
+          error?.response?.data && typeof error.response.data === "string"
+            ? error.response.data
+            : error?.response?.data?.message;
+        dispatchAlert({
+          message: apiMessage || "Bir hata oluştu",
+          type: "Warning",
+        });
       })
       .finally(() => {
         dispatchBusy({ isBusy: false });
@@ -612,13 +704,22 @@ function ApproveList() {
     setSelectedIsMsp(obj?.original?.isMsp === true);
     setSelectedMspClientId(obj?.original?.mspClientId ?? null);
     setSelectedCustomerRefName(obj?.original?.customerRefName ?? null);
+    const workFlowInfo = obj?.original?.workFlowItem?.workflowHead?.workFlowInfo;
+    const isEffortApproval = isEffortApprovalWorkFlow(workFlowInfo);
+    setSelectedIsEffortApproval(isEffortApproval);
     setIsQuestionMessageBoxOpen(true);
     setDescription("");
-    getLastManDay(obj.original.workFlowItem.workflowHead.id);
-    var isExist = emails.emails.find((e) => e == loginUserName);
-    if (isExist != null) {
-      setCanEditManDay(false);
+    if (!isEffortApproval) {
+      getLastManDay(obj.original.workFlowItem.workflowHead.id);
+      var isExist = emails.emails.find((e) => e == loginUserName);
+      if (isExist != null) {
+        setCanEditManDay(false);
+      } else {
+        setCanEditManDay(true);
+      }
     } else {
+      setNumberManDay(0);
+      lastsetNumberManDay(null);
       setCanEditManDay(true);
     }
   };
@@ -1169,9 +1270,16 @@ function ApproveList() {
                                 </button>
                                 <button
                                   type="button"
-                                  title="Talep Detayına Git"
+                                  title={
+                                    String(detailStr).toLocaleLowerCase("tr-TR").startsWith("efor onayı:")
+                                      ? "Efor Bilgisi sekmesine git"
+                                      : "Talep Detayına Git"
+                                  }
                                   onClick={() =>
-                                    goTicketDetail((row as any).workFlowItem?.workflowHead?.id)
+                                    goTicketDetail(
+                                      (row as any).workFlowItem?.workflowHead?.id,
+                                      detailStr !== "-" ? detailStr : undefined
+                                    )
                                   }
                                   className="w-7 h-7 flex items-center justify-center rounded-lg text-violet-500 hover:bg-violet-50 border border-transparent hover:border-violet-200 transition-all"
                                   aria-label="Talep Detayına Git"
@@ -1360,6 +1468,7 @@ function ApproveList() {
         setNumberManDay={setNumberManDay}
         canEditManDay={canEditManDay}
         lastnumberManDay={lastnumberManDay}
+        hideManDay={selectedIsEffortApproval}
         isMsp={selectedIsMsp}
         mspClientId={selectedMspClientId}
         customerRefName={selectedCustomerRefName}
