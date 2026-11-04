@@ -14,6 +14,8 @@ export interface TicketEffortListResponseDto {
   isDepartmentManager?: boolean;
   isEffortEnter?: boolean;
   canEnterEffort?: boolean;
+  /** Aktif IsEffort ataması veya departman yöneticisi — Efor Bilgisi sekmesi */
+  canSeeEffortTab?: boolean;
   isEffortLockedInApproval?: boolean;
   canCompleteEffort?: boolean;
   isEffortComplated?: boolean;
