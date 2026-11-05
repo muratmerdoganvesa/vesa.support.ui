@@ -783,6 +783,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [isEffortDeptManager, setIsEffortDeptManager] = useState(false);
   const [isEffortEnter, setIsEffortEnter] = useState(false);
   const [canEnterEffort, setCanEnterEffort] = useState(false);
+  const [canSeeEffortTab, setCanSeeEffortTab] = useState(false);
   const [isEffortLockedInApproval, setIsEffortLockedInApproval] = useState(false);
   const [canCompleteEffort, setCanCompleteEffort] = useState(false);
   const [isEffortComplated, setIsEffortComplated] = useState(false);
@@ -794,6 +795,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
     setIsEffortDeptManager(Boolean(data.isDepartmentManager));
     setIsEffortEnter(Boolean(data.isEffortEnter));
     setCanEnterEffort(Boolean(data.canEnterEffort));
+    setCanSeeEffortTab(Boolean(data.canSeeEffortTab));
     setIsEffortLockedInApproval(Boolean(data.isEffortLockedInApproval));
     setCanCompleteEffort(Boolean(data.canCompleteEffort));
     setIsEffortComplated(Boolean(data.isEffortComplated));
@@ -806,13 +808,14 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const quillRef = useRef(null);
 
   // ── Tab items ──────────────────────────────────────────────────────────────
+  // Efor Bilgisi: yalnızca canSeeEffortTab (aktif IsEffort ataması veya dept yöneticisi)
   const tabItems = [
     { value: "0", label: t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailNavBarProps.MevcutTalep"), icon: <ClipboardList className="w-3.5 h-3.5" /> },
     { value: "1", label: "Görevler", icon: <CheckSquare className="w-3.5 h-3.5" /> },
     ...(isSolveTicket && !review
       ? [{ value: "2", label: t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailNavBarProps.TalepGuncelleme"), icon: <Settings2 className="w-3.5 h-3.5" /> }]
       : []),
-    ...(isSolveTicket
+    ...(isSolveTicket && canSeeEffortTab
       ? [{ value: "3", label: "Efor Bilgisi", icon: <Timer className="w-3.5 h-3.5" /> }]
       : []),
   ];
@@ -1218,9 +1221,39 @@ function CreateRequest({ ...rest }: createTicketProps) {
     fetchTasks();
   }, [activeIndex, id]);
 
+  // ── Efor yetkisi / sekme görünürlüğü (solveTicket) ────────────────────────
+  // Tab görünürlüğü için bayrakları erken yükle; kayıtlar sekmeye girince yenilenir.
+  useEffect(() => {
+    if (!isSolveTicket || !id) {
+      setCanSeeEffortTab(false);
+      return;
+    }
+    let cancelled = false;
+    const loadEffortAccess = async () => {
+      try {
+        const data = await fetchTicketEfforts(id);
+        if (cancelled) return;
+        applyEffortResponse(data);
+      } catch {
+        if (!cancelled) setCanSeeEffortTab(false);
+      }
+    };
+    void loadEffortAccess();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSolveTicket, id]);
+
+  // Sekme gizlendiyse Efor Bilgisi'nden çık
+  useEffect(() => {
+    if (activeIndex === 3 && !canSeeEffortTab) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, canSeeEffortTab]);
+
   // ── Efor sekmesi açılınca efor kayıtlarını çek ─────────────────────────────
   useEffect(() => {
-    if (activeIndex !== 3 || !id) return;
+    if (activeIndex !== 3 || !id || !canSeeEffortTab) return;
     const loadEfforts = async () => {
       try {
         setEffortsLoading(true);
@@ -1245,7 +1278,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
       }
     };
     loadEfforts();
-  }, [activeIndex, id]);
+  }, [activeIndex, id, canSeeEffortTab]);
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -2153,9 +2186,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
           )}
 
           {/* ─────────────────────────────────────────────────────────────── */}
-          {/* Tab 3: Efor Bilgisi (isSolveTicket)                            */}
+          {/* Tab 3: Efor Bilgisi — yalnızca canSeeEffortTab                 */}
           {/* ─────────────────────────────────────────────────────────────── */}
-          {activeIndex === 3 && (
+          {activeIndex === 3 && canSeeEffortTab && (
             <div className="p-6">
               {id ? (
                 <EffortList
@@ -2191,7 +2224,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       const data = await fetchTicketEfforts(id);
                       applyEffortResponse(data);
                       dispatchAlert({
-                        message: "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu.",
+                        message: "Eforunuz tamamlandı ve yöneticinizin onayına sunuldu.",
                         type: "Success",
                       });
                     } catch (error) {

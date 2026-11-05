@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, Loader2, RotateCcw, Send } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, RotateCcw, Send } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { Button } from "components/ui/button";
@@ -25,6 +25,7 @@ import {
   readEffortApiError,
   returnEffortManagement,
 } from "./api";
+import { downloadApprovedEffortHtml } from "./approvedEffortReport";
 import { EffortStatusBadge, formatDateTime, formatHours } from "./shared";
 import { TicketEffortStatus } from "./types";
 import type {
@@ -33,7 +34,7 @@ import type {
   TicketEffortManagementUserOptionDto,
 } from "./types";
 
-type ApprovalActionTab = "submit" | "self-approve" | "return";
+type ApprovalActionTab = "submit" | "self-approve" | "return" | "decide";
 
 const InfoItem = ({ label, value }: { label: string; value?: string | number | null }) => (
   <div className="flex flex-col gap-1">
@@ -101,6 +102,7 @@ const EffortManagementDetailPage = () => {
   useEffect(() => {
     if (loading || !detail?.canDecideCustomerApproval) return;
     if (window.location.hash !== "#approve") return;
+    setApprovalActionTab("decide");
     const timer = window.setTimeout(() => {
       approvalSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 120);
@@ -214,6 +216,20 @@ const EffortManagementDetailPage = () => {
     navigate("/effortManagement");
   };
 
+  const handleDownloadApprovedReport = () => {
+    if (!detail) return;
+    try {
+      setError("");
+      downloadApprovedEffortHtml(detail, efforts);
+    } catch (downloadError) {
+      setError(
+        downloadError instanceof Error
+          ? downloadError.message
+          : "Onay raporu indirilemedi."
+      );
+    }
+  };
+
   const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const rejectedByCustomer =
     detail?.status === TicketEffortStatus.ReturnedToDepartment && Boolean(detail.customerApprovedByUserName);
@@ -226,7 +242,8 @@ const EffortManagementDetailPage = () => {
   const canShowApprovalActions =
     Boolean(detail?.canAssignCustomerApproval) ||
     Boolean(detail?.canManagerApprove) ||
-    Boolean(detail?.canReturn);
+    Boolean(detail?.canReturn) ||
+    Boolean(detail?.canDecideCustomerApproval);
   const approvalActionTabs: {
     value: ApprovalActionTab;
     label: string;
@@ -253,9 +270,20 @@ const EffortManagementDetailPage = () => {
       icon: <RotateCcw className="w-3.5 h-3.5" />,
     });
   }
+  if (detail?.canDecideCustomerApproval) {
+    approvalActionTabs.push({
+      value: "decide",
+      label: "Efor onayı",
+      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    });
+  }
   const activeApprovalActionTab = approvalActionTabs.some((tab) => tab.value === approvalActionTab)
     ? approvalActionTab
     : (approvalActionTabs[0]?.value ?? "submit");
+  const approvalSectionDescription =
+    activeApprovalActionTab === "decide"
+      ? "Fatura saatlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner."
+      : "VESA içindeki efor yöneticilerinden onay isteyebilir, kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.";
 
   return (
     <DashboardLayout>
@@ -304,55 +332,12 @@ const EffortManagementDetailPage = () => {
           </div>
         ) : detail && (
           <>
-            {detail.canDecideCustomerApproval && (
+            {canShowApprovalActions && (
               <section
                 ref={approvalSectionRef}
                 id="approve"
-                className="scroll-mt-24 rounded-2xl border border-violet-100 bg-white p-5 shadow-sm shadow-slate-200/50"
+                className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_4px_40px_rgba(62,93,143,0.08)]"
               >
-                <h2 className="text-sm font-semibold text-slate-800">Müşteri onayı</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Fatura saatlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner.
-                </p>
-                <label htmlFor="reject-note" className="mt-4 block text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Red nedeni
-                </label>
-                <Textarea
-                  id="reject-note"
-                  value={rejectNote}
-                  onChange={(event) => setRejectNote(event.target.value)}
-                  placeholder="Reddediyorsanız nedenini yazın"
-                  aria-label="Red nedeni"
-                  rows={3}
-                  className="mt-1.5 rounded-xl border-slate-200"
-                />
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    onClick={() => void handleApprove()}
-                    disabled={approving || rejecting}
-                    aria-label="Eforu onaylıyorum"
-                    className="h-10 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
-                  >
-                    {approving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    Onaylıyorum
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void handleReject()}
-                    disabled={approving || rejecting || rejectNote.trim() === ""}
-                    aria-label="Eforu red ediyorum"
-                    className="h-10 rounded-xl bg-rose-600 px-5 text-white hover:bg-rose-700"
-                  >
-                    {rejecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    Red ediyorum
-                  </Button>
-                </div>
-              </section>
-            )}
-
-            {canShowApprovalActions && (
-              <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_4px_40px_rgba(62,93,143,0.08)]">
                 <div className="h-[3px] bg-gradient-to-r from-[#3e5d8f] via-[#5272a8] to-[#8aaad4]" />
 
                 <Tabs
@@ -361,9 +346,7 @@ const EffortManagementDetailPage = () => {
                 >
                   <div className="border-b border-slate-100/80 px-6 pt-5 pb-0">
                     <h2 className="text-[15px] font-bold tracking-tight text-slate-900">Onay işlemleri</h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Talebi onaya sunabilir, kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.
-                    </p>
+                    <p className="mt-1 text-xs text-slate-500">{approvalSectionDescription}</p>
 
                     <TabsList variant="line" aria-label="Onay işlemleri" className="mt-4 h-10 gap-1">
                       {approvalActionTabs.map((tab) => (
@@ -383,7 +366,7 @@ const EffortManagementDetailPage = () => {
                     <TabsContent value="submit" className="mt-0 outline-none">
                       <div className="flex flex-col gap-4 p-6">
                         <p className="text-xs text-slate-500">
-                          Talebin müşterisine bağlı kişiler veya vesacons.com kullanıcılarından birini seçin. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                          Onayı VESA içindeki efor yöneticilerinden veya talebin müşterisine bağlı kişilerden isteyebilirsiniz. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
                         </p>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
                           <div className="flex flex-col gap-1.5">
@@ -516,22 +499,82 @@ const EffortManagementDetailPage = () => {
                       </div>
                     </TabsContent>
                   )}
+
+                  {detail.canDecideCustomerApproval && (
+                    <TabsContent value="decide" className="mt-0 outline-none">
+                      <div className="flex flex-col gap-4 p-6">
+                        <div>
+                          <label
+                            htmlFor="reject-note"
+                            className="block text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                          >
+                            Red nedeni
+                          </label>
+                          <Textarea
+                            id="reject-note"
+                            value={rejectNote}
+                            onChange={(event) => setRejectNote(event.target.value)}
+                            placeholder="Reddediyorsanız nedenini yazın"
+                            aria-label="Red nedeni"
+                            rows={3}
+                            className="mt-1.5 rounded-xl border-slate-200"
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => void handleApprove()}
+                            disabled={approving || rejecting}
+                            aria-label="Eforu onaylıyorum"
+                            className="h-10 rounded-xl bg-emerald-600 px-5 text-white hover:bg-emerald-700"
+                          >
+                            {approving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            Onaylıyorum
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => void handleReject()}
+                            disabled={approving || rejecting || rejectNote.trim() === ""}
+                            aria-label="Eforu red ediyorum"
+                            className="h-10 rounded-xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                          >
+                            {rejecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            Red ediyorum
+                          </Button>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  )}
                 </Tabs>
               </section>
             )}
 
             {detail.status === TicketEffortStatus.CustomerApproved && (
               <section className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
-                <p className="text-sm font-semibold text-emerald-900">Efor onaylandı</p>
-                <p className="mt-1 text-xs text-emerald-800">
-                  {detail.customerApprovedByUserName || "Onaylayan"}
-                  {detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}
-                </p>
-                {detail.returnNote && (
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-950">
-                    Onay açıklaması: {detail.returnNote}
-                  </p>
-                )}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-900">Efor onaylandı</p>
+                    <p className="mt-1 text-xs text-emerald-800">
+                      {detail.customerApprovedByUserName || "Onaylayan"}
+                      {detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}
+                    </p>
+                    {detail.returnNote && (
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-950">
+                        Onay açıklaması: {detail.returnNote}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleDownloadApprovedReport}
+                    aria-label={`Talep No ${detail.ticketNumber ?? ""} onay raporunu indir`}
+                    className="h-10 shrink-0 rounded-xl bg-emerald-700 px-4 text-white hover:bg-emerald-800"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Raporu indir
+                    {detail.ticketNumber != null ? ` (Ticket No : ${detail.ticketNumber})` : ""}
+                  </Button>
+                </div>
               </section>
             )}
 
