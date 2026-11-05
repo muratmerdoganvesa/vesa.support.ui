@@ -16,6 +16,7 @@ export const fetchTicketEfforts = async (
     isDepartmentManager: false,
     isEffortEnter: false,
     canEnterEffort: false,
+    canSeeEffortTab: false,
     isEffortLockedInApproval: false,
     canCompleteEffort: false,
     isEffortComplated: false,

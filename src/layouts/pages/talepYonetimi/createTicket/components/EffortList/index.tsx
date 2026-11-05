@@ -351,8 +351,8 @@ const EffortList = ({
                     ? "Efor süreci tamamlandı. Efor girişi ve kayıtlar kalıcı olarak kilitlendi."
                     : "Efor onay sürecinde. Düzenleme için geri gönderilene kadar efor girişi açılamaz; fiili saat, fatura saati ve açıklama değiştirilemez."
                   : isEffortEnter
-                    ? "Atanan, efor istenen kişiler ve siz efor ekleyebilirsiniz. Başkalarının fiili saatini değiştiremezsiniz."
-                    : "Efor girişi kapalı. Atanan kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
+                    ? "Yalnızca efor istenen kişiler ve siz efor ekleyebilirsiniz. Talebin atananı efor giremez. Başkalarının fiili saatini değiştiremezsiniz."
+                    : "Efor girişi kapalı. Efor istenen kişiler yalnızca kayıtlarını görür. Siz efor girebilir ve fatura saatini güncelleyebilirsiniz; başkalarının fiili saati değiştirilemez."}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">

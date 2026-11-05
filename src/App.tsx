@@ -326,7 +326,8 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-         
+           
+            <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
@@ -343,7 +344,6 @@ export default function App() {
             <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
             <Route path="/effortManagement" element={<EffortManagementPage />} />
             <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
-            <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}

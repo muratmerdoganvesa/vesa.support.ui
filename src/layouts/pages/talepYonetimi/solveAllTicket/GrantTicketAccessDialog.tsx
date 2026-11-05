@@ -400,7 +400,7 @@ const GrantTicketAccessPanel = ({
               {isEffortProcessLocked
                 ? "Efor süreci kilitli. Giriş durumu değiştirilemez."
                 : isEffortEnter
-                  ? "Atanan ve efor istenen kişiler efor girebilir."
+                  ? "Yalnızca efor istenen kişiler efor girebilir. Talebin atananı efor giremez."
                   : "Kapalıyken efor eklenemez, silinemez ve güncellenemez."}
             </p>
           </div>
