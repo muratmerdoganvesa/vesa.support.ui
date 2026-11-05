@@ -49,7 +49,7 @@ interface QuickUpdatePanelProps {
   onBusyChange: (busy: boolean) => void;
 }
 
-const LOCKED_STATUS_IDS = new Set([9, 10, 11, 12, 13]);
+const LOCKED_STATUS_IDS = new Set([9, 10, 11, 12, 13, 14, 15]);
 
 const fieldClassName =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-800 outline-none transition-colors focus:border-[#3e5d8f] focus:ring-2 focus:ring-[#3e5d8f]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
@@ -117,7 +117,7 @@ const QuickUpdatePanel = ({ ticket, onClose, onUpdated, onBusyChange }: QuickUpd
         setStatusOptions(
           statData.filter((item) => {
             const id = Number(item.id);
-            return id !== 1 && id !== 2 && id !== 12 && id !== 13;
+            return id !== 1 && id !== 2 && id !== 12 && id !== 13 && id !== 14 && id !== 15;
           })
         );
       } catch (error) {
@@ -168,8 +168,10 @@ const QuickUpdatePanel = ({ ticket, onClose, onUpdated, onBusyChange }: QuickUpd
   const visibleOptions = useMemo(() => {
     if (ticket.status == null) return statusOptions;
     const currentId = Number(ticket.status);
-    // Onay Sürecinde (12) ve Efor Onayında (13) seçenek listesinde gösterilmez
-    if (currentId === 12 || currentId === 13) return statusOptions;
+    // Süreç statusları (12–15) seçenek listesinde gösterilmez
+    if (currentId === 12 || currentId === 13 || currentId === 14 || currentId === 15) {
+      return statusOptions;
+    }
     if (statusOptions.some((item) => Number(item.id) === currentId)) return statusOptions;
     return [
       ...statusOptions,

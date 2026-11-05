@@ -1,8 +1,12 @@
+import vesaconsLogoSvg from "assets/images/small-logos/vesacons-logo.svg?raw";
 import { formatDateTime, formatHours } from "./shared";
-import type {
-  TicketEffortManagementDetailDto,
-  TicketEffortManagementEffortsDto,
+import {
+  TicketEffortStatus,
+  type TicketEffortManagementDetailDto,
+  type TicketEffortManagementEffortsDto,
 } from "./types";
+
+const VESACONS_LOGO_DATA_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(vesaconsLogoSvg)}`;
 
 const escapeHtml = (value?: string | number | null): string => {
   if (value === null || value === undefined) return "";
@@ -53,6 +57,13 @@ export const buildApprovedEffortHtml = (
     detail.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const generatedAt = formatDateTime(new Date().toISOString());
   const descriptionText = stripHtmlToText(detail.description);
+  const isApproved = detail.status === TicketEffortStatus.CustomerApproved;
+  const statusLabel = detail.statusText?.trim() || (isApproved ? "Onaylandı" : "—");
+  const reportTitle = isApproved ? "Onaylanan Efor Raporu" : "Efor Raporu";
+  const footerNote = isApproved
+    ? "Bu belge onaylanan efor kaydının özetidir."
+    : "Bu belge efor kaydının güncel özetidir.";
+  const statusCardClass = isApproved ? "summary-card success" : "summary-card";
 
   const effortRows =
     items.length === 0
@@ -62,7 +73,7 @@ export const buildApprovedEffortHtml = (
       : items
           .map((item, index) => {
             const personCell = canViewActualHours
-              ? `<td>
+              ? `<td class="person">
                   <div class="person-name">${textOrDash(item.userAppName)}</div>
                   ${item.userTitle ? `<div class="person-title">${escapeHtml(item.userTitle)}</div>` : ""}
                 </td>`
@@ -104,12 +115,13 @@ export const buildApprovedEffortHtml = (
     )
     .join("");
 
-  const approvalNote = detail.returnNote?.trim()
-    ? `<section class="card note-card">
+  const approvalNote =
+    isApproved && detail.returnNote?.trim()
+      ? `<section class="card note-card">
         <h2>Onay açıklaması</h2>
         <p>${multilineHtml(detail.returnNote)}</p>
       </section>`
-    : "";
+      : "";
 
   const descriptionBlock = descriptionText
     ? `<section class="card">
@@ -128,9 +140,9 @@ export const buildApprovedEffortHtml = (
         <span class="summary-label">Görev / iş kaydı</span>
         <strong class="summary-value">${items.length}</strong>
       </div>
-      <div class="summary-card success">
+      <div class="${statusCardClass}">
         <span class="summary-label">Durum</span>
-        <strong class="summary-value status">${textOrDash(detail.statusText || "Onaylandı")}</strong>
+        <strong class="summary-value status">${textOrDash(statusLabel)}</strong>
       </div>
     </div>`;
 
@@ -139,7 +151,7 @@ export const buildApprovedEffortHtml = (
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Talep No: ${escapeHtml(ticketNo)} — Onaylanan Efor</title>
+  <title>Talep No: ${escapeHtml(ticketNo)} — ${escapeHtml(reportTitle)}</title>
   <style>
     :root {
       --brand: #3e5d8f;
@@ -181,25 +193,54 @@ export const buildApprovedEffortHtml = (
         linear-gradient(135deg, #314f7c 0%, var(--brand) 48%, #5272a8 100%);
       color: #fff;
     }
-    .hero-kicker {
-      margin: 0;
+    .hero-top {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .hero-logo-wrap {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+    }
+    .hero-logo {
+      display: block;
+      height: 28px;
+      width: auto;
+      max-width: 150px;
+      object-fit: contain;
+    }
+    .hero-heading {
+      min-width: 0;
+      flex: 1;
+    }
+    .hero-report {
+      margin: 0 0 4px;
       font-size: 11px;
       font-weight: 700;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       opacity: 0.82;
     }
     .hero h1 {
-      margin: 8px 0 6px;
+      margin: 0;
       font-size: 28px;
       font-weight: 700;
       letter-spacing: -0.02em;
     }
     .hero-title {
-      margin: 0;
+      margin: 10px 0 0;
       max-width: 720px;
       font-size: 15px;
       opacity: 0.92;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .hero-meta {
       display: flex;
@@ -278,6 +319,8 @@ export const buildApprovedEffortHtml = (
       color: #334155;
       font-size: 14px;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     .meta-grid {
       display: grid;
@@ -315,14 +358,15 @@ export const buildApprovedEffortHtml = (
       font-size: 14px;
     }
     .table-wrap {
-      overflow: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid var(--line);
       border-radius: 12px;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 640px;
+      table-layout: fixed;
     }
     th {
       padding: 11px 12px;
@@ -345,16 +389,33 @@ export const buildApprovedEffortHtml = (
     tr:last-child td { border-bottom: none; }
     td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
     td.index { width: 44px; color: #94a3b8; font-weight: 600; }
-    td.highlight { font-weight: 700; color: var(--brand); }
-    td.work { min-width: 220px; line-height: 1.55; }
-    td.date { white-space: nowrap; color: #64748b; }
+    td.person { width: 160px; }
+    td.highlight { width: 96px; font-weight: 700; color: var(--brand); }
+    td.work {
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    td.date { width: 140px; white-space: nowrap; color: #64748b; }
     td.empty {
       text-align: center;
       color: #94a3b8;
       padding: 28px 12px;
     }
-    .person-name { font-weight: 600; color: #0f172a; }
-    .person-title { margin-top: 2px; font-size: 11px; color: #94a3b8; }
+    .person-name {
+      font-weight: 600;
+      color: #0f172a;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .person-title {
+      margin-top: 2px;
+      font-size: 11px;
+      color: #94a3b8;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     .muted { color: #94a3b8; }
     .footer {
       display: flex;
@@ -367,11 +428,24 @@ export const buildApprovedEffortHtml = (
       font-size: 11px;
       color: #94a3b8;
     }
+    @media (max-width: 720px) {
+      .page { margin: 12px auto; padding: 0 10px 24px; }
+      .hero { padding: 20px 16px 18px; }
+      .hero h1 { font-size: 22px; }
+      .hero-logo { height: 24px; max-width: 120px; }
+      .content { padding: 16px 14px 20px; }
+      .card { padding: 14px 12px; }
+      table { min-width: 520px; }
+      td.date { width: 120px; }
+      td.highlight { width: 84px; }
+    }
     @media print {
       body { background: #fff; }
       .page { margin: 0; max-width: none; padding: 0; }
       .sheet { border: none; border-radius: 0; box-shadow: none; }
       .hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      table { min-width: 0; }
+      td.work { overflow-wrap: anywhere; word-break: break-word; }
     }
   </style>
 </head>
@@ -379,11 +453,18 @@ export const buildApprovedEffortHtml = (
   <div class="page">
     <article class="sheet">
       <header class="hero">
-        <p class="hero-kicker">Vesacons Destek · Onaylanan Efor Raporu</p>
-        <h1>Talep No: ${escapeHtml(ticketNo)}</h1>
+        <div class="hero-top">
+          <div class="hero-logo-wrap">
+            <img class="hero-logo" src="${VESACONS_LOGO_DATA_URI}" alt="Vesacons" />
+          </div>
+          <div class="hero-heading">
+            <p class="hero-report">${escapeHtml(reportTitle)}</p>
+            <h1>Talep No: ${escapeHtml(ticketNo)}</h1>
+          </div>
+        </div>
         <p class="hero-title">${textOrDash(detail.title)}</p>
         <div class="hero-meta">
-          <span class="chip">Durum: ${textOrDash(detail.statusText || "Onaylandı")}</span>
+          <span class="chip">Durum: ${textOrDash(statusLabel)}</span>
           <span class="chip">Fatura: ${escapeHtml(formatHours(efforts?.totalInvoiceHours))} saat</span>
           ${detail.customerName ? `<span class="chip">${escapeHtml(detail.customerName)}</span>` : ""}
         </div>
@@ -423,7 +504,7 @@ export const buildApprovedEffortHtml = (
         </section>
 
         <footer class="footer">
-          <span>Bu belge onaylanan efor kaydının özetidir.</span>
+          <span>${escapeHtml(footerNote)}</span>
           <span>Oluşturulma: ${escapeHtml(generatedAt)}</span>
         </footer>
       </div>

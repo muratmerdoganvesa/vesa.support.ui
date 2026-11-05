@@ -25,17 +25,21 @@ const DATE_COLUMNS = new Set([
 ]);
 
 const STATUS_COLORS = [
-  "#607D8B", // blue grey
-  "#4CAF50", // green
-  "#3F51B5", // indigo
-  "#2196F3", // blue
-  "#9C27B0", // purple
-  "#00BCD4", // cyan
-  "#795548", // brown
-  "#ffaa00", // orange
-  "#009688", // teal
-  "#E91E63", // pink
-  "#df1c1a", // deep orange
+  "#607D8B", // 1 Draft — blue grey
+  "#4CAF50", // 2 Open — green
+  "#3F51B5", // 3 Assigned — indigo
+  "#2196F3", // 4 ConsultantWaiting — blue
+  "#9C27B0", // 5 InProgress — purple
+  "#00BCD4", // 6 InternalTesting — cyan
+  "#795548", // 7 CustomerTesting — brown
+  "#ffaa00", // 8 WaitingForCustomer — orange
+  "#009688", // 9 Resolved — teal
+  "#E91E63", // 10 Cancelled — pink
+  "#df1c1a", // 11 Closed — deep orange
+  "#7B1FA2", // 12 InApprove
+  "#1565C0", // 13 InEffortApprove
+  "#00897B", // 14 EffortEntryInProgress
+  "#F57C00", // 15 WaitingManagerEffortApproval
 ];
 
 const getStatusColor = (statusId?: string): string | undefined => {

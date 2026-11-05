@@ -486,6 +486,19 @@ function SolveAllTicket() {
     // Liste yenilemeye gerek yok; atama değişmez, sadece erişim eklenir.
   };
 
+  const handleEffortTicketStatusChange = (
+    ticketId: string,
+    status: number,
+    statusText: string
+  ) => {
+    setTicketRowData((rows) =>
+      rows.map((row) => (row.id === ticketId ? { ...row, status, statusText } : row))
+    );
+    setGrantAccessTicket((current) =>
+      current && current.id === ticketId ? { ...current, status, statusText } : current
+    );
+  };
+
   const handleEffortEnterChange = (ticketId: string, isEffortEnter: boolean) => {
     setTicketRowData((rows) =>
       rows.map((row) => (row.id === ticketId ? { ...row, isEffortEnter } : row))
@@ -695,6 +708,7 @@ function SolveAllTicket() {
                       ticket={grantAccessTicket}
                       onClose={handleGrantAccessClose}
                       onGranted={handleGrantAccessDone}
+                      onTicketStatusChange={handleEffortTicketStatusChange}
                       onEffortEnterChange={handleEffortEnterChange}
                       onBusyChange={setGrantAccessBusy}
                     />

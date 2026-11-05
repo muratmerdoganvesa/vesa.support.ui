@@ -33,12 +33,16 @@ export const completeTicketEffortAccess = async (
   isEffortComplated?: boolean;
   approvalStarted?: boolean;
   queued?: boolean;
+  status?: number;
+  statusText?: string;
 }> => {
   const response = await axiosInstance.post<{
     ticketId?: string;
     isEffortComplated?: boolean;
     approvalStarted?: boolean;
     queued?: boolean;
+    status?: number;
+    statusText?: string;
   }>("/api/Ticket/CompleteTicketEffortAccess", { ticketId });
   return response.data ?? { ticketId, isEffortComplated: true };
 };
@@ -50,12 +54,16 @@ export const approveEffortAsManager = async (
   approved?: boolean;
   sentToEffortManager?: boolean;
   nextManagerStarted?: boolean;
+  status?: number;
+  statusText?: string;
 }> => {
   const response = await axiosInstance.post<{
     ticketId?: string;
     approved?: boolean;
     sentToEffortManager?: boolean;
     nextManagerStarted?: boolean;
+    status?: number;
+    statusText?: string;
   }>("/api/Ticket/ApproveEffortAsManager", { ticketId });
   return response.data ?? { ticketId, approved: true };
 };

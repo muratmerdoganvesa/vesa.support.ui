@@ -592,6 +592,7 @@ const getStatusColor = (value: number): string => {
   const colors = [
     "#607D8B", "#4CAF50", "#3F51B5", "#2196F3", "#9C27B0",
     "#00BCD4", "#795548", "#ffaa00", "#009688", "#E91E63", "#df1c1a",
+    "#7B1FA2", "#1565C0", "#00897B", "#F57C00",
   ];
   return colors[(value - 1)] ?? "#94a3b8";
 };
@@ -1595,8 +1596,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
     if (!selectedStatus) return base;
     const idStr = String(selectedStatus.id);
     const currentId = Number(selectedStatus.id);
-    // Onay Sürecinde (12) / Efor Onayında (13) seçilemez; kilitliyken yalnızca mevcut durumu göstermek için eklenir
-    if (currentId === 12 || currentId === 13) {
+    // Süreç statusları (12–15) seçilemez; kilitliyken yalnızca mevcut durumu göstermek için eklenir
+    if (currentId === 12 || currentId === 13 || currentId === 14 || currentId === 15) {
       const fallbackLabel = selectedStatus.description ?? selectedStatus.name ?? idStr;
       return [{ value: idStr, label: fallbackLabel }];
     }
@@ -2220,9 +2221,16 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   }}
                   onCompleteEffort={async () => {
                     try {
-                      await completeTicketEffortAccess(id);
+                      const completeResult = await completeTicketEffortAccess(id);
                       const data = await fetchTicketEfforts(id);
                       applyEffortResponse(data);
+                      if (completeResult.status != null) {
+                        setSelectedStatus({
+                          id: completeResult.status as TicketStatus,
+                          name: completeResult.statusText || String(completeResult.status),
+                          description: completeResult.statusText || String(completeResult.status),
+                        });
+                      }
                       dispatchAlert({
                         message: "Eforunuz tamamlandı ve yöneticinizin onayına sunuldu.",
                         type: "Success",
@@ -2285,6 +2293,13 @@ function CreateRequest({ ...rest }: createTicketProps) {
                         const result = await approveEffortAsManager(id);
                         const data = await fetchTicketEfforts(id);
                         applyEffortResponse(data);
+                        if (result.status != null) {
+                          setSelectedStatus({
+                            id: result.status as TicketStatus,
+                            name: result.statusText || String(result.status),
+                            description: result.statusText || String(result.status),
+                          });
+                        }
                         try {
                           const status = await fetchEffortManagementByTicket(id);
                           setEffortSendStatus(status);
