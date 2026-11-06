@@ -326,7 +326,7 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-           
+            
             <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  

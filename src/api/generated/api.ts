@@ -18168,7 +18168,10 @@ export const TicketStatus = {
     NUMBER_9: 9,
     NUMBER_10: 10,
     NUMBER_11: 11,
-    NUMBER_12: 12
+    NUMBER_12: 12,
+    NUMBER_13: 13,
+    NUMBER_14: 14,
+    NUMBER_15: 15
 } as const;
 
 export type TicketStatus = typeof TicketStatus[keyof typeof TicketStatus];

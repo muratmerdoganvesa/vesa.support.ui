@@ -153,7 +153,7 @@ function defaultTableFilters(onlyAll?: boolean): TableFilters {
     endDate: "",
     assignedTeam: "",
     assignedUser: [],
-    status: onlyAll ? ["2"] : ["1", "2", "3", "4", "5", "6", "7", "8", "13"],
+    status: onlyAll ? ["2"] : ["1", "2", "3", "4", "5", "6", "7", "8", "13", "14", "15"],
     type: "",
     customer: "",
     closeInc: false,
@@ -614,7 +614,7 @@ function FilterTableMethod({
     endDate: "",
     assignedTeam: "",
     assignedUser: [],
-    status: onlyAll ? ["2"] : ["1", "2", "3", "4", "5", "6", "7", "8", "13"],
+    status: onlyAll ? ["2"] : ["1", "2", "3", "4", "5", "6", "7", "8", "13", "14", "15"],
     type: "",
     customer: "",
     closeInc: false,
@@ -680,9 +680,15 @@ function FilterTableMethod({
 
       if (filterCheckData.data === true) {
         if (isSolveAllTicket) {
-          setFilters((prev) => ({ ...prev, status: ["2", "4", "5", "6", "7", "8", "9", "10", "13"] }));
+          setFilters((prev) => ({
+            ...prev,
+            status: ["2", "4", "5", "6", "7", "8", "9", "10", "13", "14", "15"],
+          }));
         } else {
-          setFilters((prev) => ({ ...prev, status: ["1", "2", "4", "5", "6", "7", "8", "9", "10", "12", "13"] }));
+          setFilters((prev) => ({
+            ...prev,
+            status: ["1", "2", "4", "5", "6", "7", "8", "9", "10", "12", "13", "14", "15"],
+          }));
         }
       }
 

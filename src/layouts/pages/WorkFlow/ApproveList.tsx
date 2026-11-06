@@ -212,11 +212,20 @@ function ApproveList() {
     var res = await api.apiApproveItemsGetTicketIdGetTicketIdGet(headId);
     sessionStorage.setItem("ticketId", res.data);
     if (isEffortApprovalWorkFlow(workFlowInfo)) {
+      if (headId) {
+        sessionStorage.setItem("effortApprovalWorkflowHeadId", String(headId));
+      }
       navigate("/solveAllTicket/solveTicket", {
-        state: { ticketId: res.data, fromApr: true, openEffortTab: true },
+        state: {
+          ticketId: res.data,
+          fromApr: true,
+          openEffortTab: true,
+          workflowHeadId: headId ? String(headId) : undefined,
+        },
       });
       return;
     }
+    sessionStorage.removeItem("effortApprovalWorkflowHeadId");
     navigate("/tickets/detail/", {
       state: { ticketId: res.data, fromApr: true },
     });
@@ -306,7 +315,8 @@ function ApproveList() {
       throw new Error("Efor onayı için talep bulunamadı.");
     }
 
-    const result = await approveEffortAsManager(ticketId);
+    // Kişi bazlı onay: hangi WorkflowHead onaylanacağı headId ile belirtilir.
+    const result = await approveEffortAsManager(ticketId, String(headId));
     const message = result.sentToEffortManager
       ? "Tüm departman onayları tamamlandı; efor efor yöneticisine gönderildi."
       : "Efor onayınız tamamlandı. Diğer kişilerin efor / yönetici onayları tamamlanana kadar efor yöneticisine gönderilmez.";

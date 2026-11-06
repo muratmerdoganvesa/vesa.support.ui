@@ -216,7 +216,7 @@ const EffortManagementDetailPage = () => {
     navigate("/effortManagement");
   };
 
-  const handleDownloadApprovedReport = () => {
+  const handleDownloadEffortReport = () => {
     if (!detail) return;
     try {
       setError("");
@@ -225,10 +225,15 @@ const EffortManagementDetailPage = () => {
       setError(
         downloadError instanceof Error
           ? downloadError.message
-          : "Onay raporu indirilemedi."
+          : "Efor raporu indirilemedi."
       );
     }
   };
+
+  const canDownloadEffortReport =
+    detail?.status === TicketEffortStatus.SentToEffortManager ||
+    detail?.status === TicketEffortStatus.UnderReview ||
+    detail?.status === TicketEffortStatus.CustomerApproved;
 
   const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const rejectedByCustomer =
@@ -305,18 +310,33 @@ const EffortManagementDetailPage = () => {
               {detail?.title ? ` · ${detail.title}` : ""}
             </h1>
           </div>
-          {detail?.canClaim && (
-            <Button
-              type="button"
-              onClick={() => void handleClaim()}
-              disabled={claiming}
-              aria-label="İncelemeyi üstlen"
-              className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
-            >
-              {claiming && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              İncelemeyi üstlen
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {canDownloadEffortReport &&
+              detail?.status !== TicketEffortStatus.CustomerApproved && (
+                <Button
+                  type="button"
+                  onClick={handleDownloadEffortReport}
+                  aria-label={`Talep No ${detail?.ticketNumber ?? ""} efor raporunu indir`}
+                  className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-slate-700 hover:bg-slate-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Raporu indir
+                  {detail?.ticketNumber != null ? ` (Ticket No : ${detail.ticketNumber})` : ""}
+                </Button>
+              )}
+            {detail?.canClaim && (
+              <Button
+                type="button"
+                onClick={() => void handleClaim()}
+                disabled={claiming}
+                aria-label="İncelemeyi üstlen"
+                className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
+              >
+                {claiming && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                İncelemeyi üstlen
+              </Button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -566,7 +586,7 @@ const EffortManagementDetailPage = () => {
                   </div>
                   <Button
                     type="button"
-                    onClick={handleDownloadApprovedReport}
+                    onClick={handleDownloadEffortReport}
                     aria-label={`Talep No ${detail.ticketNumber ?? ""} onay raporunu indir`}
                     className="h-10 shrink-0 rounded-xl bg-emerald-700 px-4 text-white hover:bg-emerald-800"
                   >
@@ -676,55 +696,134 @@ const EffortManagementDetailPage = () => {
                 <h2 className="text-sm font-semibold text-slate-800">
                   {canViewActualHours ? "Efor kayıtları" : "Yapılacak işler"}
                 </h2>
-                <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                  {canViewActualHours && (
+                {detail.status !== TicketEffortStatus.ReturnedToDepartment && (
+                  <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                    {canViewActualHours && (
+                      <span>
+                        Toplam fiili saat{" "}
+                        <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
+                      </span>
+                    )}
                     <span>
-                      Toplam fiili saat{" "}
-                      <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
+                      Toplam fatura saati{" "}
+                      <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
                     </span>
-                  )}
-                  <span>
-                    Toplam fatura saati{" "}
-                    <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
-                  </span>
-                </div>
+                  </div>
+                )}
               </div>
-              {(efforts?.items ?? []).length === 0 ? (
+              {detail.status === TicketEffortStatus.ReturnedToDepartment ? (
+                <p className="px-5 py-10 text-center text-sm text-slate-500">
+                  Efor düzenleme için geri gönderildi. Onaylanmamış eforlar burada gösterilmez; talep tekrar efor
+                  onayına gönderildiğinde listelenir.
+                </p>
+              ) : (efforts?.items ?? []).length === 0 ? (
                 <p className="px-5 py-10 text-center text-sm text-slate-400">Bu talebe bağlı efor kaydı yok.</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-100 hover:bg-transparent">
-                      {canViewActualHours && (
-                        <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Personel</TableHead>
-                      )}
-                      {canViewActualHours && (
-                        <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Fiili saat</TableHead>
-                      )}
-                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Fatura saati</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Yapılacak iş</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">Tarih</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="flex flex-col gap-3 p-4 md:hidden">
                     {(efforts?.items ?? []).map((effort) => (
-                      <TableRow key={effort.id} className="border-slate-100">
-                        {canViewActualHours && (
-                          <TableCell>
-                            <p className="text-sm font-medium text-slate-800">{effort.userAppName || "—"}</p>
-                            {effort.userTitle && <p className="text-xs text-slate-400">{effort.userTitle}</p>}
-                          </TableCell>
-                        )}
-                        {canViewActualHours && (
-                          <TableCell className="text-sm text-slate-700">{formatHours(effort.effortHours)}</TableCell>
-                        )}
-                        <TableCell className="text-sm text-slate-700">{formatHours(effort.invoiceHours)}</TableCell>
-                        <TableCell className="max-w-[320px] text-sm text-slate-600">{effort.description || "—"}</TableCell>
-                        <TableCell className="text-sm text-slate-600">{formatDateTime(effort.createdDate)}</TableCell>
-                      </TableRow>
+                      <article
+                        key={effort.id}
+                        className="rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          {canViewActualHours ? (
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium text-slate-800">
+                                {effort.userAppName || "—"}
+                              </p>
+                              {effort.userTitle && (
+                                <p className="truncate text-xs text-slate-400">{effort.userTitle}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              Yapılacak iş
+                            </p>
+                          )}
+                          <time className="shrink-0 text-xs text-slate-400" dateTime={effort.createdDate}>
+                            {formatDateTime(effort.createdDate)}
+                          </time>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+                          {canViewActualHours && (
+                            <span>
+                              Fiili{" "}
+                              <strong className="text-slate-800">{formatHours(effort.effortHours)}</strong>
+                            </span>
+                          )}
+                          <span>
+                            Fatura{" "}
+                            <strong className="text-slate-800">{formatHours(effort.invoiceHours)}</strong>
+                          </span>
+                        </div>
+                        <p className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-700">
+                          {effort.description || "—"}
+                        </p>
+                      </article>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  <div className="hidden md:block">
+                    <Table className="table-fixed">
+                      <TableHeader>
+                        <TableRow className="border-slate-100 hover:bg-transparent">
+                          {canViewActualHours && (
+                            <TableHead className="w-[18%] text-[11px] uppercase tracking-wider text-slate-400">
+                              Personel
+                            </TableHead>
+                          )}
+                          {canViewActualHours && (
+                            <TableHead className="w-[10%] text-[11px] uppercase tracking-wider text-slate-400">
+                              Fiili saat
+                            </TableHead>
+                          )}
+                          <TableHead className="w-[10%] text-[11px] uppercase tracking-wider text-slate-400">
+                            Fatura saati
+                          </TableHead>
+                          <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">
+                            Yapılacak iş
+                          </TableHead>
+                          <TableHead className="w-[16%] text-[11px] uppercase tracking-wider text-slate-400">
+                            Tarih
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(efforts?.items ?? []).map((effort) => (
+                          <TableRow key={effort.id} className="border-slate-100">
+                            {canViewActualHours && (
+                              <TableCell className="whitespace-normal align-top">
+                                <p className="truncate text-sm font-medium text-slate-800">
+                                  {effort.userAppName || "—"}
+                                </p>
+                                {effort.userTitle && (
+                                  <p className="truncate text-xs text-slate-400">{effort.userTitle}</p>
+                                )}
+                              </TableCell>
+                            )}
+                            {canViewActualHours && (
+                              <TableCell className="align-top text-sm text-slate-700">
+                                {formatHours(effort.effortHours)}
+                              </TableCell>
+                            )}
+                            <TableCell className="align-top text-sm text-slate-700">
+                              {formatHours(effort.invoiceHours)}
+                            </TableCell>
+                            <TableCell className="whitespace-normal align-top">
+                              <p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-600">
+                                {effort.description || "—"}
+                              </p>
+                            </TableCell>
+                            <TableCell className="align-top text-sm text-slate-600">
+                              {formatDateTime(effort.createdDate)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </section>
           </>
