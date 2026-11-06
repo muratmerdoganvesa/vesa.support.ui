@@ -7,10 +7,16 @@ import type {
 } from "../types/ticketEffort.types";
 
 export const fetchTicketEfforts = async (
-  ticketId: string
+  ticketId: string,
+  options?: { workflowHeadId?: string | null }
 ): Promise<TicketEffortListResponseDto> => {
+  const params: Record<string, string> = {};
+  if (options?.workflowHeadId) {
+    params.workflowHeadId = options.workflowHeadId;
+  }
   const response = await axiosInstance.get<TicketEffortListResponseDto>(
-    `/api/Ticket/${ticketId}/efforts`
+    `/api/Ticket/${ticketId}/efforts`,
+    { params: Object.keys(params).length > 0 ? params : undefined }
   );
   return response.data ?? {
     isDepartmentManager: false,
@@ -48,7 +54,8 @@ export const completeTicketEffortAccess = async (
 };
 
 export const approveEffortAsManager = async (
-  ticketId: string
+  ticketId: string,
+  workflowHeadId?: string | null
 ): Promise<{
   ticketId?: string;
   approved?: boolean;
@@ -57,6 +64,10 @@ export const approveEffortAsManager = async (
   status?: number;
   statusText?: string;
 }> => {
+  const body: { ticketId: string; workflowHeadId?: string } = { ticketId };
+  if (workflowHeadId) {
+    body.workflowHeadId = workflowHeadId;
+  }
   const response = await axiosInstance.post<{
     ticketId?: string;
     approved?: boolean;
@@ -64,7 +75,7 @@ export const approveEffortAsManager = async (
     nextManagerStarted?: boolean;
     status?: number;
     statusText?: string;
-  }>("/api/Ticket/ApproveEffortAsManager", { ticketId });
+  }>("/api/Ticket/ApproveEffortAsManager", body);
   return response.data ?? { ticketId, approved: true };
 };
 

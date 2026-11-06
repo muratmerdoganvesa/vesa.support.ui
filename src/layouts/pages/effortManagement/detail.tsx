@@ -696,20 +696,27 @@ const EffortManagementDetailPage = () => {
                 <h2 className="text-sm font-semibold text-slate-800">
                   {canViewActualHours ? "Efor kayıtları" : "Yapılacak işler"}
                 </h2>
-                <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                  {canViewActualHours && (
+                {detail.status !== TicketEffortStatus.ReturnedToDepartment && (
+                  <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                    {canViewActualHours && (
+                      <span>
+                        Toplam fiili saat{" "}
+                        <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
+                      </span>
+                    )}
                     <span>
-                      Toplam fiili saat{" "}
-                      <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
+                      Toplam fatura saati{" "}
+                      <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
                     </span>
-                  )}
-                  <span>
-                    Toplam fatura saati{" "}
-                    <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
-                  </span>
-                </div>
+                  </div>
+                )}
               </div>
-              {(efforts?.items ?? []).length === 0 ? (
+              {detail.status === TicketEffortStatus.ReturnedToDepartment ? (
+                <p className="px-5 py-10 text-center text-sm text-slate-500">
+                  Efor düzenleme için geri gönderildi. Onaylanmamış eforlar burada gösterilmez; talep tekrar efor
+                  onayına gönderildiğinde listelenir.
+                </p>
+              ) : (efforts?.items ?? []).length === 0 ? (
                 <p className="px-5 py-10 text-center text-sm text-slate-400">Bu talebe bağlı efor kaydı yok.</p>
               ) : (
                 <>
