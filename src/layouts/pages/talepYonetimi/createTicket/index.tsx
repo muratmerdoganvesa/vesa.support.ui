@@ -592,6 +592,7 @@ const getStatusColor = (value: number): string => {
   const colors = [
     "#607D8B", "#4CAF50", "#3F51B5", "#2196F3", "#9C27B0",
     "#00BCD4", "#795548", "#ffaa00", "#009688", "#E91E63", "#df1c1a",
+    "#7B1FA2", "#1565C0", "#00897B", "#F57C00",
   ];
   return colors[(value - 1)] ?? "#94a3b8";
 };
@@ -698,6 +699,10 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const reviewFromSession = sessionStorage.getItem("review") === "true";
   const review = Boolean(id) && (reviewFromState || reviewFromSession);
   const checkApr = fromApr || location.state?.fromApr;
+  const effortApprovalWorkflowHeadId =
+    (typeof location.state?.workflowHeadId === "string" && location.state.workflowHeadId) ||
+    sessionStorage.getItem("effortApprovalWorkflowHeadId") ||
+    null;
   const { idSolveTicket, isSolveTicket } = rest;
   const dispatchAlert = useAlert();
   const navigate = useNavigate();
@@ -788,7 +793,13 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [canCompleteEffort, setCanCompleteEffort] = useState(false);
   const [isEffortComplated, setIsEffortComplated] = useState(false);
   const [canApproveEffortAsManager, setCanApproveEffortAsManager] = useState(false);
+  const [pendingEffortApprovalWorkflowHeadId, setPendingEffortApprovalWorkflowHeadId] = useState<string | null>(
+    effortApprovalWorkflowHeadId
+  );
   const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
+
+  const resolveEffortWorkflowHeadId = () =>
+    pendingEffortApprovalWorkflowHeadId || effortApprovalWorkflowHeadId || null;
 
   const applyEffortResponse = (data: TicketEffortListResponseDto) => {
     setExistingEfforts(data.items ?? []);
@@ -800,6 +811,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
     setCanCompleteEffort(Boolean(data.canCompleteEffort));
     setIsEffortComplated(Boolean(data.isEffortComplated));
     setCanApproveEffortAsManager(Boolean(data.canApproveEffortAsManager));
+    if (data.pendingEffortApprovalWorkflowHeadId) {
+      setPendingEffortApprovalWorkflowHeadId(String(data.pendingEffortApprovalWorkflowHeadId));
+    }
   };
 
   // ── Yönlendirme geçmişi collapsible ───────────────────────────────────────
@@ -1231,7 +1245,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
     let cancelled = false;
     const loadEffortAccess = async () => {
       try {
-        const data = await fetchTicketEfforts(id);
+        const data = await fetchTicketEfforts(id, {
+          workflowHeadId: effortApprovalWorkflowHeadId,
+        });
         if (cancelled) return;
         applyEffortResponse(data);
       } catch {
@@ -1242,7 +1258,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
     return () => {
       cancelled = true;
     };
-  }, [isSolveTicket, id]);
+  }, [isSolveTicket, id, effortApprovalWorkflowHeadId]);
 
   // Sekme gizlendiyse Efor Bilgisi'nden çık
   useEffect(() => {
@@ -1257,7 +1273,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
     const loadEfforts = async () => {
       try {
         setEffortsLoading(true);
-        const data = await fetchTicketEfforts(id);
+        const data = await fetchTicketEfforts(id, {
+          workflowHeadId: resolveEffortWorkflowHeadId(),
+        });
         applyEffortResponse(data);
         try {
           const status = await fetchEffortManagementByTicket(id);
@@ -1595,8 +1613,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
     if (!selectedStatus) return base;
     const idStr = String(selectedStatus.id);
     const currentId = Number(selectedStatus.id);
-    // Onay Sürecinde (12) / Efor Onayında (13) seçilemez; kilitliyken yalnızca mevcut durumu göstermek için eklenir
-    if (currentId === 12 || currentId === 13) {
+    // Süreç statusları (12–15) seçilemez; kilitliyken yalnızca mevcut durumu göstermek için eklenir
+    if (currentId === 12 || currentId === 13 || currentId === 14 || currentId === 15) {
       const fallbackLabel = selectedStatus.description ?? selectedStatus.name ?? idStr;
       return [{ value: idStr, label: fallbackLabel }];
     }
@@ -2204,7 +2222,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   onEffortEnterChange={async (next) => {
                     try {
                       await setTicketEffortEnter(id, next);
-                      const data = await fetchTicketEfforts(id);
+                      const data = await fetchTicketEfforts(id, {
+                        workflowHeadId: resolveEffortWorkflowHeadId(),
+                      });
                       applyEffortResponse(data);
                       dispatchAlert({
                         message: next ? "Efor girişi açıldı." : "Efor girişi kapatıldı.",
@@ -2220,9 +2240,18 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   }}
                   onCompleteEffort={async () => {
                     try {
-                      await completeTicketEffortAccess(id);
-                      const data = await fetchTicketEfforts(id);
+                      const completeResult = await completeTicketEffortAccess(id);
+                      const data = await fetchTicketEfforts(id, {
+                        workflowHeadId: resolveEffortWorkflowHeadId(),
+                      });
                       applyEffortResponse(data);
+                      if (completeResult.status != null) {
+                        setSelectedStatus({
+                          id: completeResult.status as TicketStatus,
+                          name: completeResult.statusText || String(completeResult.status),
+                          description: completeResult.statusText || String(completeResult.status),
+                        });
+                      }
                       dispatchAlert({
                         message: "Eforunuz tamamlandı ve yöneticinizin onayına sunuldu.",
                         type: "Success",
@@ -2242,7 +2271,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
                         description: description ?? null,
                         ...(invoiceHours !== undefined ? { invoiceHours } : {}),
                       });
-                      const data = await fetchTicketEfforts(id);
+                      const data = await fetchTicketEfforts(id, {
+                        workflowHeadId: resolveEffortWorkflowHeadId(),
+                      });
                       applyEffortResponse(data);
                       dispatchAlert({ message: "Efor kaydı eklendi.", type: "Success" });
                     } catch (error) {
@@ -2270,7 +2301,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   onDelete={async (effortId) => {
                     try {
                       await deleteTicketEffort(id, effortId);
-                      const data = await fetchTicketEfforts(id);
+                      const data = await fetchTicketEfforts(id, {
+                        workflowHeadId: resolveEffortWorkflowHeadId(),
+                      });
                       applyEffortResponse(data);
                       dispatchAlert({ message: "Efor kaydı silindi.", type: "Success" });
                     } catch (error) {
@@ -2282,9 +2315,21 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   onSendToEffortManager={async () => {
                     try {
                       if (canApproveEffortAsManager) {
-                        const result = await approveEffortAsManager(id);
-                        const data = await fetchTicketEfforts(id);
+                        const result = await approveEffortAsManager(
+                          id,
+                          resolveEffortWorkflowHeadId()
+                        );
+                        const data = await fetchTicketEfforts(id, {
+                          workflowHeadId: resolveEffortWorkflowHeadId(),
+                        });
                         applyEffortResponse(data);
+                        if (result.status != null) {
+                          setSelectedStatus({
+                            id: result.status as TicketStatus,
+                            name: result.statusText || String(result.status),
+                            description: result.statusText || String(result.status),
+                          });
+                        }
                         try {
                           const status = await fetchEffortManagementByTicket(id);
                           setEffortSendStatus(status);

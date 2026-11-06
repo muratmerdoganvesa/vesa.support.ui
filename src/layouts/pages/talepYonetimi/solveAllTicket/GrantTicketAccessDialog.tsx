@@ -48,6 +48,7 @@ interface GrantTicketAccessPanelProps {
   ticket: GrantTicketAccessTicket;
   onClose: () => void;
   onGranted: (ticketId: string) => void;
+  onTicketStatusChange: (ticketId: string, status: number, statusText: string) => void;
   onEffortEnterChange: (ticketId: string, isEffortEnter: boolean) => void;
   onBusyChange: (busy: boolean) => void;
 }
@@ -81,6 +82,7 @@ const GrantTicketAccessPanel = ({
   ticket,
   onClose,
   onGranted,
+  onTicketStatusChange,
   onEffortEnterChange,
   onBusyChange,
 }: GrantTicketAccessPanelProps) => {
@@ -263,11 +265,14 @@ const GrantTicketAccessPanel = ({
 
     setSubmitting(true);
     try {
-      await axiosInstance.post("/api/Ticket/GrantTicketAccess", {
-        ticketId: ticket.id,
-        userAppId: selectedUser.id,
-        description: description.trim() || undefined,
-      });
+      const response = await axiosInstance.post<{ status?: number; statusText?: string }>(
+        "/api/Ticket/GrantTicketAccess",
+        {
+          ticketId: ticket.id,
+          userAppId: selectedUser.id,
+          description: description.trim() || undefined,
+        }
+      );
 
       dispatchAlert({
         message: `${displayUserName(selectedUser)} kişisinden efor istendi.`,
@@ -277,6 +282,13 @@ const GrantTicketAccessPanel = ({
       setUserQuery("");
       setDescription("");
       await loadAccessList();
+      if (response.data?.status != null) {
+        onTicketStatusChange(
+          ticket.id,
+          response.data.status,
+          response.data.statusText || String(response.data.status)
+        );
+      }
       onGranted(ticket.id);
     } catch (error) {
       dispatchAlert({
@@ -295,12 +307,22 @@ const GrantTicketAccessPanel = ({
 
     setRevokingUserId(item.userAppId);
     try {
-      await axiosInstance.post("/api/Ticket/RevokeTicketAccess", {
-        ticketId: ticket.id,
-        userAppId: item.userAppId,
-      });
+      const response = await axiosInstance.post<{ status?: number; statusText?: string }>(
+        "/api/Ticket/RevokeTicketAccess",
+        {
+          ticketId: ticket.id,
+          userAppId: item.userAppId,
+        }
+      );
       dispatchAlert({ message: `${item.name} için efor isteği kaldırıldı.`, type: "Success" });
       await loadAccessList();
+      if (response.data?.status != null) {
+        onTicketStatusChange(
+          ticket.id,
+          response.data.status,
+          response.data.statusText || String(response.data.status)
+        );
+      }
     } catch (error) {
       dispatchAlert({
         message: "Efor isteği kaldırılırken hata oluştu: " + formatRequestError(error),
