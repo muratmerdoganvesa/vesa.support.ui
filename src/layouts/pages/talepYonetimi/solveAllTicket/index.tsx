@@ -66,16 +66,17 @@ import SubmitForApprovalPanel, { SubmitForApprovalTicket } from "./SubmitForAppr
 import GrantTicketAccessPanel, { GrantTicketAccessTicket } from "./GrantTicketAccessDialog";
 
 /** Geçici: Efor İste yalnızca bu departmanda; tüm departmanlara yetki verilince kaldırılacak. */
-const EFFORT_REQUEST_ALLOWED_DEPARTMENT_ID = "1FF822C6-0FBC-4D12-AA20-E0A0D9D8AEC3";
+// const EFFORT_REQUEST_ALLOWED_DEPARTMENT_ID = "1FF822C6-0FBC-4D12-AA20-E0A0D9D8AEC3";
 
 const canShowEffortRequest = (row: {
   canGrantTicketAccess?: boolean;
-  ticketDepartmentId?: string | null;
+  // ticketDepartmentId?: string | null;
 }): boolean => {
   if (row.canGrantTicketAccess !== true) return false;
-  const departmentId = row.ticketDepartmentId?.trim();
-  if (!departmentId) return false;
-  return departmentId.toUpperCase() === EFFORT_REQUEST_ALLOWED_DEPARTMENT_ID;
+  // const departmentId = row.ticketDepartmentId?.trim();
+  // if (!departmentId) return false;
+  // return departmentId.toUpperCase() === EFFORT_REQUEST_ALLOWED_DEPARTMENT_ID;
+  return true;
 };
 
 // ---------------------------------------------------------------------------

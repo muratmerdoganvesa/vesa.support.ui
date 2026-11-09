@@ -5,6 +5,7 @@ export const TicketEffortStatus = {
   CustomerApproved: 4,
   CustomerRejected: 5,
   ReturnedToDepartment: 6,
+  MailEffortRequested: 7,
 } as const;
 
 export interface TicketEffortManagementStatusDto {
@@ -104,6 +105,7 @@ export interface TicketEffortManagementDetailDto {
   canAssignCustomerApproval?: boolean;
   canDecideCustomerApproval?: boolean;
   canManagerApprove?: boolean;
+  canRequestMailEffort?: boolean;
   canViewActualHours?: boolean;
   comments?: TicketEffortManagementCommentDto[] | null;
 }
@@ -157,6 +159,9 @@ export const effortStatusClassName = (status?: number | null): string => {
   }
   if (status === TicketEffortStatus.WaitingCustomerApproval) {
     return "bg-violet-50 text-violet-700 ring-violet-200";
+  }
+  if (status === TicketEffortStatus.MailEffortRequested) {
+    return "bg-indigo-50 text-indigo-700 ring-indigo-200";
   }
   if (status === TicketEffortStatus.CustomerApproved) {
     return "bg-emerald-50 text-emerald-700 ring-emerald-200";
