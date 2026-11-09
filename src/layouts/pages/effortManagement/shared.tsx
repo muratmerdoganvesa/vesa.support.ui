@@ -10,9 +10,23 @@ export const formatDateTime = (value?: string | null): string => {
   return format(date, "dd MMM yyyy HH:mm", { locale: tr });
 };
 
+/** Fatura/fiili girişleri saat tutulur; müşteriye gösterimde 1 adam gün = 8 saat. */
+export const HOURS_PER_MAN_DAY = 8;
+
 export const formatHours = (value?: number | null): string => {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
   return Number(value).toFixed(2);
+};
+
+export const hoursToManDays = (hours?: number | null): number | null => {
+  if (hours === null || hours === undefined || Number.isNaN(Number(hours))) return null;
+  return Number(hours) / HOURS_PER_MAN_DAY;
+};
+
+export const formatManDays = (hours?: number | null): string => {
+  const manDays = hoursToManDays(hours);
+  if (manDays === null) return "—";
+  return manDays.toFixed(3);
 };
 
 export const EffortStatusBadge = ({

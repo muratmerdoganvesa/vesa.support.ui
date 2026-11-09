@@ -1,19 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw, Send } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw /* , Send */ } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { Button } from "components/ui/button";
-import { Input } from "components/ui/input";
 import { Textarea } from "components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -37,7 +28,7 @@ import {
 } from "./api";
 import { downloadApprovedEffortHtml } from "./approvedEffortReport";
 import { openExternalEffortMailInOutlook } from "./effortMailDraft";
-import { EffortStatusBadge, formatDateTime, formatHours } from "./shared";
+import { EffortStatusBadge, formatDateTime, formatHours, formatManDays } from "./shared";
 import { TicketEffortStatus } from "./types";
 import type {
   TicketEffortManagementDetailDto,
@@ -74,9 +65,6 @@ const EffortManagementDetailPage = () => {
   const [rejecting, setRejecting] = useState(false);
   const [managerApproving, setManagerApproving] = useState(false);
   const [approvalActionTab, setApprovalActionTab] = useState<ApprovalActionTab>("submit");
-  const [mailDialogOpen, setMailDialogOpen] = useState(false);
-  const [mailRecipientEmail, setMailRecipientEmail] = useState("");
-  const [mailRecipientName, setMailRecipientName] = useState("");
   const [creatingMail, setCreatingMail] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -246,39 +234,15 @@ const EffortManagementDetailPage = () => {
     }
   };
 
-  const handleOpenMailDialog = () => {
-    setError("");
-    setSuccessMessage("");
-    setMailDialogOpen(true);
-  };
-
   const handleCreateExternalEffortMail = async () => {
     if (!id || !detail || creatingMail) return;
-
-    const email = mailRecipientEmail.trim();
-    const fullName = mailRecipientName.trim();
-    if (!email) {
-      setError("Alıcı e-posta adresi zorunludur.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Geçerli bir e-posta adresi girin.");
-      return;
-    }
-    if (!fullName) {
-      setError("Ad soyad zorunludur.");
-      return;
-    }
 
     try {
       setCreatingMail(true);
       setError("");
       setSuccessMessage("");
       await markMailEffortRequested(id);
-      const openMessage = await openExternalEffortMailInOutlook(email, fullName, detail, efforts);
-      setMailDialogOpen(false);
-      setMailRecipientEmail("");
-      setMailRecipientName("");
+      const openMessage = await openExternalEffortMailInOutlook(detail, efforts);
       setSuccessMessage(openMessage);
       await load(id);
     } catch (mailError) {
@@ -298,14 +262,15 @@ const EffortManagementDetailPage = () => {
   const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const rejectedByCustomer =
     detail?.status === TicketEffortStatus.ReturnedToDepartment && Boolean(detail.customerApprovedByUserName);
-  const filteredApprovalUsers = approvalUsers.filter((user) => {
-    const term = approvalSearch.trim().toLocaleLowerCase("tr");
-    if (!term) return true;
-    const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
-    return label.includes(term);
-  });
+  // Talebi Onaya Sun gizlendiği için kullanıcı filtresi geçici olarak kapatıldı
+  // const filteredApprovalUsers = approvalUsers.filter((user) => {
+  //   const term = approvalSearch.trim().toLocaleLowerCase("tr");
+  //   if (!term) return true;
+  //   const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
+  //   return label.includes(term);
+  // });
   const canShowApprovalActions =
-    Boolean(detail?.canAssignCustomerApproval) ||
+    // Boolean(detail?.canAssignCustomerApproval) || // Talebi Onaya Sun gizlendi
     Boolean(detail?.canManagerApprove) ||
     Boolean(detail?.canReturn) ||
     Boolean(detail?.canDecideCustomerApproval);
@@ -314,13 +279,14 @@ const EffortManagementDetailPage = () => {
     label: string;
     icon: ReactNode;
   }[] = [];
-  if (detail?.canAssignCustomerApproval) {
-    approvalActionTabs.push({
-      value: "submit",
-      label: "Talebi Onaya Sun",
-      icon: <Send className="w-3.5 h-3.5" />,
-    });
-  }
+  // Talebi Onaya Sun sekmesi geçici olarak gizlendi
+  // if (detail?.canAssignCustomerApproval) {
+  //   approvalActionTabs.push({
+  //     value: "submit",
+  //     label: "Talebi Onaya Sun",
+  //     icon: <Send className="w-3.5 h-3.5" />,
+  //   });
+  // }
   if (detail?.canManagerApprove) {
     approvalActionTabs.push({
       value: "self-approve",
@@ -347,8 +313,8 @@ const EffortManagementDetailPage = () => {
     : (approvalActionTabs[0]?.value ?? "submit");
   const approvalSectionDescription =
     activeApprovalActionTab === "decide"
-      ? "Fatura saatlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner."
-      : "VESA içindeki efor yöneticilerinden onay isteyebilir, kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.";
+      ? "Adam gün değerlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner."
+      : "Kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.";
 
   return (
     <DashboardLayout>
@@ -374,11 +340,16 @@ const EffortManagementDetailPage = () => {
             {detail?.canRequestMailEffort && (
               <Button
                 type="button"
-                onClick={handleOpenMailDialog}
+                onClick={() => void handleCreateExternalEffortMail()}
+                disabled={creatingMail}
                 aria-label="Outlook ile efor onay maili oluştur"
                 className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-slate-700 hover:bg-slate-50"
               >
-                <Mail className="h-3.5 w-3.5" />
+                {creatingMail ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Mail className="h-3.5 w-3.5" />
+                )}
                 Mail ile efor iste
               </Button>
             )}
@@ -458,11 +429,12 @@ const EffortManagementDetailPage = () => {
                     </TabsList>
                   </div>
 
+                  {/* Talebi Onaya Sun paneli geçici olarak gizlendi
                   {detail.canAssignCustomerApproval && (
                     <TabsContent value="submit" className="mt-0 outline-none">
                       <div className="flex flex-col gap-4 p-6">
                         <p className="text-xs text-slate-500">
-                          Onayı VESA içindeki efor yöneticilerinden veya talebin müşterisine bağlı kişilerden isteyebilirsiniz. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                          Onayı VESA içindeki efor yöneticilerinden veya talebin müşterisine bağlı kişilerden isteyebilirsiniz. Seçilen kişi bu talebi, adam gün değerlerini ve yapılacak işleri görür.
                         </p>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
                           <div className="flex flex-col gap-1.5">
@@ -520,6 +492,7 @@ const EffortManagementDetailPage = () => {
                       </div>
                     </TabsContent>
                   )}
+                  */}
 
                   {detail.canManagerApprove && (
                     <TabsContent value="self-approve" className="mt-0 outline-none">
@@ -651,8 +624,8 @@ const EffortManagementDetailPage = () => {
                 <p className="mt-1 text-xs text-indigo-800">
                   {detail.customerApprovedByUserName || "Maili gönderen"}
                   {" · "}
-                  Sistem dışı kişiye Outlook taslağı oluşturuldu. Onay/red butonu yoktur; bu talebi atanan kişi
-                  sistem üzerinden onaylayabilir.
+                  Outlook mail şablonu oluşturuldu. Onay/red butonu yoktur; bu talebi atanan kişi sistem
+                  üzerinden onaylayabilir.
                 </p>
               </section>
             )}
@@ -801,9 +774,15 @@ const EffortManagementDetailPage = () => {
                         <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
                       </span>
                     )}
+                    {canViewActualHours && (
+                      <span>
+                        Toplam fatura saati{" "}
+                        <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
+                      </span>
+                    )}
                     <span>
-                      Toplam fatura saati{" "}
-                      <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
+                      Toplam adam gün{" "}
+                      <strong className="text-slate-800">{formatManDays(efforts?.totalInvoiceHours)}</strong>
                     </span>
                   </div>
                 )}
@@ -849,9 +828,15 @@ const EffortManagementDetailPage = () => {
                               <strong className="text-slate-800">{formatHours(effort.effortHours)}</strong>
                             </span>
                           )}
+                          {canViewActualHours && (
+                            <span>
+                              Fatura{" "}
+                              <strong className="text-slate-800">{formatHours(effort.invoiceHours)}</strong>
+                            </span>
+                          )}
                           <span>
-                            Fatura{" "}
-                            <strong className="text-slate-800">{formatHours(effort.invoiceHours)}</strong>
+                            Adam gün{" "}
+                            <strong className="text-slate-800">{formatManDays(effort.invoiceHours)}</strong>
                           </span>
                         </div>
                         <p className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-700">
@@ -875,8 +860,13 @@ const EffortManagementDetailPage = () => {
                               Fiili saat
                             </TableHead>
                           )}
+                          {canViewActualHours && (
+                            <TableHead className="w-[10%] text-[11px] uppercase tracking-wider text-slate-400">
+                              Fatura saati
+                            </TableHead>
+                          )}
                           <TableHead className="w-[10%] text-[11px] uppercase tracking-wider text-slate-400">
-                            Fatura saati
+                            Adam gün
                           </TableHead>
                           <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">
                             Yapılacak iş
@@ -904,8 +894,13 @@ const EffortManagementDetailPage = () => {
                                 {formatHours(effort.effortHours)}
                               </TableCell>
                             )}
+                            {canViewActualHours && (
+                              <TableCell className="align-top text-sm text-slate-700">
+                                {formatHours(effort.invoiceHours)}
+                              </TableCell>
+                            )}
                             <TableCell className="align-top text-sm text-slate-700">
-                              {formatHours(effort.invoiceHours)}
+                              {formatManDays(effort.invoiceHours)}
                             </TableCell>
                             <TableCell className="whitespace-normal align-top">
                               <p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-600">
@@ -926,78 +921,6 @@ const EffortManagementDetailPage = () => {
           </>
         )}
 
-        <Dialog open={mailDialogOpen} onOpenChange={setMailDialogOpen}>
-          <DialogContent className="sm:max-w-md" aria-describedby="mail-effort-desc">
-            <DialogHeader>
-              <DialogTitle>Mail ile efor iste</DialogTitle>
-              <DialogDescription id="mail-effort-desc">
-                Outlook doğrudan açılır; alıcı ve konu dolar. Kurumsal şablon (logo + efor tablosu)
-                panoya kopyalanır — gövdeye Ctrl+V ile yapıştırın. Onay/red butonu yoktur.
-                Durum &quot;Mail ile efor istendi&quot; olur ve talep size atanır.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-3 py-1">
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="mail-recipient-email"
-                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400"
-                >
-                  Alıcı e-posta
-                </label>
-                <Input
-                  id="mail-recipient-email"
-                  type="email"
-                  value={mailRecipientEmail}
-                  onChange={(event) => setMailRecipientEmail(event.target.value)}
-                  placeholder="ornek@firma.com"
-                  aria-label="Alıcı e-posta adresi"
-                  autoComplete="email"
-                  className="h-10 rounded-xl"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="mail-recipient-name"
-                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400"
-                >
-                  Ad soyad
-                </label>
-                <Input
-                  id="mail-recipient-name"
-                  type="text"
-                  value={mailRecipientName}
-                  onChange={(event) => setMailRecipientName(event.target.value)}
-                  placeholder="Ad Soyad"
-                  aria-label="Alıcı ad soyad"
-                  autoComplete="name"
-                  className="h-10 rounded-xl"
-                />
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setMailDialogOpen(false)}
-                disabled={creatingMail}
-                aria-label="İptal"
-                className="h-10 rounded-xl"
-              >
-                İptal
-              </Button>
-              <Button
-                type="button"
-                onClick={() => void handleCreateExternalEffortMail()}
-                disabled={creatingMail}
-                aria-label="Outlook mail taslağı oluştur"
-                className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
-              >
-                {creatingMail && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Mail oluştur
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </main>
     </DashboardLayout>
   );
