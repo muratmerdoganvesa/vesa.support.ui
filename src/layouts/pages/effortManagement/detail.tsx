@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw, Send } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw /* , Send */ } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { Button } from "components/ui/button";
@@ -262,14 +262,15 @@ const EffortManagementDetailPage = () => {
   const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const rejectedByCustomer =
     detail?.status === TicketEffortStatus.ReturnedToDepartment && Boolean(detail.customerApprovedByUserName);
-  const filteredApprovalUsers = approvalUsers.filter((user) => {
-    const term = approvalSearch.trim().toLocaleLowerCase("tr");
-    if (!term) return true;
-    const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
-    return label.includes(term);
-  });
+  // Talebi Onaya Sun gizlendiği için kullanıcı filtresi geçici olarak kapatıldı
+  // const filteredApprovalUsers = approvalUsers.filter((user) => {
+  //   const term = approvalSearch.trim().toLocaleLowerCase("tr");
+  //   if (!term) return true;
+  //   const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
+  //   return label.includes(term);
+  // });
   const canShowApprovalActions =
-    Boolean(detail?.canAssignCustomerApproval) ||
+    // Boolean(detail?.canAssignCustomerApproval) || // Talebi Onaya Sun gizlendi
     Boolean(detail?.canManagerApprove) ||
     Boolean(detail?.canReturn) ||
     Boolean(detail?.canDecideCustomerApproval);
@@ -278,13 +279,14 @@ const EffortManagementDetailPage = () => {
     label: string;
     icon: ReactNode;
   }[] = [];
-  if (detail?.canAssignCustomerApproval) {
-    approvalActionTabs.push({
-      value: "submit",
-      label: "Talebi Onaya Sun",
-      icon: <Send className="w-3.5 h-3.5" />,
-    });
-  }
+  // Talebi Onaya Sun sekmesi geçici olarak gizlendi
+  // if (detail?.canAssignCustomerApproval) {
+  //   approvalActionTabs.push({
+  //     value: "submit",
+  //     label: "Talebi Onaya Sun",
+  //     icon: <Send className="w-3.5 h-3.5" />,
+  //   });
+  // }
   if (detail?.canManagerApprove) {
     approvalActionTabs.push({
       value: "self-approve",
@@ -312,7 +314,7 @@ const EffortManagementDetailPage = () => {
   const approvalSectionDescription =
     activeApprovalActionTab === "decide"
       ? "Adam gün değerlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner."
-      : "VESA içindeki efor yöneticilerinden onay isteyebilir, kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.";
+      : "Kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.";
 
   return (
     <DashboardLayout>
@@ -427,6 +429,7 @@ const EffortManagementDetailPage = () => {
                     </TabsList>
                   </div>
 
+                  {/* Talebi Onaya Sun paneli geçici olarak gizlendi
                   {detail.canAssignCustomerApproval && (
                     <TabsContent value="submit" className="mt-0 outline-none">
                       <div className="flex flex-col gap-4 p-6">
@@ -489,6 +492,7 @@ const EffortManagementDetailPage = () => {
                       </div>
                     </TabsContent>
                   )}
+                  */}
 
                   {detail.canManagerApprove && (
                     <TabsContent value="self-approve" className="mt-0 outline-none">
