@@ -16,7 +16,7 @@ import {
   fetchMailDecisionPreview,
   readEffortApiError,
 } from "./api";
-import { formatHours } from "./shared";
+import { formatManDays } from "./shared";
 import type { MailDecisionPreviewDto } from "./types";
 
 type DecisionAction = "approve" | "reject";
@@ -161,10 +161,10 @@ const MailDecisionPage = () => {
                 </div>
                 <div className="rounded-xl bg-slate-50 px-4 py-3">
                   <dt className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    Toplam fatura saati
+                    Toplam adam gün
                   </dt>
                   <dd className="mt-1 text-sm font-semibold text-slate-800">
-                    {formatHours(preview.totalInvoiceHours)}
+                    {formatManDays(preview.totalInvoiceHours)}
                   </dd>
                 </div>
                 <div className="rounded-xl bg-slate-50 px-4 py-3 sm:col-span-2">
@@ -195,7 +195,7 @@ const MailDecisionPage = () => {
                       <TableRow className="bg-slate-50 hover:bg-slate-50">
                         <TableHead className="text-xs text-slate-500">Yapılacak iş</TableHead>
                         <TableHead className="w-32 text-right text-xs text-slate-500">
-                          Fatura saati
+                          Adam gün
                         </TableHead>
                       </TableRow>
                     </TableHeader>
@@ -213,7 +213,7 @@ const MailDecisionPage = () => {
                               {item.description?.trim() || "—"}
                             </TableCell>
                             <TableCell className="text-right text-sm font-semibold text-slate-800">
-                              {formatHours(item.invoiceHours)}
+                              {formatManDays(item.invoiceHours)}
                             </TableCell>
                           </TableRow>
                         ))
