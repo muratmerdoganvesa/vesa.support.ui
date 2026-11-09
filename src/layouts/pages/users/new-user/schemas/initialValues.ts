@@ -57,6 +57,7 @@ let {
     sicilNo,
     isTeamLeader,
     isKanbanAdmin,
+    isEffortEnter,
   },
 } = checkout;
 
@@ -107,6 +108,7 @@ let initialValues: InitialValuesType = {
   [sicilNo.name]: "",
   [isTeamLeader.name]:false,
   [isKanbanAdmin.name]: false,
+  [isEffortEnter.name]: false,
 };
 
 

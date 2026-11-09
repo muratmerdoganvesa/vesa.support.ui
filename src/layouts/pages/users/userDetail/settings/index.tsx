@@ -41,6 +41,7 @@ function Settings(): JSX.Element {
       if (update.isTestData == null) update.isTestData = false;
       if (update.isSystemAdmin == null) update.isSystemAdmin = false;
       if (update.isKanbanAdmin == null) update.isKanbanAdmin = false;
+      if (update.isEffortEnter == null) update.isEffortEnter = false;
       if (update.vacationMode == null) update.vacationMode = false;
       if (update.workCompanyId == null) {
         dispatchAlert({ message: "Şirket Alanı Boş Bırakılamaz", type: "Error" });
@@ -140,6 +141,7 @@ function Settings(): JSX.Element {
       sicilNo: data.data.sicilNo || "",
       isTeamLeader: data.data.isTeamLeader || false,
       isKanbanAdmin: data.data.isKanbanAdmin || false,
+      isEffortEnter: data.data.isEffortEnter || false,
     }));
     dispatchBusy({ isBusy: false });
   };

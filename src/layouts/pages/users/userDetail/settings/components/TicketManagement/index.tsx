@@ -150,6 +150,7 @@ function TicketManagement({ formData }: any): JSX.Element {
     mainManagerUserAppId: mainManagerUserAppIdV,
     isTeamLeader: isTeamLeaderV,
     isKanbanAdmin: isKanbanAdminV,
+    isEffortEnter: isEffortEnterV,
   } = values;
 
   const [departmentData, setDepartmentData] = useState<TicketDepartmensListDto[]>([]);
@@ -238,6 +239,7 @@ function TicketManagement({ formData }: any): JSX.Element {
     { id: "perm-filter",   label: "Varsayılan filtreleri uygulama",                                  field: "dontApplyDefaultFilters",   value: dontApplyDefaultFiltersV },
     { id: "perm-leader",   label: "Takım Lideri mi?",                                               field: "isTeamLeader",              value: isTeamLeaderV },
     { id: "perm-kanban-admin", label: "Kanbanda Admin Yetkisi",                                     field: "isKanbanAdmin",            value: isKanbanAdminV },
+    { id: "perm-effort-enter", label: "Efor İsteyebilir",                                           field: "isEffortEnter",            value: isEffortEnterV },
   ];
 
   return (

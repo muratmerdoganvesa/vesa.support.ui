@@ -124,6 +124,15 @@ export const assignCustomerApprovalUser = async (
   return response.data;
 };
 
+export const markMailEffortRequested = async (
+  id: string
+): Promise<TicketEffortManagementStatusDto> => {
+  const response = await axiosInstance.post<TicketEffortManagementStatusDto>(
+    `/api/TicketEffortManagement/${id}/mail-effort-requested`
+  );
+  return response.data;
+};
+
 export const decideCustomerApproval = async (
   id: string,
   approve: boolean,

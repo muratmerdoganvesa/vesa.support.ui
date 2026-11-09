@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, RotateCcw, Send } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw, Send } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { Button } from "components/ui/button";
+import { Input } from "components/ui/input";
 import { Textarea } from "components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -22,10 +31,12 @@ import {
   fetchEffortManagementDetail,
   fetchEffortManagementEfforts,
   managerApproveEffort,
+  markMailEffortRequested,
   readEffortApiError,
   returnEffortManagement,
 } from "./api";
 import { downloadApprovedEffortHtml } from "./approvedEffortReport";
+import { openExternalEffortMailInOutlook } from "./effortMailDraft";
 import { EffortStatusBadge, formatDateTime, formatHours } from "./shared";
 import { TicketEffortStatus } from "./types";
 import type {
@@ -63,7 +74,12 @@ const EffortManagementDetailPage = () => {
   const [rejecting, setRejecting] = useState(false);
   const [managerApproving, setManagerApproving] = useState(false);
   const [approvalActionTab, setApprovalActionTab] = useState<ApprovalActionTab>("submit");
+  const [mailDialogOpen, setMailDialogOpen] = useState(false);
+  const [mailRecipientEmail, setMailRecipientEmail] = useState("");
+  const [mailRecipientName, setMailRecipientName] = useState("");
+  const [creatingMail, setCreatingMail] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const load = async (recordId: string) => {
     const [detailData, effortData] = await Promise.all([
@@ -230,9 +246,53 @@ const EffortManagementDetailPage = () => {
     }
   };
 
+  const handleOpenMailDialog = () => {
+    setError("");
+    setSuccessMessage("");
+    setMailDialogOpen(true);
+  };
+
+  const handleCreateExternalEffortMail = async () => {
+    if (!id || !detail || creatingMail) return;
+
+    const email = mailRecipientEmail.trim();
+    const fullName = mailRecipientName.trim();
+    if (!email) {
+      setError("Alıcı e-posta adresi zorunludur.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Geçerli bir e-posta adresi girin.");
+      return;
+    }
+    if (!fullName) {
+      setError("Ad soyad zorunludur.");
+      return;
+    }
+
+    try {
+      setCreatingMail(true);
+      setError("");
+      setSuccessMessage("");
+      await markMailEffortRequested(id);
+      const openMessage = await openExternalEffortMailInOutlook(email, fullName, detail, efforts);
+      setMailDialogOpen(false);
+      setMailRecipientEmail("");
+      setMailRecipientName("");
+      setSuccessMessage(openMessage);
+      await load(id);
+    } catch (mailError) {
+      setError(readEffortApiError(mailError));
+    } finally {
+      setCreatingMail(false);
+    }
+  };
+
   const canDownloadEffortReport =
     detail?.status === TicketEffortStatus.SentToEffortManager ||
     detail?.status === TicketEffortStatus.UnderReview ||
+    detail?.status === TicketEffortStatus.WaitingCustomerApproval ||
+    detail?.status === TicketEffortStatus.MailEffortRequested ||
     detail?.status === TicketEffortStatus.CustomerApproved;
 
   const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
@@ -311,6 +371,17 @@ const EffortManagementDetailPage = () => {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {detail?.canRequestMailEffort && (
+              <Button
+                type="button"
+                onClick={handleOpenMailDialog}
+                aria-label="Outlook ile efor onay maili oluştur"
+                className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-slate-700 hover:bg-slate-50"
+              >
+                <Mail className="h-3.5 w-3.5" />
+                Mail ile efor iste
+              </Button>
+            )}
             {canDownloadEffortReport &&
               detail?.status !== TicketEffortStatus.CustomerApproved && (
                 <Button
@@ -342,6 +413,11 @@ const EffortManagementDetailPage = () => {
         {error && (
           <div className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error}
+          </div>
+        )}
+        {successMessage && (
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            {successMessage}
           </div>
         )}
 
@@ -569,6 +645,18 @@ const EffortManagementDetailPage = () => {
               </section>
             )}
 
+            {detail.status === TicketEffortStatus.MailEffortRequested && (
+              <section className="rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4">
+                <p className="text-sm font-semibold text-indigo-900">Mail ile efor istendi</p>
+                <p className="mt-1 text-xs text-indigo-800">
+                  {detail.customerApprovedByUserName || "Maili gönderen"}
+                  {" · "}
+                  Sistem dışı kişiye Outlook taslağı oluşturuldu. Onay/red butonu yoktur; bu talebi atanan kişi
+                  sistem üzerinden onaylayabilir.
+                </p>
+              </section>
+            )}
+
             {detail.status === TicketEffortStatus.CustomerApproved && (
               <section className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -636,8 +724,17 @@ const EffortManagementDetailPage = () => {
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Efor durumu</span>
                 <EffortStatusBadge status={detail.status} label={detail.statusText} />
               </div>
-              {detail.status === TicketEffortStatus.WaitingCustomerApproval && detail.customerApprovedByUserName && (
-                <InfoItem label="Onaya sunulan" value={detail.customerApprovedByUserName} />
+              {(detail.status === TicketEffortStatus.WaitingCustomerApproval ||
+                detail.status === TicketEffortStatus.MailEffortRequested) &&
+                detail.customerApprovedByUserName && (
+                <InfoItem
+                  label={
+                    detail.status === TicketEffortStatus.MailEffortRequested
+                      ? "Mail ile atanan"
+                      : "Onaya sunulan"
+                  }
+                  value={detail.customerApprovedByUserName}
+                />
               )}
               {detail.status === TicketEffortStatus.CustomerApproved && (
                 <InfoItem
@@ -828,6 +925,79 @@ const EffortManagementDetailPage = () => {
             </section>
           </>
         )}
+
+        <Dialog open={mailDialogOpen} onOpenChange={setMailDialogOpen}>
+          <DialogContent className="sm:max-w-md" aria-describedby="mail-effort-desc">
+            <DialogHeader>
+              <DialogTitle>Mail ile efor iste</DialogTitle>
+              <DialogDescription id="mail-effort-desc">
+                Outlook doğrudan açılır; alıcı ve konu dolar. Kurumsal şablon (logo + efor tablosu)
+                panoya kopyalanır — gövdeye Ctrl+V ile yapıştırın. Onay/red butonu yoktur.
+                Durum &quot;Mail ile efor istendi&quot; olur ve talep size atanır.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 py-1">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="mail-recipient-email"
+                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                >
+                  Alıcı e-posta
+                </label>
+                <Input
+                  id="mail-recipient-email"
+                  type="email"
+                  value={mailRecipientEmail}
+                  onChange={(event) => setMailRecipientEmail(event.target.value)}
+                  placeholder="ornek@firma.com"
+                  aria-label="Alıcı e-posta adresi"
+                  autoComplete="email"
+                  className="h-10 rounded-xl"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="mail-recipient-name"
+                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                >
+                  Ad soyad
+                </label>
+                <Input
+                  id="mail-recipient-name"
+                  type="text"
+                  value={mailRecipientName}
+                  onChange={(event) => setMailRecipientName(event.target.value)}
+                  placeholder="Ad Soyad"
+                  aria-label="Alıcı ad soyad"
+                  autoComplete="name"
+                  className="h-10 rounded-xl"
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setMailDialogOpen(false)}
+                disabled={creatingMail}
+                aria-label="İptal"
+                className="h-10 rounded-xl"
+              >
+                İptal
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleCreateExternalEffortMail()}
+                disabled={creatingMail}
+                aria-label="Outlook mail taslağı oluştur"
+                className="h-10 rounded-xl bg-[#3e5d8f] px-5 text-white hover:bg-[#324d7a]"
+              >
+                {creatingMail && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Mail oluştur
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </DashboardLayout>
   );

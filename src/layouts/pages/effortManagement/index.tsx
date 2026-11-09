@@ -33,6 +33,7 @@ const statusOptions = [
   { value: "4", label: "Efor onaylandı" },
   { value: "5", label: "Müşteri reddetti" },
   { value: "6", label: "Düzenleme için geri gönderildi" },
+  { value: "7", label: "Mail ile efor istendi" },
 ];
 
 const Pagination = ({
