@@ -230,9 +230,10 @@ type UserSearchSingleProps = {
   value: UserAppDto | undefined;
   options: UserAppDto[];
   onInputChange: (val: string) => void;
-  onChange: (user: UserAppDto) => void;
+  onChange: (user: UserAppDto | null) => void;
   placeholder?: string;
   label?: string;
+  clearable?: boolean;
 };
 
 function UserSearchSingle({
@@ -241,6 +242,7 @@ function UserSearchSingle({
   onInputChange,
   onChange,
   placeholder,
+  clearable = false,
 }: UserSearchSingleProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -249,6 +251,8 @@ function UserSearchSingle({
   useEffect(() => {
     if (value) {
       setInputValue(`${value.firstName ?? ""} ${value.lastName ?? ""}`.trim());
+    } else {
+      setInputValue("");
     }
   }, [value?.id]);
 
@@ -258,6 +262,8 @@ function UserSearchSingle({
         setOpen(false);
         if (value) {
           setInputValue(`${value.firstName ?? ""} ${value.lastName ?? ""}`.trim());
+        } else {
+          setInputValue("");
         }
       }
     };
@@ -278,6 +284,15 @@ function UserSearchSingle({
     setOpen(false);
   };
 
+  const handleClear = () => {
+    setInputValue("");
+    onInputChange("");
+    setOpen(false);
+    if (clearable) {
+      onChange(null);
+    }
+  };
+
   return (
     <div className="relative w-full" ref={ref}>
       <div className="relative">
@@ -296,11 +311,7 @@ function UserSearchSingle({
         {value && (
           <button
             type="button"
-            onClick={() => {
-              setInputValue("");
-              onInputChange("");
-              setOpen(false);
-            }}
+            onClick={handleClear}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             aria-label="Temizle"
           >
@@ -507,8 +518,11 @@ function CreateDepartment() {
   const [departmentManageId, setDepartmentManageId] = useState("");
   const [activeOptions] = useState(["Pasif", "Aktif"]);
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
+  const [searchEffortApproveByName, setSearchEffortApproveByName] = useState<UserAppDto[]>([]);
   const [selectedKullanici, setSelectedKullanici] = useState<UserAppDto>();
   const [selectionKullaniciId, setSelectionKullaniciId] = useState<string>();
+  const [selectedEffortApprove, setSelectedEffortApprove] = useState<UserAppDto>();
+  const [selectionEffortApproveId, setSelectionEffortApproveId] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<UserAppDto[]>([]);
   const [selectionUserIds, setSelectionUserIds] = useState<string[]>([]);
   const [namesOfSelected, setNamesOfSelected] = useState<string>();
@@ -519,6 +533,8 @@ function CreateDepartment() {
   const [parentDepartmanId, setParentDepartmanId] = useState(null);
   const [IsVisibleInList, setIsVisibleInList] = useState(false);
   const [nameofSelected, setNameofSelected] = useState("");
+
+  const VESACONS_EMAIL_DOMAIN = "@vesacons.com";
 
   const dispatchBusy = useBusy();
   const dispatchAlert = useAlert();
@@ -562,6 +578,19 @@ function CreateDepartment() {
       };
       setSelectedKullanici(managerData);
       setSelectionKullaniciId(response.data.managerId);
+
+      if (response.data.effortApproveId && response.data.effortApprove) {
+        setSelectedEffortApprove({
+          id: response.data.effortApproveId,
+          firstName: response.data.effortApprove.firstName,
+          lastName: response.data.effortApprove.lastName,
+          email: response.data.effortApprove.email,
+        });
+        setSelectionEffortApproveId(response.data.effortApproveId);
+      } else {
+        setSelectedEffortApprove(undefined);
+        setSelectionEffortApproveId(null);
+      }
 
       var deptusers: UserAppDto[] = [];
       response.data.departmentUsers.forEach((item) => {
@@ -655,6 +684,7 @@ function CreateDepartment() {
         departmentText: departmentText,
         isActive: departmentIsActive,
         managerId: selectionKullaniciId,
+        effortApproveId: selectionEffortApproveId,
         workCompanyId: selectedCompany.id,
         isVisibleInList: IsVisibleInList,
         departmentUsers: selectedUsers.map((user) => ({
@@ -700,6 +730,7 @@ function CreateDepartment() {
         departmentText: departmentText,
         isActive: departmentIsActive,
         managerId: selectionKullaniciId,
+        effortApproveId: selectionEffortApproveId,
         workCompanyId: selectedCompany.id,
         isVisibleInList: IsVisibleInList,
         departmentUsers: selectedUsers.map((user) => ({
@@ -738,6 +769,28 @@ function CreateDepartment() {
       } finally {
         dispatchBusy({ isBusy: false });
       }
+    }
+  };
+
+  const handleSearchEffortApproveByName = async (value: string) => {
+    if (value === "") {
+      setSearchEffortApproveByName([]);
+      return;
+    }
+
+    try {
+      dispatchBusy({ isBusy: true });
+      var conf = getConfiguration();
+      var api = new UserApi(conf);
+      var data = await api.apiUserGetAllUsersAsyncWitNameGet(value);
+      var pureData = (data.data ?? []).filter((user) =>
+        (user.email ?? "").toLowerCase().endsWith(VESACONS_EMAIL_DOMAIN)
+      );
+      setSearchEffortApproveByName(pureData);
+    } catch (error) {
+      console.log("error", error);
+    } finally {
+      dispatchBusy({ isBusy: false });
     }
   };
 
@@ -900,6 +953,7 @@ function CreateDepartment() {
                     options={searchByName}
                     onInputChange={handleSearchByName}
                     onChange={(user) => {
+                      if (!user) return;
                       setSelectedKullanici(user);
                       setSelectionKullaniciId(user.id);
                       setNamesOfSelected(`${user.firstName} ${user.lastName}`);
@@ -918,6 +972,40 @@ function CreateDepartment() {
                       </div>
                     </div>
                   )}
+                </FormField>
+
+                {/* Effort Approver Search */}
+                <FormField label="Departman Efor Yöneticisi">
+                  <UserSearchSingle
+                    value={selectedEffortApprove}
+                    options={searchEffortApproveByName}
+                    onInputChange={handleSearchEffortApproveByName}
+                    clearable
+                    onChange={(user) => {
+                      if (!user) {
+                        setSelectedEffortApprove(undefined);
+                        setSelectionEffortApproveId(null);
+                        return;
+                      }
+                      setSelectedEffortApprove(user);
+                      setSelectionEffortApproveId(user.id ?? null);
+                    }}
+                    placeholder="vesacons.com e-posta ile ara..."
+                  />
+                  {selectedEffortApprove && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                      <UserAvatar user={selectedEffortApprove} size="md" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {selectedEffortApprove.firstName} {selectedEffortApprove.lastName}
+                        </p>
+                        <p className="text-xs text-slate-500">{selectedEffortApprove.email}</p>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    Boş bırakılırsa efor onayı departman yöneticisine gider.
+                  </p>
                 </FormField>
 
                 {/* Users Multi-Search */}

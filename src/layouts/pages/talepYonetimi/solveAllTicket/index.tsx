@@ -38,7 +38,7 @@ import {
   Eye,
   Zap,
   UserCheck,
-  UserPlus,
+  Timer,
   BarChart2,
   LayoutList,
   ChevronLeft,
@@ -65,7 +65,7 @@ import QuickUpdatePanel, { QuickUpdateTicket } from "./QuickUpdateDialog";
 import SubmitForApprovalPanel, { SubmitForApprovalTicket } from "./SubmitForApprovalDialog";
 import GrantTicketAccessPanel, { GrantTicketAccessTicket } from "./GrantTicketAccessDialog";
 
-/** Efor İste: backend CanGrantTicketAccess (UserApp.IsEffortEnter + yönetilen departman alt ağacı). */
+/** Efor İste: backend CanGrantTicketAccess (yalnızca UserApp.IsEffortEnter). */
 const canShowEffortRequest = (row: {
   canGrantTicketAccess?: boolean;
 }): boolean => row.canGrantTicketAccess === true;
@@ -671,7 +671,7 @@ function SolveAllTicket() {
                       disabled={panelBusy}
                       onClick={() => handleGrantAccessOpen(row.original)}
                     >
-                      <UserPlus className="w-3.5 h-3.5" />
+                      <Timer className="w-3.5 h-3.5" />
                     </ActionBtn>
                   </span>
                 </PopoverAnchor>

@@ -29,7 +29,7 @@ const statusOptions = [
   { value: "", label: "Tüm durumlar" },
   { value: "1", label: "Efor yöneticisine gönderildi" },
   { value: "2", label: "İncelemede" },
-  { value: "3", label: "Müşteri onayı bekliyor" },
+  { value: "3", label: "Onay Bekliyor" },
   { value: "4", label: "Efor onaylandı" },
   { value: "5", label: "Müşteri reddetti" },
   { value: "6", label: "Düzenleme için geri gönderildi" },
