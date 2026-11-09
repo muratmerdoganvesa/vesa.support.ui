@@ -1,4 +1,4 @@
-import { formatHours } from "./shared";
+import { formatManDays } from "./shared";
 import type {
   TicketEffortManagementDetailDto,
   TicketEffortManagementEffortsDto,
@@ -34,7 +34,7 @@ export const buildExternalEffortMailHtml = (
   const title = escapeHtml(detail.title?.trim() || "—");
   const customer = escapeHtml(detail.customerName?.trim() || "—");
   const items = efforts?.items ?? [];
-  const totalInvoice = formatHours(efforts?.totalInvoiceHours);
+  const totalManDays = formatManDays(efforts?.totalInvoiceHours);
   const mailTitle = "Efor Onayı Bilgisi";
 
   const rows =
@@ -52,7 +52,7 @@ export const buildExternalEffortMailHtml = (
                 ${multilineHtml(item.description)}
               </td>
               <td align="right" style="padding:12px 14px;border-bottom:1px solid #eef2f7;color:#3e5d8f;font-size:13px;font-weight:700;white-space:nowrap;width:22%;${zebra}">
-                ${escapeHtml(formatHours(item.invoiceHours))}
+                ${escapeHtml(formatManDays(item.invoiceHours))}
               </td>
             </tr>`;
           })
@@ -84,8 +84,8 @@ export const buildExternalEffortMailHtml = (
                                         <p style="margin:0;font-size:14px;font-weight:700;color:#0f172a;">#${ticketNo}</p>
                                     </td>
                                     <td style="padding:14px 18px;background-color:#f8fafc;border-left:1px solid #f1f5f9;width:50%;vertical-align:top;">
-                                        <p style="margin:0 0 3px;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:#94a3b8;">Toplam fatura saati</p>
-                                        <p style="margin:0;font-size:18px;font-weight:700;color:#3e5d8f;">${escapeHtml(totalInvoice)}</p>
+                                        <p style="margin:0 0 3px;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:#94a3b8;">Toplam adam gün</p>
+                                        <p style="margin:0;font-size:18px;font-weight:700;color:#3e5d8f;">${escapeHtml(totalManDays)}</p>
                                     </td>
                                 </tr>
                             </table>
@@ -100,7 +100,7 @@ export const buildExternalEffortMailHtml = (
                                         Yapılacak iş
                                     </th>
                                     <th align="right" style="background-color:#f1f5f9;padding:12px 14px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;width:22%;">
-                                        Fatura saati
+                                        Adam gün
                                     </th>
                                 </tr>
                                 ${rows}

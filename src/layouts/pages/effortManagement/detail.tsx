@@ -37,7 +37,7 @@ import {
 } from "./api";
 import { downloadApprovedEffortHtml } from "./approvedEffortReport";
 import { openExternalEffortMailInOutlook } from "./effortMailDraft";
-import { EffortStatusBadge, formatDateTime, formatHours } from "./shared";
+import { EffortStatusBadge, formatDateTime, formatHours, formatManDays } from "./shared";
 import { TicketEffortStatus } from "./types";
 import type {
   TicketEffortManagementDetailDto,
@@ -347,7 +347,7 @@ const EffortManagementDetailPage = () => {
     : (approvalActionTabs[0]?.value ?? "submit");
   const approvalSectionDescription =
     activeApprovalActionTab === "decide"
-      ? "Fatura saatlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner."
+      ? "Adam gün değerlerini ve yapılacak işleri inceleyin. Onaylarsanız efor onaylandı durumuna geçer ve talep tekrar açık olur. Reddederseniz red nedeni departman yöneticisine döner."
       : "VESA içindeki efor yöneticilerinden onay isteyebilir, kendiniz onaylayabilir veya eforu düzenleme için geri gönderebilirsiniz.";
 
   return (
@@ -462,7 +462,7 @@ const EffortManagementDetailPage = () => {
                     <TabsContent value="submit" className="mt-0 outline-none">
                       <div className="flex flex-col gap-4 p-6">
                         <p className="text-xs text-slate-500">
-                          Onayı VESA içindeki efor yöneticilerinden veya talebin müşterisine bağlı kişilerden isteyebilirsiniz. Seçilen kişi bu talebi, fatura saatlerini ve yapılacak işleri görür.
+                          Onayı VESA içindeki efor yöneticilerinden veya talebin müşterisine bağlı kişilerden isteyebilirsiniz. Seçilen kişi bu talebi, adam gün değerlerini ve yapılacak işleri görür.
                         </p>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr_auto] md:items-end">
                           <div className="flex flex-col gap-1.5">
@@ -801,9 +801,15 @@ const EffortManagementDetailPage = () => {
                         <strong className="text-slate-800">{formatHours(efforts?.totalEffortHours)}</strong>
                       </span>
                     )}
+                    {canViewActualHours && (
+                      <span>
+                        Toplam fatura saati{" "}
+                        <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
+                      </span>
+                    )}
                     <span>
-                      Toplam fatura saati{" "}
-                      <strong className="text-slate-800">{formatHours(efforts?.totalInvoiceHours)}</strong>
+                      Toplam adam gün{" "}
+                      <strong className="text-slate-800">{formatManDays(efforts?.totalInvoiceHours)}</strong>
                     </span>
                   </div>
                 )}
@@ -849,9 +855,15 @@ const EffortManagementDetailPage = () => {
                               <strong className="text-slate-800">{formatHours(effort.effortHours)}</strong>
                             </span>
                           )}
+                          {canViewActualHours && (
+                            <span>
+                              Fatura{" "}
+                              <strong className="text-slate-800">{formatHours(effort.invoiceHours)}</strong>
+                            </span>
+                          )}
                           <span>
-                            Fatura{" "}
-                            <strong className="text-slate-800">{formatHours(effort.invoiceHours)}</strong>
+                            Adam gün{" "}
+                            <strong className="text-slate-800">{formatManDays(effort.invoiceHours)}</strong>
                           </span>
                         </div>
                         <p className="mt-3 max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-700">
@@ -875,8 +887,13 @@ const EffortManagementDetailPage = () => {
                               Fiili saat
                             </TableHead>
                           )}
+                          {canViewActualHours && (
+                            <TableHead className="w-[10%] text-[11px] uppercase tracking-wider text-slate-400">
+                              Fatura saati
+                            </TableHead>
+                          )}
                           <TableHead className="w-[10%] text-[11px] uppercase tracking-wider text-slate-400">
-                            Fatura saati
+                            Adam gün
                           </TableHead>
                           <TableHead className="text-[11px] uppercase tracking-wider text-slate-400">
                             Yapılacak iş
@@ -904,8 +921,13 @@ const EffortManagementDetailPage = () => {
                                 {formatHours(effort.effortHours)}
                               </TableCell>
                             )}
+                            {canViewActualHours && (
+                              <TableCell className="align-top text-sm text-slate-700">
+                                {formatHours(effort.invoiceHours)}
+                              </TableCell>
+                            )}
                             <TableCell className="align-top text-sm text-slate-700">
-                              {formatHours(effort.invoiceHours)}
+                              {formatManDays(effort.invoiceHours)}
                             </TableCell>
                             <TableCell className="whitespace-normal align-top">
                               <p className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-sm text-slate-600">

@@ -1,5 +1,5 @@
 import vesaconsLogoSvg from "assets/images/small-logos/vesacons-logo.svg?raw";
-import { formatDateTime, formatHours } from "./shared";
+import { formatDateTime, formatHours, formatManDays } from "./shared";
 import {
   TicketEffortStatus,
   type TicketEffortManagementDetailDto,
@@ -65,10 +65,11 @@ export const buildApprovedEffortHtml = (
     : "Bu belge efor kaydının güncel özetidir.";
   const statusCardClass = isApproved ? "summary-card success" : "summary-card";
 
+  const emptyColSpan = canViewActualHours ? 6 : 4;
   const effortRows =
     items.length === 0
       ? `<tr>
-          <td colspan="${canViewActualHours ? 4 : 3}" class="empty">Bu talebe bağlı efor kaydı yok.</td>
+          <td colspan="${emptyColSpan}" class="empty">Bu talebe bağlı efor kaydı yok.</td>
         </tr>`
       : items
           .map((item, index) => {
@@ -78,10 +79,14 @@ export const buildApprovedEffortHtml = (
                   ${item.userTitle ? `<div class="person-title">${escapeHtml(item.userTitle)}</div>` : ""}
                 </td>`
               : "";
+            const invoiceCell = canViewActualHours
+              ? `<td class="num">${escapeHtml(formatHours(item.invoiceHours))}</td>`
+              : "";
             return `<tr>
               <td class="num index">${index + 1}</td>
               ${personCell}
-              <td class="num highlight">${escapeHtml(formatHours(item.invoiceHours))}</td>
+              ${invoiceCell}
+              <td class="num highlight">${escapeHtml(formatManDays(item.invoiceHours))}</td>
               <td class="work">${multilineHtml(item.description)}</td>
               <td class="date">${escapeHtml(formatDateTime(item.createdDate))}</td>
             </tr>`;
@@ -132,9 +137,17 @@ export const buildApprovedEffortHtml = (
 
   const summaryCards = `
     <div class="summary-grid">
-      <div class="summary-card primary">
+      ${
+        canViewActualHours
+          ? `<div class="summary-card">
         <span class="summary-label">Toplam fatura saati</span>
         <strong class="summary-value">${escapeHtml(formatHours(efforts?.totalInvoiceHours))}</strong>
+      </div>`
+          : ""
+      }
+      <div class="summary-card primary">
+        <span class="summary-label">Toplam adam gün</span>
+        <strong class="summary-value">${escapeHtml(formatManDays(efforts?.totalInvoiceHours))}</strong>
       </div>
       <div class="summary-card">
         <span class="summary-label">Görev / iş kaydı</span>
@@ -465,7 +478,7 @@ export const buildApprovedEffortHtml = (
         <p class="hero-title">${textOrDash(detail.title)}</p>
         <div class="hero-meta">
           <span class="chip">Durum: ${textOrDash(statusLabel)}</span>
-          <span class="chip">Fatura: ${escapeHtml(formatHours(efforts?.totalInvoiceHours))} saat</span>
+          <span class="chip">Adam gün: ${escapeHtml(formatManDays(efforts?.totalInvoiceHours))}</span>
           ${detail.customerName ? `<span class="chip">${escapeHtml(detail.customerName)}</span>` : ""}
         </div>
       </header>
@@ -484,14 +497,15 @@ export const buildApprovedEffortHtml = (
         ${approvalNote}
 
         <section class="card">
-          <h2>Yapılacak işler ve fatura saatleri</h2>
+          <h2>Yapılacak işler ve adam gün</h2>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>#</th>
                   ${canViewActualHours ? "<th>Personel</th>" : ""}
-                  <th>Fatura saati</th>
+                  ${canViewActualHours ? "<th>Fatura saati</th>" : ""}
+                  <th>Adam gün</th>
                   <th>Yapılacak iş / görev</th>
                   <th>Tarih</th>
                 </tr>
