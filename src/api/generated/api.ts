@@ -5252,6 +5252,12 @@ export interface CreateUserDto {
      * @memberof CreateUserDto
      */
     'isKanbanAdmin'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof CreateUserDto
+     */
+    'isEffortEnter'?: boolean;
 }
 
 
@@ -20344,6 +20350,12 @@ export interface UpdateUserDto {
      * @memberof UpdateUserDto
      */
     'isKanbanAdmin'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UpdateUserDto
+     */
+    'isEffortEnter'?: boolean;
 }
 
 
@@ -20709,6 +20721,12 @@ export interface UserApp {
     'isKanbanAdmin'?: boolean;
     /**
      * 
+     * @type {boolean}
+     * @memberof UserApp
+     */
+    'isEffortEnter'?: boolean;
+    /**
+     * 
      * @type {Array<PerformanceForm>}
      * @memberof UserApp
      */
@@ -21016,6 +21034,12 @@ export interface UserAppDto {
      * @memberof UserAppDto
      */
     'isKanbanAdmin'?: boolean;
+    /**
+     * 
+     * @type {boolean}
+     * @memberof UserAppDto
+     */
+    'isEffortEnter'?: boolean;
 }
 
 

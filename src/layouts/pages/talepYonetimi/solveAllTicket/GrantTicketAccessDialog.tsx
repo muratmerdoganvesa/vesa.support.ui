@@ -42,6 +42,8 @@ interface AccessListItem {
   isActive: boolean;
   isEffort?: boolean;
   isEffortComplated?: boolean;
+  /** null: onay başlamadı; false: yönetici onayında beklemede; true: yönetici onayladı */
+  isManagerApproved?: boolean | null;
 }
 
 interface GrantTicketAccessPanelProps {
@@ -520,18 +522,28 @@ const GrantTicketAccessPanel = ({
                   key={item.id}
                   className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1.5 text-sm text-slate-700"
                 >
-                  <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                     <span className="truncate font-medium">{item.name}</span>
                     {item.isEffortComplated ? (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-sky-700">
                         <CheckCircle2 className="h-3 w-3" />
-                        Tamamlandı
+                        Efor-girişi yapıldı
                       </span>
                     ) : (
-                      <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                        Bekliyor
+                      <span className="inline-flex shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-amber-700">
+                        Beklemede
                       </span>
                     )}
+                    {item.isManagerApproved === true ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Yönetici onayladı
+                      </span>
+                    ) : item.isManagerApproved === false ? (
+                      <span className="inline-flex shrink-0 rounded-md bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-violet-700">
+                        Yönetici onayında beklemede
+                      </span>
+                    ) : null}
                   </div>
                   {!isEffortProcessLocked && (
                     <button
@@ -539,7 +551,7 @@ const GrantTicketAccessPanel = ({
                       aria-label={`${item.name} efor isteğini kaldır`}
                       disabled={isFormLocked}
                       onClick={() => handleRevoke(item)}
-                      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
                     >
                       {revokingUserId === item.userAppId ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />

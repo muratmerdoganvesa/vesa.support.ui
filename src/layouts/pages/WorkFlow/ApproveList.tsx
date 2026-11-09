@@ -87,6 +87,18 @@ const getInitials = (name?: string | null): string => {
     .toUpperCase();
 };
 
+/** Detay kolonunda gösterilmemesi için WorkFlowInfo içindeki "UID:{guid}" işaretini temizler. */
+const stripUidFromWorkFlowInfo = (info?: string | null): string => {
+  if (!info) return "";
+  return info
+    .replace(/\s*\|\s*UID:[^\s|]+/gi, "")
+    .replace(/\bUID:[^\s|]+/gi, "")
+    .replace(/\s*\|\s*\|/g, " | ")
+    .replace(/^\s*\|\s*|\s*\|\s*$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
+
 // ─── Status filter tabs (same statuses as former sidebar) ─────────────────────
 
 interface SideNavItem {
@@ -1207,6 +1219,10 @@ function ApproveList() {
                           detailRaw != null && String(detailRaw).trim() !== ""
                             ? String(detailRaw)
                             : "-";
+                        const detailDisplayStr =
+                          detailStr === "-"
+                            ? "-"
+                            : stripUidFromWorkFlowInfo(detailStr) || "-";
                         const noteRaw = (row as any).approvedUser_RuntimeNote;
                         const noteStr =
                           noteRaw != null && String(noteRaw).trim() !== ""
@@ -1369,7 +1385,7 @@ function ApproveList() {
                             {/* Detay — tam metin, satır kırar; tablo genişler, yatay kaydır */}
                             <td className="px-3 py-3 align-top min-w-[16rem] max-w-md">
                               <p className="text-xs text-slate-700 break-words leading-relaxed whitespace-normal">
-                                {detailStr}
+                                {detailDisplayStr}
                               </p>
                             </td>
 

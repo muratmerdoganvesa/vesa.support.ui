@@ -268,8 +268,12 @@ let form = {
       type: "checkbox",
       errorMsg: "isKanbanAdmin",
     },
-  
-
+    isEffortEnter: {
+      name: "isEffortEnter",
+      label: "Efor İsteyebilir",
+      type: "checkbox",
+      errorMsg: "isEffortEnter",
+    },
   },
 };
 export default form;
