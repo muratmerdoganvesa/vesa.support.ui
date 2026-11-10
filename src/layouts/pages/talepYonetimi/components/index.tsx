@@ -682,7 +682,7 @@ function FilterTableMethod({
         if (isSolveAllTicket) {
           setFilters((prev) => ({
             ...prev,
-            status: ["2", "4", "5", "6", "7", "8", "9", "10", "13", "14", "15"],
+            status: ["2", "4", "5", "6", "7", "8", "9", "10", "12", "13", "14", "15"],
           }));
         } else {
           setFilters((prev) => ({
@@ -692,8 +692,9 @@ function FilterTableMethod({
         }
       }
 
+      // solveAllTicket: Taslak (1) filtreden gizlenir; Onay Sürecinde (12) seçilebilir olmalı
       const filteredData = isSolveAllTicket
-        ? response.data.filter((item: any) => item.id !== 12 && item.id !== 1)
+        ? response.data.filter((item: any) => item.id !== 1)
         : response.data;
       setStatusData(filteredData);
 
@@ -800,8 +801,8 @@ function FilterTableMethod({
         const filterCheckData = await api5.apiUserCheckApplyDefaultFiltersGet();
         if (filterCheckData.data === true) {
           filters.status = isSolveAllTicket
-            ? ["2", "4", "5", "6", "7", "8", "9", "10", "13"]
-            : ["1", "2", "4", "5", "6", "7", "8", "9", "10", "12", "13"];
+            ? ["2", "4", "5", "6", "7", "8", "9", "10", "12", "13", "14", "15"]
+            : ["1", "2", "4", "5", "6", "7", "8", "9", "10", "12", "13", "14", "15"];
         }
         setIsFirst(false);
 
