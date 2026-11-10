@@ -20,9 +20,6 @@ const multilineHtml = (value?: string | null): string => {
   return escapeHtml(trimmed).replace(/\n/g, "<br>");
 };
 
-export const buildExternalEffortMailSubject = (ticketNumber?: number | null): string =>
-  `Talep ${ticketNumber ?? "—"} Numaralı Ticketin Efor Onayı`;
-
 const buildEffortRowsPlain = (efforts: TicketEffortManagementEffortsDto | null): string => {
   const items = efforts?.items ?? [];
   if (items.length === 0) {
@@ -53,19 +50,19 @@ export const buildExternalEffortMailPlainText = (
   const effortBlock = buildEffortRowsPlain(efforts);
 
   return [
-    "Sayın                          ,",
+    "Merhaba                     ,",
+    "",
+    `${ticketNo} Nolu Talebiniz kapsamında toplam eforumuz ${totalManDays} adam/gün olup onayınızla çalışmayı plana alabiliriz. Bilginize sunar onayınızı rica ederim`,
     "",
     `Ticket Numarası : ${ticketNo}`,
     "",
-    "Onaylamanız durumunda çalışmalara başlayacağız.",
-    "",
-    "Girilen Eforlar:",
+    "Taleple ilgili:",
     effortBlock,
     "",
-    `Toplam fatura saati: ${totalInvoiceHours}`,
-    `Toplam adam gün: ${totalManDays}`,
+    `Toplam fatura saati : ${totalInvoiceHours}`,
+    `Toplam adam gün : ${totalManDays}`,
     "",
-    "İyi çalışmalar dilerim.",
+    "İyi çalışmalar dilerim",
   ].join("\n");
 };
 
@@ -107,10 +104,12 @@ export const buildExternalEffortMailHtml = (
   <meta charset="UTF-8">
 </head>
 <body style="margin:0;padding:16px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;font-size:14px;line-height:1.6;">
-  <p style="margin:0 0 16px;">Sayın&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;,</p>
+  <p style="margin:0 0 16px;">Merhaba&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;,</p>
+  <p style="margin:0 0 16px;">
+    <strong>${ticketNo}</strong> Nolu Talebiniz kapsamında toplam eforumuz <strong>${totalManDays}</strong> adam/gün olup onayınızla çalışmayı plana alabiliriz. Bilginize sunar onayınızı rica ederim
+  </p>
   <p style="margin:0 0 16px;">Ticket Numarası : <strong>${ticketNo}</strong></p>
-  <p style="margin:0 0 16px;">Onaylamanız durumunda çalışmalara başlayacağız.</p>
-  <p style="margin:0 0 8px;"><strong>Girilen Eforlar</strong></p>
+  <p style="margin:0 0 8px;"><strong>Taleple ilgili</strong></p>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
          style="border-collapse:collapse;width:100%;max-width:720px;margin:0 0 16px;border:1px solid #e2e8f0;">
     <tr>
@@ -126,9 +125,9 @@ export const buildExternalEffortMailHtml = (
     </tr>
     ${rows}
   </table>
-  <p style="margin:0 0 4px;">Toplam fatura saati: <strong>${totalInvoiceHours}</strong></p>
-  <p style="margin:0 0 16px;">Toplam adam gün: <strong>${totalManDays}</strong></p>
-  <p style="margin:0;">İyi çalışmalar dilerim.</p>
+  <p style="margin:0 0 4px;">Toplam fatura saati : <strong>${totalInvoiceHours}</strong></p>
+  <p style="margin:0 0 16px;">Toplam adam gün : <strong>${totalManDays}</strong></p>
+  <p style="margin:0;">İyi çalışmalar dilerim</p>
 </body>
 </html>`;
 };
@@ -155,20 +154,8 @@ const copyHtmlToClipboard = async (html: string, plainText: string): Promise<boo
   return false;
 };
 
-const openOutlookCompose = (subject: string): void => {
-  // URLSearchParams kullanma: boşlukları + yapar ve Outlook'ta "Talep+849..." görünür.
-  const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}`;
-  const anchor = document.createElement("a");
-  anchor.href = mailtoUrl;
-  anchor.rel = "noopener";
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-};
-
 /**
- * Alıcı bilgisi istemeden Outlook açar (yalnızca konu).
- * Mail gövdesi panoya kopyalanır; gövdeye Ctrl+V ile yapıştırılır.
+ * Efor mail şablonunu panoya kopyalar. Outlook açmaz, status değiştirmez.
  */
 export const openExternalEffortMailInOutlook = async (
   detail: TicketEffortManagementDetailDto,
@@ -178,14 +165,13 @@ export const openExternalEffortMailInOutlook = async (
     throw new Error("Talep numarası bulunamadı.");
   }
 
-  const subject = buildExternalEffortMailSubject(detail.ticketNumber);
   const html = buildExternalEffortMailHtml(detail, efforts);
   const plainText = buildExternalEffortMailPlainText(detail, efforts);
   const copied = await copyHtmlToClipboard(html, plainText);
 
-  openOutlookCompose(subject);
+  if (!copied) {
+    throw new Error("Şablon panoya kopyalanamadı. Tarayıcı pano iznini kontrol edin.");
+  }
 
-  return copied
-    ? "Outlook açıldı. Mail gövdesine tıklayıp Ctrl+V ile şablonu yapıştırın. Alıcıyı ve 'Sayın ...' satırındaki ismi kendiniz doldurun."
-    : "Outlook açıldı ancak içerik panoya kopyalanamadı. Tarayıcı pano iznini kontrol edin.";
+  return "Efor şablonu panoya kopyalandı. Mail gövdesine Ctrl+V ile yapıştırabilirsiniz.";
 };
