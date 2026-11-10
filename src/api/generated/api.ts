@@ -16147,6 +16147,12 @@ export interface TicketDepartmensInsertDto {
      * @type {string}
      * @memberof TicketDepartmensInsertDto
      */
+    'effortApproveId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketDepartmensInsertDto
+     */
     'workCompanyId'?: string | null;
     /**
      * 
@@ -16209,6 +16215,18 @@ export interface TicketDepartmensListDto {
      * @memberof TicketDepartmensListDto
      */
     'manager'?: UserApp;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketDepartmensListDto
+     */
+    'effortApproveId'?: string | null;
+    /**
+     * 
+     * @type {UserApp}
+     * @memberof TicketDepartmensListDto
+     */
+    'effortApprove'?: UserApp;
     /**
      * 
      * @type {string}
@@ -16282,6 +16300,12 @@ export interface TicketDepartmensUpdateDto {
      * @memberof TicketDepartmensUpdateDto
      */
     'managerId'?: string | null;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketDepartmensUpdateDto
+     */
+    'effortApproveId'?: string | null;
     /**
      * 
      * @type {string}
@@ -16421,6 +16445,18 @@ export interface TicketDepartment {
      * @memberof TicketDepartment
      */
     'manager'?: UserApp;
+    /**
+     * 
+     * @type {string}
+     * @memberof TicketDepartment
+     */
+    'effortApproveId'?: string | null;
+    /**
+     * 
+     * @type {UserApp}
+     * @memberof TicketDepartment
+     */
+    'effortApprove'?: UserApp;
     /**
      * 
      * @type {Array<UserApp>}

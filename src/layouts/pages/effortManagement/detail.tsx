@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw /* , Send */ } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CheckCircle2, Download, Loader2, Mail, RotateCcw, Send } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import { Button } from "components/ui/button";
@@ -66,6 +66,7 @@ const EffortManagementDetailPage = () => {
   const [managerApproving, setManagerApproving] = useState(false);
   const [approvalActionTab, setApprovalActionTab] = useState<ApprovalActionTab>("submit");
   const [creatingMail, setCreatingMail] = useState(false);
+  const [submittingForApproval, setSubmittingForApproval] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -235,20 +236,48 @@ const EffortManagementDetailPage = () => {
   };
 
   const handleCreateExternalEffortMail = async () => {
-    if (!id || !detail || creatingMail) return;
+    if (!detail || creatingMail || submittingForApproval) return;
+    if (detail.status === TicketEffortStatus.CustomerApproved) {
+      setError("Efor onaylandıktan sonra şablon kopyalanamaz veya düzenleme yapılamaz.");
+      return;
+    }
 
     try {
       setCreatingMail(true);
       setError("");
       setSuccessMessage("");
-      await markMailEffortRequested(id);
+      // Yalnızca şablon kopyalanır; status değişmez.
       const openMessage = await openExternalEffortMailInOutlook(detail, efforts);
       setSuccessMessage(openMessage);
-      await load(id);
     } catch (mailError) {
       setError(readEffortApiError(mailError));
     } finally {
       setCreatingMail(false);
+    }
+  };
+
+  const handleSubmitForApproval = async () => {
+    if (!id || !detail || submittingForApproval || creatingMail) return;
+    if (detail.status === TicketEffortStatus.CustomerApproved) {
+      setError("Efor onaylandıktan sonra onaya sunulamaz.");
+      return;
+    }
+    if (detail.status === TicketEffortStatus.WaitingCustomerApproval) {
+      setError("Bu kayıt zaten onaya sunuldu.");
+      return;
+    }
+
+    try {
+      setSubmittingForApproval(true);
+      setError("");
+      setSuccessMessage("");
+      await markMailEffortRequested(id);
+      await load(id);
+      setSuccessMessage("Talep onaya sunuldu.");
+    } catch (submitError) {
+      setError(readEffortApiError(submitError));
+    } finally {
+      setSubmittingForApproval(false);
     }
   };
 
@@ -269,11 +298,13 @@ const EffortManagementDetailPage = () => {
   //   const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
   //   return label.includes(term);
   // });
+  const isEffortApproved = detail?.status === TicketEffortStatus.CustomerApproved;
   const canShowApprovalActions =
+    !isEffortApproved &&
     // Boolean(detail?.canAssignCustomerApproval) || // Talebi Onaya Sun gizlendi
-    Boolean(detail?.canManagerApprove) ||
-    Boolean(detail?.canReturn) ||
-    Boolean(detail?.canDecideCustomerApproval);
+    (Boolean(detail?.canManagerApprove) ||
+      Boolean(detail?.canReturn) ||
+      Boolean(detail?.canDecideCustomerApproval));
   const approvalActionTabs: {
     value: ApprovalActionTab;
     label: string;
@@ -337,12 +368,13 @@ const EffortManagementDetailPage = () => {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {detail?.canRequestMailEffort && (
+            {detail?.canRequestMailEffort &&
+              detail.status !== TicketEffortStatus.CustomerApproved && (
               <Button
                 type="button"
                 onClick={() => void handleCreateExternalEffortMail()}
-                disabled={creatingMail}
-                aria-label="Outlook ile efor onay maili oluştur"
+                disabled={creatingMail || submittingForApproval}
+                aria-label="Efor şablonunu panoya kopyala"
                 className="h-10 rounded-xl border border-slate-200 bg-white px-4 text-slate-700 hover:bg-slate-50"
               >
                 {creatingMail ? (
@@ -350,7 +382,25 @@ const EffortManagementDetailPage = () => {
                 ) : (
                   <Mail className="h-3.5 w-3.5" />
                 )}
-                Mail ile efor iste
+                Efor şablonu kopyala
+              </Button>
+            )}
+            {detail?.canRequestMailEffort &&
+              detail.status !== TicketEffortStatus.CustomerApproved &&
+              detail.status !== TicketEffortStatus.WaitingCustomerApproval && (
+              <Button
+                type="button"
+                onClick={() => void handleSubmitForApproval()}
+                disabled={submittingForApproval || creatingMail}
+                aria-label="Talebi onaya sun"
+                className="h-10 rounded-xl bg-[#3e5d8f] px-4 text-white hover:bg-[#324d7a]"
+              >
+                {submittingForApproval ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                Onaya Sun
               </Button>
             )}
             {canDownloadEffortReport &&
@@ -618,14 +668,24 @@ const EffortManagementDetailPage = () => {
               </section>
             )}
 
+            {detail.status === TicketEffortStatus.WaitingCustomerApproval && (
+              <section className="rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
+                <p className="text-sm font-semibold text-violet-900">Onay Bekliyor</p>
+                <p className="mt-1 text-xs text-violet-800">
+                  {detail.customerApprovedByUserName || "Atanan"}
+                  {" · "}
+                  Talep onaya sunuldu. Giriş yapan kullanıcı onay işlemlerinden durumu güncelleyebilir.
+                </p>
+              </section>
+            )}
+
             {detail.status === TicketEffortStatus.MailEffortRequested && (
               <section className="rounded-2xl border border-indigo-100 bg-indigo-50 px-5 py-4">
                 <p className="text-sm font-semibold text-indigo-900">Mail ile efor istendi</p>
                 <p className="mt-1 text-xs text-indigo-800">
-                  {detail.customerApprovedByUserName || "Maili gönderen"}
+                  {detail.customerApprovedByUserName || "Atanan"}
                   {" · "}
-                  Outlook mail şablonu oluşturuldu. Onay/red butonu yoktur; bu talebi atanan kişi sistem
-                  üzerinden onaylayabilir.
+                  Bu kayıt mail sürecinde. Durumu giriş yapan kullanıcı onay işlemlerinden güncelleyebilir.
                 </p>
               </section>
             )}
