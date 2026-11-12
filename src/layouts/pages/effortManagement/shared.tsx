@@ -26,7 +26,11 @@ export const hoursToManDays = (hours?: number | null): number | null => {
 export const formatManDays = (hours?: number | null): string => {
   const manDays = hoursToManDays(hours);
   if (manDays === null) return "—";
-  return manDays.toFixed(3);
+  // Ondalık ayırıcı virgül; 4.000 Türkçede "dört bin" gibi okunmasın.
+  return manDays.toLocaleString("tr-TR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
 };
 
 export const EffortStatusBadge = ({

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Search, Timer } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
@@ -109,7 +108,6 @@ const Pagination = ({
 };
 
 const EffortManagementPage = () => {
-  const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -161,7 +159,7 @@ const EffortManagementPage = () => {
 
   const handleOpen = (id?: string) => {
     if (!id) return;
-    navigate(`/effortManagement/${id}`);
+    window.open(`/effortManagement/${id}`, "_blank", "noopener,noreferrer");
   };
 
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
