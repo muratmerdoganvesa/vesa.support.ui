@@ -277,6 +277,34 @@ select.gantt-module-status-select:hover {
   border-color: #2dd4bf;
 }
 
+input.gantt-live-date-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #5eead4;
+  border-radius: 10px;
+  background-color: #f0fdfa;
+  background-image: none;
+  appearance: auto;
+  -webkit-appearance: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: #134e4a;
+  cursor: pointer;
+}
+
+input.gantt-live-date-input:focus {
+  outline: none;
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.22);
+}
+
+input.gantt-live-date-input:hover {
+  border-color: #2dd4bf;
+}
+
 .e-gantt-dialog .e-edit-form-column.gantt-modules-tab-column {
   float: left;
   padding: 16px 18px 18px 18px;

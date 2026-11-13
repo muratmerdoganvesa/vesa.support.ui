@@ -130,6 +130,9 @@ const ProjectStatsKanbanCard = ({
   const moduleNames = (item.modules ?? []).map((m) => String(m).trim()).filter(Boolean);
   const moduleLabel = moduleNames.join(", ");
   const hasModules = moduleNames.length > 0;
+  const liveDateLabel = item.liveDate
+    ? formatDate(item.liveDate)
+    : "Canlı Tarih Girilmedi";
   const consultants = item.employees ?? [];
   const headline =
     [customerName, projectPath, hasModules ? moduleLabel : stepName]
@@ -195,21 +198,34 @@ const ProjectStatsKanbanCard = ({
               Danışman yok
             </span>
           )}
-          {hasModules ? (
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
+            {hasModules ? (
+              <span
+                className="inline-flex max-w-full truncate rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
+                title={`Modül: ${moduleLabel}`}
+              >
+                {moduleLabel}
+              </span>
+            ) : (
+              <span
+                className="inline-flex max-w-full truncate text-[10px] font-semibold text-red-600 dark:text-red-400"
+                title="Modül girilmemiş"
+              >
+                modul girilmemiş
+              </span>
+            )}
             <span
-              className="mt-1 inline-flex max-w-full truncate rounded border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300"
-              title={`Modül: ${moduleLabel}`}
+              className={cn(
+                "inline-flex max-w-full truncate rounded border px-1.5 py-0.5 text-[10px] font-semibold",
+                item.liveDate
+                  ? "border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-200"
+                  : "border-slate-200 bg-slate-50 text-slate-500 dark:border-border dark:bg-muted dark:text-muted-foreground",
+              )}
+              title={item.liveDate ? `Canlı Tarih: ${liveDateLabel}` : "Canlı Tarih Girilmedi"}
             >
-              {moduleLabel}
+              {liveDateLabel}
             </span>
-          ) : (
-            <span
-              className="mt-1 inline-flex max-w-full truncate text-[10px] font-semibold text-red-600 dark:text-red-400"
-              title="Modül girilmemiş"
-            >
-              modul girilmemiş
-            </span>
-          )}
+          </div>
         </div>
 
         <ChevronDown

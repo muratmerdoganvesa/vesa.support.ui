@@ -326,7 +326,7 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-         
+        
             <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
@@ -361,7 +361,8 @@ export default function App() {
             <Route path="/position/detail/:id" element={<PositionDetailPage />} />
             <Route path="/org-chart" element={<OrgChartPage />} />
             <Route path="/organizationalChart" element={<OrganizationalChart />} />
-            
+            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
+            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
             
             <Route path="/form-role" element={<FormRoleList />} />
             <Route path="/form-role/detail" element={<FormRoleDetail />} />
@@ -405,8 +406,7 @@ export default function App() {
             <Route path="/projectmanagement/chart" element={<ProjectChart />} />
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
             <Route path="/chat-home" element={<ChatHome />} />
-            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
-            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
+        
             <Route path="/myUserProjects" element={<MyUserProjects />} />
             <Route path="/myUserProjects/chart" element={<ProjectChart />} />
 

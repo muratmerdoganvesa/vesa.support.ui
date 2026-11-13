@@ -1042,6 +1042,7 @@ function buildLocalRowPatchFromTaskData(
     projectStatus:
       normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
     ...resolveChecklistForSave(taskData, existing),
+    liveDate: resolveLiveDateForSave(taskData, existing),
     isSubProject: hasIsSubProjectField(taskData)
       ? normalizeIsSubProjectFromRow(taskData)
       : Boolean(existing?.isSubProject),
@@ -1310,6 +1311,75 @@ function resolveChecklistForSave(taskData: any, existing: any): ProjectTaskCheck
   return next;
 }
 
+/** HTML date input (yyyy-MM-dd); boşsa null. */
+function formatLiveDateForInput(value: unknown): string {
+  if (value == null || value === "") return "";
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) return "";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseLiveDateInput(raw: string | null | undefined): string | null {
+  if (raw == null || raw.trim() === "") return null;
+  const match = raw.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+}
+
+function readLiveDateFromRow(row: any): string | null {
+  if (!row || typeof row !== "object") return null;
+  const raw =
+    row.liveDate ??
+    row.LiveDate ??
+    row?.taskData?.liveDate ??
+    row?.taskData?.LiveDate;
+  const formatted = formatLiveDateForInput(raw);
+  return formatted || null;
+}
+
+function hasLiveDateKey(row: any): boolean {
+  if (!row || typeof row !== "object") return false;
+  return (
+    "liveDate" in row ||
+    "LiveDate" in row ||
+    (row.taskData && ("liveDate" in row.taskData || "LiveDate" in row.taskData))
+  );
+}
+
+function applyLiveDateToRow(rowData: any, next: string | null) {
+  if (!rowData) return;
+  rowData.liveDate = next;
+  if (rowData.taskData) rowData.taskData.liveDate = next;
+}
+
+function hydrateMissingLiveDate(rowData: any, source: any) {
+  if (!rowData || !source) return;
+  if (hasLiveDateKey(rowData)) return;
+  applyLiveDateToRow(rowData, readLiveDateFromRow(source));
+}
+
+function resolveLiveDateForSave(taskData: any, existing: any): string | null {
+  if (hasLiveDateKey(taskData)) return readLiveDateFromRow(taskData);
+  return readLiveDateFromRow(existing);
+}
+
+function readLiveDateFromElement(
+  root: HTMLElement | null | undefined,
+): string | null | undefined {
+  if (!root) return undefined;
+  const wrap = root.querySelector<HTMLElement>(".gantt-task-checklist");
+  if (!wrap) return undefined;
+  const input = wrap.querySelector<HTMLInputElement>("input[data-live-date]");
+  if (!input) return undefined;
+  return parseLiveDateInput(input.value);
+}
+
 /**
  * Durum değeri: Syncfusion DropDownList dialog içinde güvenilir değil;
  * native select kullan (popup/z-index/value tipi sorunları yok).
@@ -1404,6 +1474,9 @@ function mergeDialogModuleStatusIntoSaveData(data: any) {
 
   const checklist = readTaskChecklistFromElement(editor);
   if (checklist) applyTaskChecklistToRow(data, checklist);
+
+  const liveDate = readLiveDateFromElement(editor);
+  if (liveDate !== undefined) applyLiveDateToRow(data, liveDate);
 }
 
 /** Durum (projectStatus) yalnızca Modüller sekmesi composite editöründe; kayıttan önce DOM'dan çek. */
@@ -1418,6 +1491,9 @@ function mergeDialogProjectStatusIntoSaveData(data: any) {
   }
   const checklist = readTaskChecklistFromElement(editor);
   if (checklist) applyTaskChecklistToRow(data, checklist);
+
+  const liveDate = readLiveDateFromElement(editor);
+  if (liveDate !== undefined) applyLiveDateToRow(data, liveDate);
 }
 
 function appendModuleMultiSelect(
@@ -1501,10 +1577,40 @@ function appendStatusDropDown(host: HTMLElement, rowData: any) {
   return select;
 }
 
+function appendLiveDateRow(wrap: HTMLElement, rowData: any) {
+  const row = document.createElement("div");
+  row.className = "gantt-task-checklist__row";
+
+  const label = document.createElement("label");
+  label.className = "gantt-task-checklist__label";
+  const inputId = `gantt-livedate-${Math.random().toString(36).slice(2, 8)}`;
+  label.htmlFor = inputId;
+  label.textContent = "Canlı Tarih";
+
+  const inputWrap = document.createElement("div");
+  inputWrap.className = "gantt-task-checklist__select-wrap";
+  const input = document.createElement("input");
+  input.type = "date";
+  input.id = inputId;
+  input.className = "gantt-module-status-select gantt-live-date-input";
+  input.dataset.liveDate = "true";
+  input.setAttribute("aria-label", "Canlı Tarih");
+  input.value = readLiveDateFromRow(rowData) ?? "";
+  input.addEventListener("change", () => {
+    applyLiveDateToRow(rowData, parseLiveDateInput(input.value));
+  });
+
+  inputWrap.appendChild(input);
+  row.append(label, inputWrap);
+  wrap.appendChild(row);
+}
+
 function appendTaskChecklist(host: HTMLElement, rowData: any) {
   host.querySelectorAll(".gantt-task-checklist").forEach((el) => el.remove());
   const wrap = document.createElement("div");
   wrap.className = "gantt-task-checklist";
+
+  appendLiveDateRow(wrap, rowData);
 
   for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
     const row = document.createElement("div");
@@ -1551,6 +1657,10 @@ function syncTaskChecklistSelects(host: HTMLElement, rowData: any) {
   if (!wrap) {
     appendTaskChecklist(host, rowData);
     return;
+  }
+  const liveDateInput = wrap.querySelector<HTMLInputElement>("input[data-live-date]");
+  if (liveDateInput) {
+    liveDateInput.value = readLiveDateFromRow(rowData) ?? "";
   }
   for (const field of PROJECT_TASK_CHECKLIST_FIELDS) {
     const select = wrap.querySelector<HTMLSelectElement>(
@@ -2196,6 +2306,7 @@ function ProjectChart() {
         );
         if (existingChecklistRow) {
           hydrateMissingChecklist(row, existingChecklistRow);
+          hydrateMissingLiveDate(row, existingChecklistRow);
         }
         const moduleList = moduleDataRef.current as GanttModuleOption[];
         if (taskGuid) {
@@ -2674,6 +2785,7 @@ function ProjectChart() {
           moduleIds: modulesArray.slice(),
           projectStatus: extractProjectStatusFromApiTask(task),
           ...extractChecklistFromApiTask(task),
+          liveDate: readLiveDateFromRow(task),
           isSubProject: Boolean(task.isSubProject ?? task.IsSubProject),
           subProjectId: String(
             task.ticketSubProjectId ?? task.TicketSubProjectId ?? task.subProjectId ?? "",
@@ -3039,6 +3151,7 @@ function ProjectChart() {
         moduleIds: moduleIdsPayload,
         projectStatus: normalizeProjectStatusFromRow(args.taskData) ?? normalizeProjectStatusFromRow(args),
         ...resolveChecklistForSave(args.taskData ?? args, args),
+        liveDate: resolveLiveDateForSave(args.taskData ?? args, args),
         isSubProject:
           normalizeIsSubProjectFromRow(args) || Boolean(normalizeSubProjectIdFromRow(args)),
       };
@@ -3364,6 +3477,7 @@ function ProjectChart() {
         projectStatus:
           normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null,
         ...resolveChecklistForSave(taskData, existing),
+        liveDate: resolveLiveDateForSave(taskData, existing),
         isSubProject: hasIsSubProjectField(taskData)
           ? normalizeIsSubProjectFromRow(taskData)
           : Boolean(existing?.isSubProject),
@@ -3407,6 +3521,7 @@ function ProjectChart() {
         patch.projectStatus =
           normalizeProjectStatusFromRow(taskData) ?? existing?.projectStatus ?? null;
         Object.assign(patch, resolveChecklistForSave(taskData, existing));
+        patch.liveDate = resolveLiveDateForSave(taskData, existing);
         patch.isSubProject = body.isSubProject ?? false;
         // Tam rebind + collapseAll yapma: çok görevde Durum/Modül React şablonları boş kalıyordu.
         commitLocalGanttRowPatch(taskGuid, patch);
@@ -3602,6 +3717,7 @@ function ProjectChart() {
       );
       if (existingChecklistRow) {
         hydrateMissingChecklist(row, existingChecklistRow);
+        hydrateMissingLiveDate(row, existingChecklistRow);
       }
       await fetchSubProjectsData();
       const pushSubProjects = () =>

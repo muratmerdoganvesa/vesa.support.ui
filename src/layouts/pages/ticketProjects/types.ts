@@ -27,4 +27,6 @@ export type StatsBoardItem = {
   projectStatus?: ProjectTypes | null;
   /** Yalnızca statuslü kalem kartında; o görevin checklist cevapları */
   taskChecklist?: ProjectTaskChecklist;
+  /** Görev canlı tarihi; null/boşsa kartta "Canlı Tarih Girilmedi" gösterilir */
+  liveDate?: string | null;
 };
