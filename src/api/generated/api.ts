@@ -13604,6 +13604,7 @@ export interface ProjectKalemStatisticsDto {
     'masterDataTemplate'?: ProjectTaskStatus;
     'authorization'?: ProjectTaskStatus;
     'integration'?: ProjectTaskStatus;
+    'liveDate'?: string | null;
 }
 
 
@@ -13759,6 +13760,7 @@ export interface ProjectTasksInsertDto {
     'masterDataTemplate'?: ProjectTaskStatus;
     'authorization'?: ProjectTaskStatus;
     'integration'?: ProjectTaskStatus;
+    'liveDate'?: string | null;
 }
 
 
@@ -13876,6 +13878,7 @@ export interface ProjectTasksListDto {
     'masterDataTemplate'?: ProjectTaskStatus;
     'authorization'?: ProjectTaskStatus;
     'integration'?: ProjectTaskStatus;
+    'liveDate'?: string | null;
 }
 
 
@@ -13987,6 +13990,7 @@ export interface ProjectTasksUpdateDto {
     'masterDataTemplate'?: ProjectTaskStatus;
     'authorization'?: ProjectTaskStatus;
     'integration'?: ProjectTaskStatus;
+    'liveDate'?: string | null;
 }
 
 

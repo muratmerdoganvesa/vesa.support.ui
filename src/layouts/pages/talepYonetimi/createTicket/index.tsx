@@ -786,6 +786,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [existingEfforts, setExistingEfforts] = useState<TicketEffortListDto[]>([]);
   const [effortsLoading, setEffortsLoading] = useState(false);
   const [isEffortDeptManager, setIsEffortDeptManager] = useState(false);
+  const [canEnterInvoiceHours, setCanEnterInvoiceHours] = useState(false);
   const [isEffortEnter, setIsEffortEnter] = useState(false);
   const [canEnterEffort, setCanEnterEffort] = useState(false);
   const [canSeeEffortTab, setCanSeeEffortTab] = useState(false);
@@ -804,6 +805,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const applyEffortResponse = (data: TicketEffortListResponseDto) => {
     setExistingEfforts(data.items ?? []);
     setIsEffortDeptManager(Boolean(data.isDepartmentManager));
+    setCanEnterInvoiceHours(Boolean(data.canEnterInvoiceHours ?? data.isDepartmentManager));
     setIsEffortEnter(Boolean(data.isEffortEnter));
     setCanEnterEffort(Boolean(data.canEnterEffort));
     setCanSeeEffortTab(Boolean(data.canSeeEffortTab));
@@ -2213,6 +2215,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                   efforts={existingEfforts}
                   loading={effortsLoading}
                   isDepartmentManager={isEffortDeptManager}
+                  canEnterInvoiceHours={canEnterInvoiceHours}
                   isEffortEnter={isEffortEnter}
                   canEnterEffort={canEnterEffort}
                   isEffortLockedInApproval={isEffortLockedInApproval}
@@ -2252,8 +2255,24 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           description: completeResult.statusText || String(completeResult.status),
                         });
                       }
+                      if (completeResult.sentToEffortManager) {
+                        try {
+                          const status = await fetchEffortManagementByTicket(id);
+                          setEffortSendStatus(status);
+                          if (status?.exists) {
+                            setIsEffortLockedInApproval(true);
+                            setCanEnterEffort(false);
+                          }
+                        } catch {
+                          /* status optional */
+                        }
+                      }
                       dispatchAlert({
-                        message: "Eforunuz tamamlandı ve yöneticinizin onayına sunuldu.",
+                        message: completeResult.skippedApproval
+                          ? completeResult.sentToEffortManager
+                            ? "Eforunuz tamamlandı. Onay süreci atlandı; talep efor yöneticisine iletildi."
+                            : "Eforunuz tamamlandı. Onay süreci atlandı. Bekleyen diğer efor girişleri tamamlanınca efor yöneticisine iletilecek."
+                          : "Eforunuz tamamlandı ve yöneticinizin onayına sunuldu.",
                         type: "Success",
                       });
                     } catch (error) {

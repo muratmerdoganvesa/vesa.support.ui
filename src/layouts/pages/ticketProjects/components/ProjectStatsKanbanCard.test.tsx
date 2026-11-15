@@ -36,6 +36,35 @@ const projectItem: StatsBoardItem = {
 };
 
 describe("ProjectStatsKanbanCard checklist", () => {
+  it("shows Canlı Tarih Girilmedi next to modules when liveDate is missing", () => {
+    render(
+      <ProjectStatsKanbanCard
+        item={{ ...kalemItem, modules: ["EC", "ONB"], liveDate: null }}
+        cardBorderClass="border-l-slate-400"
+        isExpanded={false}
+        onToggleExpand={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("EC, ONB")).toBeInTheDocument();
+    expect(screen.getByText("Canlı Tarih Girilmedi")).toBeInTheDocument();
+  });
+
+  it("shows formatted liveDate next to modules when present", () => {
+    render(
+      <ProjectStatsKanbanCard
+        item={{ ...kalemItem, modules: ["EC"], liveDate: "2026-11-13T00:00:00" }}
+        cardBorderClass="border-l-slate-400"
+        isExpanded={false}
+        onToggleExpand={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("EC")).toBeInTheDocument();
+    expect(screen.getByText("13.11.2026")).toBeInTheDocument();
+    expect(screen.queryByText("Canlı Tarih Girilmedi")).not.toBeInTheDocument();
+  });
+
   it("hides task questions until the card is expanded", () => {
     const handleToggleExpand = vi.fn();
 
