@@ -28,6 +28,12 @@ const normalizeCommonFields = (item: Record<string, unknown>) => {
   const rawIsActive = item.isActive ?? item.IsActive;
   const isActive = rawIsActive == null ? true : Boolean(rawIsActive);
 
+  const rawLiveDate = item.liveDate ?? item.LiveDate;
+  const liveDate =
+    rawLiveDate == null || rawLiveDate === ""
+      ? null
+      : String(rawLiveDate);
+
   return {
     id: String(item.id ?? item.Id ?? projectId),
     projectId,
@@ -42,6 +48,7 @@ const normalizeCommonFields = (item: Record<string, unknown>) => {
     modules,
     employees,
     projectManager,
+    liveDate,
   };
 };
 

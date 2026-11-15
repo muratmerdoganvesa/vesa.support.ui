@@ -32,6 +32,7 @@ interface EffortListProps {
   efforts: TicketEffortListDto[];
   loading: boolean;
   isDepartmentManager?: boolean;
+  canEnterInvoiceHours?: boolean;
   isEffortEnter?: boolean;
   canEnterEffort?: boolean;
   isEffortLockedInApproval?: boolean;
@@ -65,6 +66,7 @@ const EffortList = ({
   efforts,
   loading,
   isDepartmentManager = false,
+  canEnterInvoiceHours = false,
   isEffortEnter = false,
   canEnterEffort = false,
   isEffortLockedInApproval = false,
@@ -111,6 +113,10 @@ const EffortList = ({
     (sum, effort) => sum + (Number(effort.invoiceHours) || 0),
     0
   );
+
+  // Fatura: dept yöneticisi paneli veya efor istenen kişinin kendisi dept yöneticisi olması.
+  const showInvoiceHours = isDepartmentManager || canEnterInvoiceHours;
+  const isAssigneeDepartmentManager = canEnterInvoiceHours && !isDepartmentManager;
 
   const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
   const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
@@ -235,7 +241,7 @@ const EffortList = ({
     }
 
     let parsedInvoice: number | undefined;
-    if (isDepartmentManager) {
+    if (showInvoiceHours) {
       parsedInvoice = Number(invoiceHours.replace(",", "."));
       if (!invoiceHours.trim() || Number.isNaN(parsedInvoice) || parsedInvoice < 0) {
         setInvoiceHoursError("Fatura saati 0 veya daha büyük olmalıdır.");
@@ -291,7 +297,7 @@ const EffortList = ({
     }
 
     let invoiceHours: number | undefined;
-    if (isDepartmentManager) {
+    if (showInvoiceHours) {
       const parsedInvoice = Number(editInvoiceHours.replace(",", "."));
       if (!editInvoiceHours.trim() || Number.isNaN(parsedInvoice) || parsedInvoice < 0) {
         setEditInvoiceError("Fatura saati 0 veya daha büyük olmalıdır.");
@@ -488,8 +494,9 @@ const EffortList = ({
 
       {!isDepartmentManager && !isProcessLocked && isEffortComplated && (
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
-          Eforunuz departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi; ekleme, silme ve
-          güncelleme yapılamaz.
+          {isAssigneeDepartmentManager
+            ? "Eforunuz tamamlandı (onay süreci atlandı). Bekleyen başka efor girişi yoksa talep efor yöneticisine iletilir. Kayıtlarınız kilitlendi."
+            : "Eforunuz departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi; ekleme, silme ve güncelleme yapılamaz."}
         </div>
       )}
 
@@ -507,8 +514,12 @@ const EffortList = ({
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               {isEffortComplated
-                ? "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi."
-                : "Efor maddelerinizi girdikten sonra tamamlayın; eforunuz otomatik olarak departman yöneticinizin onayına gider."}
+                ? canEnterInvoiceHours
+                  ? "Eforunuz tamamlandı. Onay süreci atlandı. Bekleyen diğer efor girişleri tamamlanınca efor yöneticisine iletilecek."
+                  : "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi."
+                : canEnterInvoiceHours
+                  ? "Fiili ve fatura saatini girdikten sonra tamamlayın. Onay sürecine girmeden devam eder; bekleyen başka efor girişi yoksa talep efor yöneticisine gider."
+                  : "Efor maddelerinizi girdikten sonra tamamlayın; eforunuz otomatik olarak departman yöneticinizin onayına gider."}
             </p>
           </div>
           {isEffortComplated ? (
@@ -547,7 +558,7 @@ const EffortList = ({
           <div
             className={cn(
               "grid grid-cols-1 gap-3 items-end",
-              isDepartmentManager
+              showInvoiceHours
                 ? "sm:grid-cols-[140px_140px_1fr_auto]"
                 : "sm:grid-cols-[140px_1fr_auto]"
             )}
@@ -578,7 +589,7 @@ const EffortList = ({
               />
             </div>
 
-            {isDepartmentManager && (
+            {showInvoiceHours && (
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="effort-invoice-hours"
@@ -655,9 +666,9 @@ const EffortList = ({
         {efforts.length > 0 && (
           <span className="text-xs text-slate-500 font-medium ml-auto inline-flex items-center gap-1.5 flex-wrap justify-end">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            {isDepartmentManager ? "Fiili" : "Toplam"}:{" "}
+            {showInvoiceHours ? "Fiili" : "Toplam"}:{" "}
             <strong className="text-slate-700">{totalHours.toFixed(2)} saat</strong>
-            {isDepartmentManager && (
+            {showInvoiceHours && (
               <>
                 <span className="text-slate-300">·</span>
                 Fatura: <strong className="text-slate-700">{totalInvoiceHours.toFixed(2)} saat</strong>
@@ -677,7 +688,11 @@ const EffortList = ({
           <Timer className="w-8 h-8 text-slate-300" />
           <p className="text-sm text-slate-400">Henüz efor kaydı yok.</p>
           {showEffortForm && (
-            <p className="text-xs text-slate-300">Yukarıdan fiili saat ve açıklama ekleyebilirsiniz.</p>
+            <p className="text-xs text-slate-300">
+              {showInvoiceHours
+                ? "Yukarıdan fiili saat, fatura saati ve açıklama ekleyebilirsiniz."
+                : "Yukarıdan fiili saat ve açıklama ekleyebilirsiniz."}
+            </p>
           )}
         </div>
       ) : (
@@ -691,9 +706,9 @@ const EffortList = ({
                   </TableHead>
                 )}
                 <TableHead className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[110px]">
-                  {isDepartmentManager ? "Fiili Saat" : "Efor (saat)"}
+                  {showInvoiceHours ? "Fiili Saat" : "Efor (saat)"}
                 </TableHead>
-                {isDepartmentManager && (
+                {showInvoiceHours && (
                   <TableHead className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[120px]">
                     Fatura Saati
                   </TableHead>
@@ -738,7 +753,7 @@ const EffortList = ({
                         {formatHours(effort.effortHours)}
                       </span>
                     </TableCell>
-                    {isDepartmentManager && (
+                    {showInvoiceHours && (
                       <TableCell className="px-4 py-3">
                         {isInvoiceHoursMissing(effort) ? (
                           <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600">
@@ -821,7 +836,7 @@ const EffortList = ({
             <DialogDescription id="effort-edit-desc">
               {editingLocksActualHours
                 ? "Bu kaydın fiili saati yalnızca giren kişi tarafından değiştirilebilir. Fatura saati ve açıklamayı güncelleyebilirsiniz."
-                : isDepartmentManager
+                : showInvoiceHours
                   ? "Fiili saat ve fatura saati farklı olabilir. Fatura saati 0 girilebilir."
                   : editingEffort?.userAppName
                     ? `${editingEffort.userAppName} kaydını düzenliyorsunuz.`
@@ -876,7 +891,7 @@ const EffortList = ({
               {editHoursError && <p className="text-xs text-rose-500 ml-1">{editHoursError}</p>}
             </div>
 
-            {isDepartmentManager && (
+            {showInvoiceHours && (
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="edit-invoice-hours"

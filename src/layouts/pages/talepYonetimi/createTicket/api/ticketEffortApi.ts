@@ -20,6 +20,7 @@ export const fetchTicketEfforts = async (
   );
   return response.data ?? {
     isDepartmentManager: false,
+    canEnterInvoiceHours: false,
     isEffortEnter: false,
     canEnterEffort: false,
     canSeeEffortTab: false,
@@ -39,6 +40,8 @@ export const completeTicketEffortAccess = async (
   isEffortComplated?: boolean;
   approvalStarted?: boolean;
   queued?: boolean;
+  skippedApproval?: boolean;
+  sentToEffortManager?: boolean;
   status?: number;
   statusText?: string;
 }> => {
@@ -47,6 +50,8 @@ export const completeTicketEffortAccess = async (
     isEffortComplated?: boolean;
     approvalStarted?: boolean;
     queued?: boolean;
+    skippedApproval?: boolean;
+    sentToEffortManager?: boolean;
     status?: number;
     statusText?: string;
   }>("/api/Ticket/CompleteTicketEffortAccess", { ticketId });

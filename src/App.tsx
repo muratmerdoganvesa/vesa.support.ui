@@ -326,8 +326,9 @@ export default function App() {
             <Route path="/crmModul/detail" element={<CrmModulDetailPage />} />
             <Route path="/crmModul/detail/:id" element={<CrmModulDetailPage />} />
             <Route path="/formlist/:formId" element={<FormList />} />
-          
+
             <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
+       
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}
@@ -339,11 +340,13 @@ export default function App() {
             <Route path="/documentation/library/:libraryId" element={<DocumentationModule />} />
             <Route path="/documentation/page/:pageId" element={<DocumentationModule />} />
             <Route path="/documentation/templates" element={<DocumentationModule />} /> */}
+            <Route path="/effortManagement" element={<EffortManagementPage />} />
+            <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
             <Route path="/webEvents" element={<WebEvents />} />
             <Route path="/webEvents/detail" element={<WebEventsCE />} />
             <Route path="/webEvents/detail/:id" element={<WebEventsCE />} />
-            <Route path="/effortManagement" element={<EffortManagementPage />} />
-            <Route path="/effortManagement/:id" element={<EffortManagementDetailPage />} />
+            <Route path="/org-chart" element={<OrgChartPage />} />
+            <Route path="/organizationalChart" element={<OrganizationalChart />} />
             <Route path="/users/detail" element={<UserDetail />} />
             <Route path="/ActivityReports" element={<ActivityReports />} />
             {/* <Route path="/Messages" element={<MessagePage />} /> */}
@@ -359,9 +362,9 @@ export default function App() {
             <Route path="/position" element={<PositionPage />} />
             <Route path="/position/detail" element={<PositionDetailPage />} />
             <Route path="/position/detail/:id" element={<PositionDetailPage />} />
-            <Route path="/org-chart" element={<OrgChartPage />} />
-            <Route path="/organizationalChart" element={<OrganizationalChart />} />
-            
+           
+            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
+            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
             
             <Route path="/form-role" element={<FormRoleList />} />
             <Route path="/form-role/detail" element={<FormRoleDetail />} />
@@ -405,8 +408,7 @@ export default function App() {
             <Route path="/projectmanagement/chart" element={<ProjectChart />} />
             <Route path="/service-evaluation-survey" element={<ServiceEvaluationSurvey />} />
             <Route path="/chat-home" element={<ChatHome />} />
-            <Route path="/projectsKanbanStatistics" element={<TicketProjectStatistics />} />
-            <Route path="/myProjectsKanbanStatistics" element={<TicketProjectStatistics />} />
+        
             <Route path="/myUserProjects" element={<MyUserProjects />} />
             <Route path="/myUserProjects/chart" element={<ProjectChart />} />
 
