@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, Lock, Trash2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, Lock, Trash2, X } from "lucide-react";
 
 import { UserApi } from "api/generated";
 import getConfiguration from "confiuration";
@@ -45,6 +45,29 @@ interface AccessListItem {
   /** null: onay başlamadı; false: yönetici onayında beklemede; true: yönetici onayladı */
   isManagerApproved?: boolean | null;
 }
+
+type AccessListApiItem = AccessListItem & {
+  UserAppId?: string;
+  IsPrimary?: boolean;
+  Name?: string;
+  Id?: string;
+};
+
+const normalizeAccessListItem = (raw: AccessListApiItem): AccessListItem => ({
+  id: String(raw.id ?? raw.Id ?? ""),
+  userAppId: String(raw.userAppId ?? raw.UserAppId ?? ""),
+  name: String(raw.name ?? raw.Name ?? ""),
+  isPrimary: Boolean(raw.isPrimary ?? raw.IsPrimary),
+  isActive: Boolean(raw.isActive),
+  isEffort: raw.isEffort,
+  isEffortComplated: raw.isEffortComplated,
+  isManagerApproved: raw.isManagerApproved,
+});
+
+const isSameUserId = (left?: string | null, right?: string | null): boolean => {
+  if (!left || !right) return false;
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
+};
 
 interface GrantTicketAccessPanelProps {
   ticket: GrantTicketAccessTicket;
@@ -100,6 +123,7 @@ const GrantTicketAccessPanel = ({
   const [accessList, setAccessList] = useState<AccessListItem[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+  const [pendingSelfRevoke, setPendingSelfRevoke] = useState<AccessListItem | null>(null);
   const [isEffortEnter, setIsEffortEnter] = useState(Boolean(ticket.isEffortEnter));
   const [effortEnterSaving, setEffortEnterSaving] = useState(false);
   const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
@@ -107,22 +131,27 @@ const GrantTicketAccessPanel = ({
   const [userInputFocused, setUserInputFocused] = useState(false);
   const searchTimerRef = useRef<number | null>(null);
   const searchRequestIdRef = useRef(0);
+  const currentUserIdRef = useRef("");
 
   const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
   const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
   const isEffortProcessLocked =
     Boolean(effortSendStatus?.exists) && !isReturnedForEdit;
   const isMutating =
-    submitting || revokingUserId != null || effortEnterSaving || effortStatusLoading;
+    submitting ||
+    revokingUserId != null ||
+    effortEnterSaving ||
+    effortStatusLoading ||
+    pendingSelfRevoke != null;
   const isFormLocked = isEffortProcessLocked || isMutating;
 
   const loadAccessList = async () => {
     setListLoading(true);
     try {
-      const response = await axiosInstance.get<AccessListItem[]>("/api/Ticket/GetActiveTicketAccess", {
+      const response = await axiosInstance.get<AccessListApiItem[]>("/api/Ticket/GetActiveTicketAccess", {
         params: { ticketId: ticket.id },
       });
-      setAccessList(response.data ?? []);
+      setAccessList((response.data ?? []).map(normalizeAccessListItem));
     } catch {
       setAccessList([]);
     } finally {
@@ -142,14 +171,35 @@ const GrantTicketAccessPanel = ({
     }
   };
 
+  const resolveCurrentUserId = async (): Promise<string> => {
+    if (currentUserIdRef.current) return currentUserIdRef.current;
+    try {
+      const api = new UserApi(getConfiguration());
+      const response = await api.apiUserGetLoginUserGet();
+      const id = response.data?.id ?? "";
+      currentUserIdRef.current = id;
+      return id;
+    } catch {
+      currentUserIdRef.current = "";
+      return "";
+    }
+  };
+
   useEffect(() => {
     setIsEffortEnter(Boolean(ticket.isEffortEnter));
+    setPendingSelfRevoke(null);
   }, [ticket.id, ticket.isEffortEnter]);
 
   useEffect(() => {
-    onBusyChange(submitting || revokingUserId != null || effortEnterSaving);
+    onBusyChange(
+      submitting || revokingUserId != null || effortEnterSaving || pendingSelfRevoke != null
+    );
     return () => onBusyChange(false);
-  }, [submitting, revokingUserId, effortEnterSaving, onBusyChange]);
+  }, [submitting, revokingUserId, effortEnterSaving, pendingSelfRevoke, onBusyChange]);
+
+  useEffect(() => {
+    void resolveCurrentUserId();
+  }, []);
 
   useEffect(() => {
     if (!isEffortProcessLocked) {
@@ -178,8 +228,13 @@ const GrantTicketAccessPanel = ({
   };
 
   const handleCancel = () => {
-    if (submitting || revokingUserId || effortEnterSaving) return;
+    if (submitting || revokingUserId || effortEnterSaving || pendingSelfRevoke) return;
     onClose();
+  };
+
+  const handleCancelSelfRevoke = () => {
+    if (revokingUserId) return;
+    setPendingSelfRevoke(null);
   };
 
   const handleToggleEffortEnter = async (next: boolean) => {
@@ -302,11 +357,7 @@ const GrantTicketAccessPanel = ({
     }
   };
 
-  const handleRevoke = async (item: AccessListItem) => {
-    if (item.isPrimary || isEffortProcessLocked || revokingUserId || submitting || effortEnterSaving) {
-      return;
-    }
-
+  const executeRevoke = async (item: AccessListItem) => {
     setRevokingUserId(item.userAppId);
     try {
       const response = await axiosInstance.post<{ status?: number; statusText?: string }>(
@@ -317,6 +368,7 @@ const GrantTicketAccessPanel = ({
         }
       );
       dispatchAlert({ message: `${item.name} için efor isteği kaldırıldı.`, type: "Success" });
+      setPendingSelfRevoke(null);
       await loadAccessList();
       if (response.data?.status != null) {
         onTicketStatusChange(
@@ -333,6 +385,32 @@ const GrantTicketAccessPanel = ({
     } finally {
       setRevokingUserId(null);
     }
+  };
+
+  const handleRevoke = async (item: AccessListItem) => {
+    if (
+      item.isPrimary ||
+      isEffortProcessLocked ||
+      revokingUserId ||
+      submitting ||
+      effortEnterSaving ||
+      pendingSelfRevoke
+    ) {
+      return;
+    }
+
+    const loginUserId = await resolveCurrentUserId();
+    if (isSameUserId(item.userAppId, loginUserId)) {
+      setPendingSelfRevoke(item);
+      return;
+    }
+
+    await executeRevoke(item);
+  };
+
+  const handleConfirmSelfRevoke = () => {
+    if (!pendingSelfRevoke || revokingUserId) return;
+    void executeRevoke(pendingSelfRevoke);
   };
 
   const handleUserKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -370,13 +448,63 @@ const GrantTicketAccessPanel = ({
         <button
           type="button"
           onClick={handleCancel}
-          disabled={submitting || revokingUserId != null || effortEnterSaving}
+          disabled={
+            submitting || revokingUserId != null || effortEnterSaving || pendingSelfRevoke != null
+          }
           aria-label="Vazgeç"
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      {pendingSelfRevoke && (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="self-revoke-title"
+          aria-describedby="self-revoke-description"
+          className="mx-4 mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3"
+        >
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+            <div className="min-w-0">
+              <p id="self-revoke-title" className="text-sm font-semibold text-amber-950">
+                Görünürlük yetkisini kaldırma
+              </p>
+              <p id="self-revoke-description" className="mt-1 text-[12px] leading-5 text-amber-900">
+                Talebin görünürlük yetkisini kendinizden kaldırıyorsunuz. Onaylamanız halinde:
+              </p>
+              <ol className="mt-2 list-decimal space-y-1 pl-4 text-[12px] leading-5 text-amber-900">
+                <li>Bu talep için başka kişilerden efor isteğinde bulunamazsınız.</li>
+                <li>Talebin sizin için görünürlüğü sona erebilir.</li>
+              </ol>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleCancelSelfRevoke}
+              disabled={revokingUserId != null}
+              className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            >
+              İptal
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmSelfRevoke}
+              disabled={revokingUserId != null}
+              aria-busy={revokingUserId === pendingSelfRevoke.userAppId}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-amber-700 px-3 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-40"
+            >
+              {revokingUserId === pendingSelfRevoke.userAppId && (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              )}
+              Onayla
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 px-4 py-3">
         {effortStatusLoading ? (
@@ -550,7 +678,7 @@ const GrantTicketAccessPanel = ({
                       type="button"
                       aria-label={`${item.name} efor isteğini kaldır`}
                       disabled={isFormLocked}
-                      onClick={() => handleRevoke(item)}
+                      onClick={() => void handleRevoke(item)}
                       className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-rose-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"
                     >
                       {revokingUserId === item.userAppId ? (
@@ -571,7 +699,9 @@ const GrantTicketAccessPanel = ({
         <button
           type="button"
           onClick={handleCancel}
-          disabled={submitting || revokingUserId != null || effortEnterSaving}
+          disabled={
+            submitting || revokingUserId != null || effortEnterSaving || pendingSelfRevoke != null
+          }
           className="h-9 rounded-lg border border-rose-200 px-4 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-40"
         >
           Kapat
@@ -580,7 +710,7 @@ const GrantTicketAccessPanel = ({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isFormLocked || !selectedUser?.id}
+            disabled={isFormLocked || !selectedUser?.id || pendingSelfRevoke != null}
             aria-busy={submitting}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#3e5d8f] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#324d7a] disabled:opacity-40"
           >

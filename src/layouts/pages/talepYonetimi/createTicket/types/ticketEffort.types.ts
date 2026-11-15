@@ -12,6 +12,8 @@ export interface TicketEffortListDto {
 
 export interface TicketEffortListResponseDto {
   isDepartmentManager?: boolean;
+  /** Talebin/kapsamın dept yöneticisi veya efor istenen kişi kendisi dept yöneticisiyse */
+  canEnterInvoiceHours?: boolean;
   isEffortEnter?: boolean;
   canEnterEffort?: boolean;
   /** Aktif IsEffort ataması veya departman yöneticisi — Efor Bilgisi sekmesi */
