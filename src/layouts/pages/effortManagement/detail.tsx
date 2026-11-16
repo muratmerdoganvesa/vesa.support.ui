@@ -170,7 +170,6 @@ const EffortManagementDetailPage = () => {
   const [returning, setReturning] = useState(false);
   const [approvalUsers, setApprovalUsers] = useState<TicketEffortManagementUserOptionDto[]>([]);
   const [approvalUserId, setApprovalUserId] = useState("");
-  const [approvalSearch, setApprovalSearch] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
   const [managerApproveNote, setManagerApproveNote] = useState("");
@@ -445,13 +444,6 @@ const EffortManagementDetailPage = () => {
   const canViewActualHours = detail?.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const rejectedByCustomer =
     detail?.status === TicketEffortStatus.ReturnedToDepartment && Boolean(detail.customerApprovedByUserName);
-  // Talebi Onaya Sun gizlendiği için kullanıcı filtresi geçici olarak kapatıldı
-  // const filteredApprovalUsers = approvalUsers.filter((user) => {
-  //   const term = approvalSearch.trim().toLocaleLowerCase("tr");
-  //   if (!term) return true;
-  //   const label = `${user.name ?? ""} ${user.email ?? ""}`.toLocaleLowerCase("tr");
-  //   return label.includes(term);
-  // });
   const isEffortApproved = detail?.status === TicketEffortStatus.CustomerApproved;
   const canShowApprovalActions =
     !isEffortApproved &&
@@ -607,7 +599,9 @@ const EffortManagementDetailPage = () => {
           }
           description={
             detail
-              ? [detail.customerName, detail.departmentName].filter(Boolean).join(" · ") || undefined
+              ? [detail.ticketCode, detail.customerName, detail.workCompanyName, detail.departmentName]
+                  .filter(Boolean)
+                  .join(" · ") || undefined
               : "Seçilen efor kaydının detayları ve onay işlemleri"
           }
           actions={
@@ -667,7 +661,6 @@ const EffortManagementDetailPage = () => {
                   >
                     <Download className="h-3.5 w-3.5" />
                     Raporu indir
-                    {detail?.ticketNumber != null ? ` (Ticket No : ${detail.ticketNumber})` : ""}
                   </Button>
                 )}
               {detail?.canClaim && (
@@ -716,7 +709,6 @@ const EffortManagementDetailPage = () => {
                   >
                     <Download className="h-3.5 w-3.5" />
                     Raporu indir
-                    {detail.ticketNumber != null ? ` (Ticket No : ${detail.ticketNumber})` : ""}
                   </Button>
                 }
               />
@@ -1017,55 +1009,146 @@ const EffortManagementDetailPage = () => {
                 </TabsContent>
 
                 <TabsContent value="summary" className="mt-0 outline-none">
-                  <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4 md:p-5">
-                    <EffortInfoItem label="Efor / talep no" value={detail.ticketNumber != null ? `#${detail.ticketNumber}` : null} />
-                    <EffortInfoItem label="Müşteri" value={detail.customerName} />
-                    <EffortInfoItem label="Şirket" value={detail.workCompanyName} />
-                    <EffortInfoItem label="Departman" value={detail.departmentName} />
-                    <EffortInfoItem label="Departman yöneticisi" value={detail.departmentManagerName || detail.sentByUserName} />
-                    <EffortInfoItem label="Talep durumu" value={detail.ticketStatusText} />
-                    <EffortInfoItem label="Öncelik" value={detail.priorityText} />
-                    <EffortInfoItem label="Tip" value={detail.typeText} />
-                    <EffortInfoItem label="Talep sahibi" value={detail.ticketOwnerName || detail.ticketCreatedBy} />
-                    <EffortInfoItem label="Oluşturma" value={formatDateTime(detail.ticketCreatedDate)} />
-                    <EffortInfoItem label="Gönderen" value={detail.sentByUserName} />
-                    <EffortInfoItem label="Gönderim tarihi" value={formatDateTime(detail.sentAt)} />
-                    <EffortInfoItem label="Efor durumu">
-                      <EffortStatusBadge status={detail.status} label={detail.statusText} />
-                    </EffortInfoItem>
-                    {(detail.status === TicketEffortStatus.WaitingCustomerApproval ||
-                      detail.status === TicketEffortStatus.MailEffortRequested) &&
-                      detail.customerApprovedByUserName && (
+                  <div className="space-y-4 p-4 md:p-5">
+                    <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50/90 to-white px-4 py-4">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        Süreç özeti
+                      </p>
+                      <ol className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <li className="rounded-xl border border-slate-100 bg-white px-3.5 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Gönderim</p>
+                          <p className="mt-1 text-sm font-medium text-slate-800">
+                            {detail.sentByUserName || "—"}
+                          </p>
+                          <p className="text-xs text-slate-400">{formatDateTime(detail.sentAt)}</p>
+                        </li>
+                        <li className="rounded-xl border border-slate-100 bg-white px-3.5 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">İnceleme</p>
+                          <p className="mt-1 text-sm font-medium text-slate-800">
+                            {detail.effortManagerUserName ||
+                              (detail.claimedByCurrentUser ? "Sizde" : "Henüz üstlenilmedi")}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {detail.effortManagerAssignedAt
+                              ? formatDateTime(detail.effortManagerAssignedAt)
+                              : "—"}
+                          </p>
+                        </li>
+                        <li className="rounded-xl border border-slate-100 bg-white px-3.5 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            {detail.status === TicketEffortStatus.MailEffortRequested
+                              ? "Mail ataması"
+                              : detail.status === TicketEffortStatus.CustomerRejected || rejectedByCustomer
+                                ? "Red"
+                                : "Onay / atama"}
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-slate-800">
+                            {detail.customerApprovedByUserName || "—"}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {detail.customerApprovedAt
+                              ? formatDateTime(detail.customerApprovedAt)
+                              : detail.returnedAt &&
+                                  (detail.status === TicketEffortStatus.ReturnedToDepartment ||
+                                    detail.status === TicketEffortStatus.CustomerRejected)
+                                ? formatDateTime(detail.returnedAt)
+                                : "—"}
+                          </p>
+                        </li>
+                        <li className="rounded-xl border border-slate-100 bg-white px-3.5 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                            Güncel durum
+                          </p>
+                          <div className="mt-1.5">
+                            <EffortStatusBadge status={detail.status} label={detail.statusText} />
+                          </div>
+                          {detail.status !== TicketEffortStatus.ReturnedToDepartment && (
+                            <p className="mt-2 text-xs text-slate-500">
+                              Toplam adam gün:{" "}
+                              <strong className="text-slate-800">
+                                {formatManDays(efforts?.totalInvoiceHours)}
+                              </strong>
+                            </p>
+                          )}
+                        </li>
+                      </ol>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       <EffortInfoItem
-                        label={
-                          detail.status === TicketEffortStatus.MailEffortRequested
-                            ? "Mail ile atanan"
-                            : "Onaya sunulan"
+                        label="Efor / talep no"
+                        value={
+                          detail.ticketNumber != null
+                            ? `#${detail.ticketNumber}${detail.ticketCode ? ` · ${detail.ticketCode}` : ""}`
+                            : detail.ticketCode
                         }
-                        value={detail.customerApprovedByUserName}
                       />
-                    )}
-                    {detail.status === TicketEffortStatus.CustomerApproved && (
+                      <EffortInfoItem label="Müşteri" value={detail.customerName} />
+                      <EffortInfoItem label="Şirket" value={detail.workCompanyName} />
+                      <EffortInfoItem label="Departman" value={detail.departmentName} />
                       <EffortInfoItem
-                        label="Onay kaydı"
-                        value={`${detail.customerApprovedByUserName || "—"}${detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""}`}
+                        label="Departman yöneticisi"
+                        value={detail.departmentManagerName || detail.sentByUserName}
                       />
-                    )}
-                    {canViewActualHours && detail.effortManagerUserName && (
+                      <EffortInfoItem label="Talep durumu" value={detail.ticketStatusText} />
+                      <EffortInfoItem label="Öncelik" value={detail.priorityText} />
+                      <EffortInfoItem label="Tip" value={detail.typeText} />
                       <EffortInfoItem
-                        label="İnceleyen"
-                        value={`${detail.effortManagerUserName}${detail.effortManagerAssignedAt ? ` · ${formatDateTime(detail.effortManagerAssignedAt)}` : ""}`}
+                        label="Talep sahibi"
+                        value={detail.ticketOwnerName || detail.ticketCreatedBy}
                       />
-                    )}
-                    {detail.claimedByCurrentUser && (
-                      <EffortInfoItem label="Üstlenme" value="Bu kayıt incelemenizde." />
-                    )}
-                    {detail.status !== TicketEffortStatus.ReturnedToDepartment && (
-                      <EffortInfoItem
-                        label="Toplam adam gün"
-                        value={formatManDays(efforts?.totalInvoiceHours)}
-                      />
-                    )}
+                      <EffortInfoItem label="Oluşturma" value={formatDateTime(detail.ticketCreatedDate)} />
+                      <EffortInfoItem label="Gönderen" value={detail.sentByUserName} />
+                      <EffortInfoItem label="Gönderim tarihi" value={formatDateTime(detail.sentAt)} />
+                      {(detail.status === TicketEffortStatus.WaitingCustomerApproval ||
+                        detail.status === TicketEffortStatus.MailEffortRequested) &&
+                        detail.customerApprovedByUserName && (
+                          <EffortInfoItem
+                            label={
+                              detail.status === TicketEffortStatus.MailEffortRequested
+                                ? "Mail ile atanan"
+                                : "Onaya sunulan"
+                            }
+                            value={detail.customerApprovedByUserName}
+                          />
+                        )}
+                      {detail.status === TicketEffortStatus.CustomerApproved && (
+                        <EffortInfoItem
+                          label="Onay kaydı"
+                          value={`${detail.customerApprovedByUserName || "—"}${
+                            detail.customerApprovedAt ? ` · ${formatDateTime(detail.customerApprovedAt)}` : ""
+                          }`}
+                        />
+                      )}
+                      {detail.returnNote &&
+                        (detail.status === TicketEffortStatus.ReturnedToDepartment ||
+                          detail.status === TicketEffortStatus.CustomerRejected ||
+                          detail.status === TicketEffortStatus.CustomerApproved) && (
+                          <EffortInfoItem
+                            label={
+                              rejectedByCustomer || detail.status === TicketEffortStatus.CustomerRejected
+                                ? "Red / geri notu"
+                                : detail.status === TicketEffortStatus.CustomerApproved
+                                  ? "Onay açıklaması"
+                                  : "Geri gönderme notu"
+                            }
+                            value={detail.returnNote}
+                          />
+                        )}
+                      {canViewActualHours && detail.effortManagerUserName && (
+                        <EffortInfoItem
+                          label="İnceleyen"
+                          value={`${detail.effortManagerUserName}${
+                            detail.effortManagerAssignedAt
+                              ? ` · ${formatDateTime(detail.effortManagerAssignedAt)}`
+                              : ""
+                          }`}
+                        />
+                      )}
+                      {detail.claimedByCurrentUser && (
+                        <EffortInfoItem label="Üstlenme" value="Bu kayıt incelemenizde." />
+                      )}
+                    </div>
                   </div>
                 </TabsContent>
 

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  Building2,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
@@ -11,6 +12,7 @@ import {
   RotateCcw,
   Search,
   Timer,
+  UserRound,
   X,
 } from "lucide-react";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -62,6 +64,7 @@ const statusOptions = [
 ];
 
 type StatusSummary = {
+  underReview: number;
   waiting: number;
   approved: number;
   returned: number;
@@ -168,6 +171,110 @@ const TableSkeleton = ({ columns }: { columns: number }) => (
   </>
 );
 
+const MetaLine = ({
+  icon,
+  label,
+  value,
+  secondary,
+}: {
+  icon?: ReactNode;
+  label: string;
+  value?: string | null;
+  secondary?: string | null;
+}) => {
+  if (!value) return null;
+  return (
+    <p className="flex min-w-0 items-start gap-1.5 text-xs text-slate-500">
+      {icon && <span className="mt-0.5 shrink-0 text-slate-400">{icon}</span>}
+      <span className="min-w-0">
+        <span className="font-medium text-slate-600">{label}: </span>
+        <span className="text-slate-700">{value}</span>
+        {secondary && <span className="text-slate-400"> · {secondary}</span>}
+      </span>
+    </p>
+  );
+};
+
+const getApprovalLabel = (row: TicketEffortManagementListItemDto): string | null => {
+  if (row.status === TicketEffortStatus.CustomerApproved) return "Onaylayan";
+  if (row.status === TicketEffortStatus.CustomerRejected) return "Reddeden";
+  if (row.status === TicketEffortStatus.WaitingCustomerApproval) return "Onaya sunulan";
+  if (row.status === TicketEffortStatus.MailEffortRequested) return "Mail ile atanan";
+  if (row.customerApprovedByUserName) return "Atanan";
+  return null;
+};
+
+const EffortListRowContent = ({
+  row,
+  canViewAllRecords,
+  compact = false,
+}: {
+  row: TicketEffortManagementListItemDto;
+  canViewAllRecords: boolean;
+  compact?: boolean;
+}) => {
+  const approvalLabel = getApprovalLabel(row);
+  const contextLine = [row.departmentName, row.workCompanyName].filter(Boolean).join(" · ");
+
+  return (
+    <div className={cn("min-w-0", compact ? "space-y-2.5" : "space-y-1")}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">
+          #{row.ticketNumber ?? "—"}
+        </span>
+        {row.ticketCode && (
+          <span className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-400">
+            {row.ticketCode}
+          </span>
+        )}
+        {compact && <EffortStatusBadge status={row.status} label={row.statusText} />}
+      </div>
+
+      <div className="min-w-0">
+        <p className={cn("font-medium text-slate-800", compact ? "text-sm leading-snug" : "truncate text-sm")}>
+          {row.title || "—"}
+        </p>
+        {contextLine && (
+          <p className={cn("text-xs text-slate-400", !compact && "truncate")}>{contextLine}</p>
+        )}
+      </div>
+
+      <div className={cn("space-y-1", compact ? "pt-1" : "hidden")}>
+        <MetaLine
+          icon={<Building2 className="h-3 w-3" aria-hidden />}
+          label="Müşteri"
+          value={row.customerName}
+        />
+        <MetaLine
+          icon={<UserRound className="h-3 w-3" aria-hidden />}
+          label="Gönderen"
+          value={row.sentByUserName || row.departmentManagerName}
+          secondary={formatDateTime(row.sentAt)}
+        />
+        {row.departmentManagerName &&
+          row.sentByUserName &&
+          row.departmentManagerName !== row.sentByUserName && (
+            <MetaLine label="Departman yöneticisi" value={row.departmentManagerName} />
+          )}
+        {canViewAllRecords && row.effortManagerUserName && (
+          <MetaLine label="Efor yöneticisi" value={row.effortManagerUserName} />
+        )}
+        {canViewAllRecords && approvalLabel && row.customerApprovedByUserName && (
+          <MetaLine
+            label={approvalLabel}
+            value={row.customerApprovedByUserName}
+            secondary={
+              row.status === TicketEffortStatus.CustomerApproved
+                ? formatDateTime(row.customerApprovedAt)
+                : null
+            }
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
 const EffortManagementPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -178,6 +285,7 @@ const EffortManagementPage = () => {
   const [canViewAllRecords, setCanViewAllRecords] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [statusSummary, setStatusSummary] = useState<StatusSummary>({
+    underReview: 0,
     waiting: 0,
     approved: 0,
     returned: 0,
@@ -202,19 +310,22 @@ const EffortManagementPage = () => {
   useEffect(() => {
     const loadSummary = async () => {
       try {
-        const [waitingCount, approvedCount, returnedCount, rejectedCount] = await Promise.all([
-          fetchStatusCount(TicketEffortStatus.WaitingCustomerApproval, customerId, appliedSearch),
-          fetchStatusCount(TicketEffortStatus.CustomerApproved, customerId, appliedSearch),
-          fetchStatusCount(TicketEffortStatus.ReturnedToDepartment, customerId, appliedSearch),
-          fetchStatusCount(TicketEffortStatus.CustomerRejected, customerId, appliedSearch),
-        ]);
+        const [underReviewCount, waitingCount, approvedCount, returnedCount, rejectedCount] =
+          await Promise.all([
+            fetchStatusCount(TicketEffortStatus.UnderReview, customerId, appliedSearch),
+            fetchStatusCount(TicketEffortStatus.WaitingCustomerApproval, customerId, appliedSearch),
+            fetchStatusCount(TicketEffortStatus.CustomerApproved, customerId, appliedSearch),
+            fetchStatusCount(TicketEffortStatus.ReturnedToDepartment, customerId, appliedSearch),
+            fetchStatusCount(TicketEffortStatus.CustomerRejected, customerId, appliedSearch),
+          ]);
         setStatusSummary({
+          underReview: underReviewCount,
           waiting: waitingCount,
           approved: approvedCount,
           returned: returnedCount + rejectedCount,
         });
       } catch {
-        setStatusSummary({ waiting: 0, approved: 0, returned: 0 });
+        setStatusSummary({ underReview: 0, waiting: 0, approved: 0, returned: 0 });
       }
     };
     void loadSummary();
@@ -271,8 +382,22 @@ const EffortManagementPage = () => {
     setStatus((current) => (current === nextStatus ? "" : nextStatus));
   };
 
+  /** API tek status aldığı için red / geri kartı iki durum arasında döner. */
+  const handleReturnedCardClick = () => {
+    setPage(0);
+    setStatus((current) => {
+      if (current === String(TicketEffortStatus.ReturnedToDepartment)) {
+        return String(TicketEffortStatus.CustomerRejected);
+      }
+      if (current === String(TicketEffortStatus.CustomerRejected)) {
+        return "";
+      }
+      return String(TicketEffortStatus.ReturnedToDepartment);
+    });
+  };
+
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const columnCount = canViewAllRecords ? 7 : 6;
+  const columnCount = canViewAllRecords ? 6 : 5;
 
   const activeFilterChips = useMemo(() => {
     const chips: { key: string; label: string; onClear: () => void }[] = [];
@@ -313,6 +438,15 @@ const EffortManagementPage = () => {
   }, [appliedSearch, status, customerId, customers]);
 
   const hasActiveFilters = activeFilterChips.length > 0;
+  const returnedFilterActive =
+    status === String(TicketEffortStatus.ReturnedToDepartment) ||
+    status === String(TicketEffortStatus.CustomerRejected);
+  const returnedCardHint =
+    status === String(TicketEffortStatus.CustomerRejected)
+      ? "Şu an müşteri reddi filtresi aktif. Tekrar tıklayınca filtre kalkar."
+      : status === String(TicketEffortStatus.ReturnedToDepartment)
+        ? "Şu an geri gönderilenler aktif. Tekrar tıklayınca müşteri reddine geçer."
+        : "İlk tık: geri gönderilenler. İkinci tık: müşteri reddi.";
 
   return (
     <DashboardLayout>
@@ -328,13 +462,22 @@ const EffortManagementPage = () => {
           }
         />
 
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
           <EffortStatCard
             label="Toplam kayıt"
             value={loading ? "—" : totalCount}
             tone="brand"
             icon={<Timer className="h-4 w-4" aria-hidden />}
             hint="Mevcut filtrelerle eşleşen toplam efor kaydı"
+          />
+          <EffortStatCard
+            label="İncelemede"
+            value={loading ? "—" : statusSummary.underReview}
+            tone="sky"
+            icon={<Search className="h-4 w-4" aria-hidden />}
+            active={status === String(TicketEffortStatus.UnderReview)}
+            onClick={() => handleStatusCardClick(String(TicketEffortStatus.UnderReview))}
+            hint="Bu karta tıklayarak incelemedeki kayıtları filtreleyin"
           />
           <EffortStatCard
             label="Onay bekleyen"
@@ -359,18 +502,16 @@ const EffortManagementPage = () => {
             value={loading ? "—" : statusSummary.returned}
             tone="rose"
             icon={<RotateCcw className="h-4 w-4" aria-hidden />}
-            active={
-              status === String(TicketEffortStatus.ReturnedToDepartment) ||
-              status === String(TicketEffortStatus.CustomerRejected)
-            }
-            onClick={() => handleStatusCardClick(String(TicketEffortStatus.ReturnedToDepartment))}
-            hint="Bu karta tıklayarak geri gönderilenleri filtreleyin"
+            active={returnedFilterActive}
+            onClick={handleReturnedCardClick}
+            hint={returnedCardHint}
           />
         </div>
 
         <EffortSectionCard
           title="Arama ve filtreler"
-          description="Talep no, başlık, durum veya müşteriye göre listeyi daraltın."
+          description="Talep no, kod, başlık, durum veya müşteriye göre listeyi daraltın."
+          accentBar
           actions={
             <div className="flex items-center gap-2">
               {hasActiveFilters && (
@@ -411,7 +552,7 @@ const EffortManagementPage = () => {
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_200px_200px_auto] md:items-end">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="effort-search" className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Talep no veya başlık
+                  Talep no, kod veya başlık
                 </label>
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -426,7 +567,7 @@ const EffortManagementPage = () => {
                       }
                     }}
                     placeholder="Ara…"
-                    aria-label="Talep no veya başlık ara"
+                    aria-label="Talep no, kod veya başlık ara"
                     className="h-10 rounded-xl border-slate-200 pl-9 focus-visible:border-[#3e5d8f] focus-visible:ring-[#3e5d8f]/20"
                   />
                 </div>
@@ -537,27 +678,42 @@ const EffortManagementPage = () => {
               />
             ) : (
               <TooltipProvider>
-                <Table>
+                <div className="flex flex-col gap-3 p-4 md:hidden">
+                  {rows.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      tabIndex={0}
+                      aria-label={`${row.ticketNumber ?? ""} numaralı talebin efor detayını aç`}
+                      onClick={() => handleOpen(row.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleOpen(row.id);
+                        }
+                      }}
+                      className="rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-sm shadow-slate-100/80 transition-all hover:-translate-y-px hover:border-[#3e5d8f]/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3e5d8f]/30"
+                    >
+                      <EffortListRowContent row={row} canViewAllRecords={canViewAllRecords} compact />
+                    </button>
+                  ))}
+                </div>
+
+                <Table className="hidden md:table">
                   <TableHeader>
                     <TableRow className="border-slate-100 bg-slate-50/70 hover:bg-slate-50/70">
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Talep no
+                        Talep
                       </TableHead>
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Başlık
+                        Müşteri / şirket
                       </TableHead>
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                        Müşteri
-                      </TableHead>
-                      <TableHead className="hidden px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 lg:table-cell">
-                        Departman yöneticisi
-                      </TableHead>
-                      <TableHead className="hidden px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 md:table-cell">
                         Gönderim
                       </TableHead>
                       {canViewAllRecords && (
                         <TableHead className="hidden px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500 xl:table-cell">
-                          Müşteri onayı
+                          Süreç
                         </TableHead>
                       )}
                       <TableHead className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -566,64 +722,88 @@ const EffortManagementPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((row) => (
-                      <TableRow
-                        key={row.id}
-                        tabIndex={0}
-                        role="link"
-                        aria-label={`${row.ticketNumber ?? ""} numaralı talebin efor detayını aç`}
-                        onClick={() => handleOpen(row.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            handleOpen(row.id);
-                          }
-                        }}
-                        className="cursor-pointer border-slate-100 transition-colors duration-150 hover:bg-[#3e5d8f]/[0.03] focus-visible:bg-[#3e5d8f]/[0.05] focus-visible:outline-none"
-                      >
-                        <TableCell className="px-4 py-3.5">
-                          <span className="inline-flex rounded-lg bg-slate-100 px-2 py-0.5 font-mono text-xs font-semibold text-slate-700">
-                            {row.ticketNumber ?? "—"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="max-w-[280px] px-4 py-3.5">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-medium text-slate-800">{row.title || "—"}</p>
-                                {row.departmentName && (
-                                  <p className="truncate text-xs text-slate-400">{row.departmentName}</p>
-                                )}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom" className="max-w-xs">
-                              <p className="font-medium">{row.title || "—"}</p>
-                              {row.departmentName && <p className="text-xs opacity-80">{row.departmentName}</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                        <TableCell className="px-4 py-3.5 text-sm text-slate-600">
-                          <span className="line-clamp-2">{row.customerName || "—"}</span>
-                        </TableCell>
-                        <TableCell className="hidden px-4 py-3.5 text-sm text-slate-600 lg:table-cell">
-                          {row.departmentManagerName || row.sentByUserName || "—"}
-                        </TableCell>
-                        <TableCell className="hidden px-4 py-3.5 text-sm text-slate-600 md:table-cell">
-                          {formatDateTime(row.sentAt)}
-                        </TableCell>
-                        {canViewAllRecords && (
-                          <TableCell className="hidden px-4 py-3.5 text-sm text-slate-600 xl:table-cell">
-                            <p className="truncate">{row.customerApprovedByUserName || "—"}</p>
-                            {row.status === TicketEffortStatus.CustomerApproved && row.customerApprovedAt && (
-                              <p className="text-xs text-slate-400">{formatDateTime(row.customerApprovedAt)}</p>
+                    {rows.map((row) => {
+                      const approvalLabel = getApprovalLabel(row);
+                      return (
+                        <TableRow
+                          key={row.id}
+                          tabIndex={0}
+                          role="link"
+                          aria-label={`${row.ticketNumber ?? ""} numaralı talebin efor detayını aç`}
+                          onClick={() => handleOpen(row.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleOpen(row.id);
+                            }
+                          }}
+                          className="cursor-pointer border-slate-100 transition-colors duration-150 hover:bg-[#3e5d8f]/[0.03] focus-visible:bg-[#3e5d8f]/[0.05] focus-visible:outline-none"
+                        >
+                          <TableCell className="max-w-[320px] px-4 py-3.5 align-top">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <EffortListRowContent row={row} canViewAllRecords={canViewAllRecords} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <p className="font-medium">{row.title || "—"}</p>
+                                {row.ticketCode && <p className="text-xs opacity-80">{row.ticketCode}</p>}
+                                {row.departmentName && <p className="text-xs opacity-80">{row.departmentName}</p>}
+                                {row.workCompanyName && <p className="text-xs opacity-80">{row.workCompanyName}</p>}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] px-4 py-3.5 align-top">
+                            <p className="truncate text-sm font-medium text-slate-700">
+                              {row.customerName || "—"}
+                            </p>
+                            {row.workCompanyName && (
+                              <p className="truncate text-xs text-slate-400">{row.workCompanyName}</p>
                             )}
                           </TableCell>
-                        )}
-                        <TableCell className="px-4 py-3.5">
-                          <EffortStatusBadge status={row.status} label={row.statusText} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          <TableCell className="max-w-[220px] px-4 py-3.5 align-top">
+                            <p className="truncate text-sm text-slate-700">
+                              {row.sentByUserName || row.departmentManagerName || "—"}
+                            </p>
+                            <p className="text-xs text-slate-400">{formatDateTime(row.sentAt)}</p>
+                            {row.departmentManagerName &&
+                              row.sentByUserName &&
+                              row.departmentManagerName !== row.sentByUserName && (
+                                <p className="mt-1 truncate text-xs text-slate-400">
+                                  Yön.: {row.departmentManagerName}
+                                </p>
+                              )}
+                          </TableCell>
+                          {canViewAllRecords && (
+                            <TableCell className="hidden max-w-[220px] px-4 py-3.5 align-top xl:table-cell">
+                              {row.effortManagerUserName ? (
+                                <p className="truncate text-sm text-slate-700">
+                                  İnceleyen: {row.effortManagerUserName}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-slate-400">Henüz üstlenilmedi</p>
+                              )}
+                              {approvalLabel && row.customerApprovedByUserName && (
+                                <p className="mt-1 truncate text-xs text-slate-500">
+                                  {approvalLabel}: {row.customerApprovedByUserName}
+                                  {row.status === TicketEffortStatus.CustomerApproved &&
+                                    row.customerApprovedAt && (
+                                      <span className="text-slate-400">
+                                        {" "}
+                                        · {formatDateTime(row.customerApprovedAt)}
+                                      </span>
+                                    )}
+                                </p>
+                              )}
+                            </TableCell>
+                          )}
+                          <TableCell className="px-4 py-3.5 align-top">
+                            <EffortStatusBadge status={row.status} label={row.statusText} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TooltipProvider>
