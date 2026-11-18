@@ -328,7 +328,7 @@ export default function App() {
             <Route path="/formlist/:formId" element={<FormList />} />
 
             <Route path="/effortMailDecision" element={<EffortMailDecisionPage />} />
-       
+           
           {/* Private Routes */}
            <Route element={<PrivateRoute />}>  
             {getRoutes(routes)} {/* Tüm özel rotaları ekler */}

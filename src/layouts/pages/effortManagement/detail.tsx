@@ -1171,6 +1171,9 @@ const EffortManagementDetailPage = () => {
                                   {effort.userTitle && (
                                     <p className="truncate text-xs text-slate-400">{effort.userTitle}</p>
                                   )}
+                                  {effort.userDepartmentName && (
+                                    <p className="truncate text-xs text-slate-500">{effort.userDepartmentName}</p>
+                                  )}
                                 </div>
                               ) : (
                                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -1211,8 +1214,13 @@ const EffortManagementDetailPage = () => {
                           <TableHeader>
                             <TableRow className="border-slate-100 bg-slate-50/70 hover:bg-slate-50/70">
                               {canViewActualHours && (
-                                <TableHead className="w-[18%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                                   Personel
+                                </TableHead>
+                              )}
+                              {canViewActualHours && (
+                                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                  Departman
                                 </TableHead>
                               )}
                               {canViewActualHours && (
@@ -1247,6 +1255,13 @@ const EffortManagementDetailPage = () => {
                                     {effort.userTitle && (
                                       <p className="truncate text-xs text-slate-400">{effort.userTitle}</p>
                                     )}
+                                  </TableCell>
+                                )}
+                                {canViewActualHours && (
+                                  <TableCell className="whitespace-normal px-4 py-3.5 align-top">
+                                    <p className="text-sm text-slate-700">
+                                      {effort.userDepartmentName || "—"}
+                                    </p>
                                   </TableCell>
                                 )}
                                 {canViewActualHours && (

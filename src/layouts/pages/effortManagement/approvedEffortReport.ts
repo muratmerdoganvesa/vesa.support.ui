@@ -77,6 +77,7 @@ export const buildApprovedEffortHtml = (
               ? `<td class="person">
                   <div class="person-name">${textOrDash(item.userAppName)}</div>
                   ${item.userTitle ? `<div class="person-title">${escapeHtml(item.userTitle)}</div>` : ""}
+                  ${item.userDepartmentName ? `<div class="person-title">${escapeHtml(item.userDepartmentName)}</div>` : ""}
                 </td>`
               : "";
             const invoiceCell = canViewActualHours
