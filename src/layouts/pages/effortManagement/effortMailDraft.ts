@@ -31,8 +31,10 @@ const buildEffortRowsPlain = (efforts: TicketEffortManagementEffortsDto | null):
       const description = item.description?.trim() || "—";
       const invoiceHours = formatHours(item.invoiceHours);
       const manDays = formatManDays(item.invoiceHours);
+      const department = item.userDepartmentName?.trim() || "—";
       return [
         `${index + 1}. Açıklama: ${description}`,
+        `   Departman: ${department}`,
         `   Fatura saati: ${invoiceHours}`,
         `   Adam gün: ${manDays}`,
       ].join("\n");
@@ -78,7 +80,7 @@ export const buildExternalEffortMailHtml = (
   const rows =
     items.length === 0
       ? `<tr>
-          <td colspan="3" style="padding:10px 12px;font-size:13px;color:#64748b;text-align:center;">
+          <td colspan="4" style="padding:10px 12px;font-size:13px;color:#64748b;text-align:center;">
             Bu talebe bağlı efor kaydı yok.
           </td>
         </tr>`
@@ -87,6 +89,9 @@ export const buildExternalEffortMailHtml = (
             return `<tr>
               <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#334155;font-size:13px;line-height:1.5;vertical-align:top;">
                 ${multilineHtml(item.description)}
+              </td>
+              <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#334155;font-size:13px;vertical-align:top;">
+                ${escapeHtml(item.userDepartmentName?.trim() || "—")}
               </td>
               <td align="right" style="padding:10px 12px;border-bottom:1px solid #e2e8f0;color:#334155;font-size:13px;white-space:nowrap;vertical-align:top;">
                 ${escapeHtml(formatHours(item.invoiceHours))}
@@ -115,6 +120,9 @@ export const buildExternalEffortMailHtml = (
     <tr>
       <th align="left" style="background-color:#f8fafc;padding:10px 12px;font-size:12px;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;">
         Açıklama
+      </th>
+      <th align="left" style="background-color:#f8fafc;padding:10px 12px;font-size:12px;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap;">
+        Departman
       </th>
       <th align="right" style="background-color:#f8fafc;padding:10px 12px;font-size:12px;font-weight:700;color:#475569;border-bottom:1px solid #e2e8f0;white-space:nowrap;">
         Fatura saati

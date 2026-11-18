@@ -123,6 +123,7 @@ export interface TicketEffortManagementEffortItemDto {
   userAppId?: string | null;
   userAppName?: string | null;
   userTitle?: string | null;
+  userDepartmentName?: string | null;
   effortHours?: number;
   invoiceHours?: number | null;
   description?: string | null;
