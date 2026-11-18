@@ -2270,9 +2270,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
                       dispatchAlert({
                         message: completeResult.skippedApproval
                           ? completeResult.sentToEffortManager
-                            ? "Eforunuz tamamlandı. Onay süreci atlandı; talep efor yöneticisine iletildi."
-                            : "Eforunuz tamamlandı. Onay süreci atlandı. Bekleyen diğer efor girişleri tamamlanınca efor yöneticisine iletilecek."
-                          : "Eforunuz tamamlandı ve yöneticinizin onayına sunuldu.",
+                            ? "Eforunuz tamamlandı. Efor onayına girilmedi; talep efor yöneticisine iletildi."
+                            : "Eforunuz tamamlandı. Efor onayına girilmeden kapatıldı. Bekleyen diğer efor girişleri tamamlanınca efor yöneticisine iletilecek."
+                          : "Eforunuz tamamlandı ve departmanınızın efor onayına sunuldu.",
                         type: "Success",
                       });
                     } catch (error) {
