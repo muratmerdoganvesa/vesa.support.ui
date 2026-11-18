@@ -114,9 +114,14 @@ const EffortList = ({
     0
   );
 
-  // Fatura: dept yöneticisi paneli veya efor istenen kişinin kendisi dept yöneticisi olması.
-  const showInvoiceHours = isDepartmentManager || canEnterInvoiceHours;
+  // Kendi satırında fatura: efor onaycısı boş olan departman yöneticisi veya kapsam yöneticisi.
+  const requireOwnInvoiceHours = canEnterInvoiceHours;
+  const showInvoiceColumn = isDepartmentManager || canEnterInvoiceHours;
   const isAssigneeDepartmentManager = canEnterInvoiceHours && !isDepartmentManager;
+  const effortsRequiringInvoice =
+    isDepartmentManager && !requireOwnInvoiceHours
+      ? efforts.filter((effort) => !effort.isOwn)
+      : efforts;
 
   const isReturnedForEdit = effortSendStatus?.status === TicketEffortStatus.ReturnedToDepartment;
   const isCustomerApproved = effortSendStatus?.status === TicketEffortStatus.CustomerApproved;
@@ -151,6 +156,9 @@ const EffortList = ({
   const showEffortForm = !isEffortLocked && (isDepartmentManager || canEnterEffort);
   const editingLocksActualHours =
     Boolean(editingEffort) && !canEditActualHours(editingEffort!);
+  const editingRequiresInvoice = Boolean(
+    editingEffort && (editingEffort.isOwn ? requireOwnInvoiceHours : showInvoiceColumn)
+  );
 
   useEffect(() => {
     if (!editOpen || !editingEffort) return;
@@ -172,7 +180,10 @@ const EffortList = ({
     effort.invoiceHours === undefined ||
     Number.isNaN(Number(effort.invoiceHours));
 
-  const hasMissingInvoiceHours = efforts.some(isInvoiceHoursMissing);
+  const rowNeedsInvoice = (effort: TicketEffortListDto) =>
+    effort.isOwn ? requireOwnInvoiceHours : showInvoiceColumn;
+
+  const hasMissingInvoiceHours = effortsRequiringInvoice.some(isInvoiceHoursMissing);
   const isManagerWorkflowApprove = canApproveEffortAsManager;
   const canSendToEffortManager =
     Boolean(onSendToEffortManager) &&
@@ -241,7 +252,7 @@ const EffortList = ({
     }
 
     let parsedInvoice: number | undefined;
-    if (showInvoiceHours) {
+    if (requireOwnInvoiceHours) {
       parsedInvoice = Number(invoiceHours.replace(",", "."));
       if (!invoiceHours.trim() || Number.isNaN(parsedInvoice) || parsedInvoice < 0) {
         setInvoiceHoursError("Fatura saati 0 veya daha büyük olmalıdır.");
@@ -297,7 +308,7 @@ const EffortList = ({
     }
 
     let invoiceHours: number | undefined;
-    if (showInvoiceHours) {
+    if (editingRequiresInvoice) {
       const parsedInvoice = Number(editInvoiceHours.replace(",", "."));
       if (!editInvoiceHours.trim() || Number.isNaN(parsedInvoice) || parsedInvoice < 0) {
         setEditInvoiceError("Fatura saati 0 veya daha büyük olmalıdır.");
@@ -495,8 +506,8 @@ const EffortList = ({
       {!isDepartmentManager && !isProcessLocked && isEffortComplated && (
         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
           {isAssigneeDepartmentManager
-            ? "Eforunuz tamamlandı (onay süreci atlandı). Bekleyen başka efor girişi yoksa talep efor yöneticisine iletilir. Kayıtlarınız kilitlendi."
-            : "Eforunuz departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi; ekleme, silme ve güncelleme yapılamaz."}
+            ? "Eforunuz tamamlandı. Efor onayına girilmeden kapatıldı. Bekleyen başka efor girişi yoksa talep efor yöneticisine iletilir. Kayıtlarınız kilitlendi."
+            : "Eforunuz departmanınızın efor onayına sunuldu. Kayıtlarınız kilitlendi; ekleme, silme ve güncelleme yapılamaz."}
         </div>
       )}
 
@@ -515,11 +526,11 @@ const EffortList = ({
             <p className="mt-0.5 text-xs text-slate-500">
               {isEffortComplated
                 ? canEnterInvoiceHours
-                  ? "Eforunuz tamamlandı. Onay süreci atlandı. Bekleyen diğer efor girişleri tamamlanınca efor yöneticisine iletilecek."
-                  : "Eforunuz tamamlandı ve departman yöneticinizin onayına sunuldu. Kayıtlarınız kilitlendi."
+                  ? "Eforunuz tamamlandı. Efor onayına girilmeden kapatıldı. Bekleyen diğer efor girişleri tamamlanınca efor yöneticisine iletilecek."
+                  : "Eforunuz tamamlandı ve departmanınızın efor onayına sunuldu. Kayıtlarınız kilitlendi."
                 : canEnterInvoiceHours
-                  ? "Fiili ve fatura saatini girdikten sonra tamamlayın. Onay sürecine girmeden devam eder; bekleyen başka efor girişi yoksa talep efor yöneticisine gider."
-                  : "Efor maddelerinizi girdikten sonra tamamlayın; eforunuz otomatik olarak departman yöneticinizin onayına gider."}
+                  ? "Açıklama, fiili saat ve fatura saatini girdikten sonra tamamlayın. Efor onayına girmeden tamamlanır; bekleyen başka efor girişi yoksa talep efor yöneticisine gider."
+                  : "Açıklama ve fiili saati girdikten sonra tamamlayın. Eforunuz departmanınızın efor onayına gönderilir."}
             </p>
           </div>
           {isEffortComplated ? (
@@ -558,7 +569,7 @@ const EffortList = ({
           <div
             className={cn(
               "grid grid-cols-1 gap-3 items-end",
-              showInvoiceHours
+              requireOwnInvoiceHours
                 ? "sm:grid-cols-[140px_140px_1fr_auto]"
                 : "sm:grid-cols-[140px_1fr_auto]"
             )}
@@ -589,7 +600,7 @@ const EffortList = ({
               />
             </div>
 
-            {showInvoiceHours && (
+            {requireOwnInvoiceHours && (
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="effort-invoice-hours"
@@ -666,9 +677,9 @@ const EffortList = ({
         {efforts.length > 0 && (
           <span className="text-xs text-slate-500 font-medium ml-auto inline-flex items-center gap-1.5 flex-wrap justify-end">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            {showInvoiceHours ? "Fiili" : "Toplam"}:{" "}
+            {showInvoiceColumn ? "Fiili" : "Toplam"}:{" "}
             <strong className="text-slate-700">{totalHours.toFixed(2)} saat</strong>
-            {showInvoiceHours && (
+            {showInvoiceColumn && (
               <>
                 <span className="text-slate-300">·</span>
                 Fatura: <strong className="text-slate-700">{totalInvoiceHours.toFixed(2)} saat</strong>
@@ -689,7 +700,7 @@ const EffortList = ({
           <p className="text-sm text-slate-400">Henüz efor kaydı yok.</p>
           {showEffortForm && (
             <p className="text-xs text-slate-300">
-              {showInvoiceHours
+              {requireOwnInvoiceHours
                 ? "Yukarıdan fiili saat, fatura saati ve açıklama ekleyebilirsiniz."
                 : "Yukarıdan fiili saat ve açıklama ekleyebilirsiniz."}
             </p>
@@ -706,9 +717,9 @@ const EffortList = ({
                   </TableHead>
                 )}
                 <TableHead className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[110px]">
-                  {showInvoiceHours ? "Fiili Saat" : "Efor (saat)"}
+                  {showInvoiceColumn ? "Fiili Saat" : "Efor (saat)"}
                 </TableHead>
-                {showInvoiceHours && (
+                {showInvoiceColumn && (
                   <TableHead className="px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500 w-[120px]">
                     Fatura Saati
                   </TableHead>
@@ -753,9 +764,9 @@ const EffortList = ({
                         {formatHours(effort.effortHours)}
                       </span>
                     </TableCell>
-                    {showInvoiceHours && (
+                    {showInvoiceColumn && (
                       <TableCell className="px-4 py-3">
-                        {isInvoiceHoursMissing(effort) ? (
+                        {rowNeedsInvoice(effort) && isInvoiceHoursMissing(effort) ? (
                           <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-600">
                             Eksik
                           </span>
@@ -836,7 +847,7 @@ const EffortList = ({
             <DialogDescription id="effort-edit-desc">
               {editingLocksActualHours
                 ? "Bu kaydın fiili saati yalnızca giren kişi tarafından değiştirilebilir. Fatura saati ve açıklamayı güncelleyebilirsiniz."
-                : showInvoiceHours
+                : editingRequiresInvoice
                   ? "Fiili saat ve fatura saati farklı olabilir. Fatura saati 0 girilebilir."
                   : editingEffort?.userAppName
                     ? `${editingEffort.userAppName} kaydını düzenliyorsunuz.`
@@ -891,7 +902,7 @@ const EffortList = ({
               {editHoursError && <p className="text-xs text-rose-500 ml-1">{editHoursError}</p>}
             </div>
 
-            {showInvoiceHours && (
+            {editingRequiresInvoice && (
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="edit-invoice-hours"

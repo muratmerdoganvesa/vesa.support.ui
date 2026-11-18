@@ -128,6 +128,7 @@ export interface TicketEffortManagementEffortItemDto {
   invoiceHours?: number | null;
   description?: string | null;
   createdDate?: string;
+  approvedByUserName?: string | null;
 }
 
 export interface TicketEffortManagementEffortsDto {
