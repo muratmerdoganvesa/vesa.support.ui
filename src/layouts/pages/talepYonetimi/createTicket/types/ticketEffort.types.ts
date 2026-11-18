@@ -12,7 +12,7 @@ export interface TicketEffortListDto {
 
 export interface TicketEffortListResponseDto {
   isDepartmentManager?: boolean;
-  /** Talebin/kapsamın dept yöneticisi veya efor istenen kişi kendisi dept yöneticisiyse */
+  /** Kendi eforunda fatura saati girer. Departman yöneticisinin efor onaycısı boşsa true. */
   canEnterInvoiceHours?: boolean;
   isEffortEnter?: boolean;
   canEnterEffort?: boolean;

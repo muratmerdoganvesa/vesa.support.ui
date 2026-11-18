@@ -1174,6 +1174,9 @@ const EffortManagementDetailPage = () => {
                                   {effort.userDepartmentName && (
                                     <p className="truncate text-xs text-slate-500">{effort.userDepartmentName}</p>
                                   )}
+                                  <p className="truncate text-xs text-slate-500">
+                                    Onaylayan: {effort.approvedByUserName || "—"}
+                                  </p>
                                 </div>
                               ) : (
                                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -1214,17 +1217,22 @@ const EffortManagementDetailPage = () => {
                           <TableHeader>
                             <TableRow className="border-slate-100 bg-slate-50/70 hover:bg-slate-50/70">
                               {canViewActualHours && (
-                                <TableHead className="w-[16%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                                   Personel
                                 </TableHead>
                               )}
                               {canViewActualHours && (
-                                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <TableHead className="w-[13%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                                   Departman
                                 </TableHead>
                               )}
                               {canViewActualHours && (
-                                <TableHead className="w-[10%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <TableHead className="w-[14%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                  Onaylayan
+                                </TableHead>
+                              )}
+                              {canViewActualHours && (
+                                <TableHead className="w-[9%] px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                                   Fiili saat
                                 </TableHead>
                               )}
@@ -1261,6 +1269,13 @@ const EffortManagementDetailPage = () => {
                                   <TableCell className="whitespace-normal px-4 py-3.5 align-top">
                                     <p className="text-sm text-slate-700">
                                       {effort.userDepartmentName || "—"}
+                                    </p>
+                                  </TableCell>
+                                )}
+                                {canViewActualHours && (
+                                  <TableCell className="whitespace-normal px-4 py-3.5 align-top">
+                                    <p className="text-sm text-slate-700">
+                                      {effort.approvedByUserName || "—"}
                                     </p>
                                   </TableCell>
                                 )}
