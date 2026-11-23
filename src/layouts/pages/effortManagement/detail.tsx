@@ -158,6 +158,17 @@ const StatusBanner = ({
   );
 };
 
+const hasVisibleRichText = (html?: string | null): boolean => {
+  if (!html) return false;
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > 0;
+};
+
 const EffortManagementDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -741,6 +752,21 @@ const EffortManagementDetailPage = () => {
                     : undefined
                 }
               />
+            )}
+
+            {hasVisibleRichText(detail.customerEffortContact) && (
+              <section
+                aria-label="Müşteri Yetkili Bilgisi"
+                className="rounded-2xl border border-slate-200/70 bg-white px-5 py-4 shadow-[0_4px_40px_rgba(62,93,143,0.08)]"
+              >
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Müşteri Yetkili Bilgisi
+                </h2>
+                <div
+                  className="prose prose-sm mt-2 max-h-56 max-w-none overflow-auto text-sm text-slate-800 [&_p]:mb-1"
+                  dangerouslySetInnerHTML={{ __html: detail.customerEffortContact ?? "" }}
+                />
+              </section>
             )}
 
             <section

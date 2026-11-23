@@ -80,6 +80,7 @@ export interface TicketEffortManagementDetailDto {
   departmentManagerName?: string | null;
   customerId?: string | null;
   customerName?: string | null;
+  customerEffortContact?: string | null;
   workCompanyId?: string;
   workCompanyName?: string | null;
   ticketCreatedDate?: string | null;

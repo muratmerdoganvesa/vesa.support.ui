@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, Lock, Trash2, X } from "lucide-react";
+import ReactQuill from "react-quill";
+import "react-quill/dist/quill.snow.css";
+import "../createTicket/index.css";
 
-import { UserApi } from "api/generated";
+import { TicketApi, UserApi } from "api/generated";
 import getConfiguration from "confiuration";
 import { axiosInstance } from "utils/axiosInstance";
 import { cn } from "lib/utils";
@@ -78,6 +81,31 @@ interface GrantTicketAccessPanelProps {
   onBusyChange: (busy: boolean) => void;
 }
 
+const hasVisibleRichText = (html?: string | null): boolean => {
+  if (!html) return false;
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > 0;
+};
+
+const normalizeCustomerEffortContact = (html?: string | null): string | null =>
+  hasVisibleRichText(html) ? (html ?? "").trim() : null;
+
+const customerEffortModules = {
+  toolbar: [
+    ["bold", "italic", "underline"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link"],
+    ["clean"],
+  ],
+};
+
+const customerEffortFormats = ["bold", "italic", "underline", "list", "bullet", "link"];
+
 const fieldClassName =
   "h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-sm text-slate-800 outline-none transition-colors focus:border-[#3e5d8f] focus:ring-2 focus:ring-[#3e5d8f]/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400";
 
@@ -129,6 +157,10 @@ const GrantTicketAccessPanel = ({
   const [effortSendStatus, setEffortSendStatus] = useState<TicketEffortManagementStatusDto | null>(null);
   const [effortStatusLoading, setEffortStatusLoading] = useState(false);
   const [userInputFocused, setUserInputFocused] = useState(false);
+  const [customerEffortContact, setCustomerEffortContact] = useState("");
+  const [contactVisible, setContactVisible] = useState(false);
+  const [contactSaving, setContactSaving] = useState(false);
+  const initialContactRef = useRef("");
   const searchTimerRef = useRef<number | null>(null);
   const searchRequestIdRef = useRef(0);
   const currentUserIdRef = useRef("");
@@ -142,6 +174,7 @@ const GrantTicketAccessPanel = ({
     revokingUserId != null ||
     effortEnterSaving ||
     effortStatusLoading ||
+    contactSaving ||
     pendingSelfRevoke != null;
   const isFormLocked = isEffortProcessLocked || isMutating;
 
@@ -157,6 +190,47 @@ const GrantTicketAccessPanel = ({
     } finally {
       setListLoading(false);
     }
+  };
+
+  const loadCustomerEffortContact = async () => {
+    try {
+      const api = new TicketApi(getConfiguration());
+      const response = await api.apiTicketIdGet(ticket.id);
+      const value = response.data?.customerEffortContact ?? "";
+      if (!hasVisibleRichText(value)) {
+        setContactVisible(false);
+        setCustomerEffortContact("");
+        initialContactRef.current = "";
+        return;
+      }
+      setContactVisible(true);
+      setCustomerEffortContact(value);
+      initialContactRef.current = value;
+    } catch {
+      setContactVisible(false);
+      setCustomerEffortContact("");
+      initialContactRef.current = "";
+    }
+  };
+
+  const persistCustomerEffortContact = async (): Promise<"saved" | "unchanged"> => {
+    if (!contactVisible || isEffortProcessLocked) return "unchanged";
+    const next = normalizeCustomerEffortContact(customerEffortContact);
+    const initial = normalizeCustomerEffortContact(initialContactRef.current);
+    if ((next ?? "") === (initial ?? "")) return "unchanged";
+
+    const response = await axiosInstance.post<{ customerEffortContact?: string | null }>(
+      "/api/Ticket/UpdateCustomerEffortContact",
+      {
+        ticketId: ticket.id,
+        customerEffortContact: next,
+      }
+    );
+    const saved = response.data?.customerEffortContact ?? "";
+    initialContactRef.current = saved;
+    setCustomerEffortContact(saved);
+    if (!hasVisibleRichText(saved)) setContactVisible(false);
+    return "saved";
   };
 
   const loadEffortStatus = async () => {
@@ -192,10 +266,10 @@ const GrantTicketAccessPanel = ({
 
   useEffect(() => {
     onBusyChange(
-      submitting || revokingUserId != null || effortEnterSaving || pendingSelfRevoke != null
+      submitting || revokingUserId != null || effortEnterSaving || contactSaving || pendingSelfRevoke != null
     );
     return () => onBusyChange(false);
-  }, [submitting, revokingUserId, effortEnterSaving, pendingSelfRevoke, onBusyChange]);
+  }, [submitting, revokingUserId, effortEnterSaving, contactSaving, pendingSelfRevoke, onBusyChange]);
 
   useEffect(() => {
     void resolveCurrentUserId();
@@ -208,6 +282,7 @@ const GrantTicketAccessPanel = ({
     }
     void loadAccessList();
     void loadEffortStatus();
+    void loadCustomerEffortContact();
   }, [ticket.id]);
 
   useEffect(() => {
@@ -227,8 +302,26 @@ const GrantTicketAccessPanel = ({
     setUserSearchLoading(false);
   };
 
+  const handleSaveCustomerEffortContact = async () => {
+    if (!contactVisible || isFormLocked || contactSaving) return;
+    setContactSaving(true);
+    try {
+      const result = await persistCustomerEffortContact();
+      if (result === "saved") {
+        dispatchAlert({ message: "Müşteri yetkili bilgisi güncellendi.", type: "Success" });
+      }
+    } catch (error) {
+      dispatchAlert({
+        message: "Müşteri yetkili bilgisi güncellenemedi: " + formatRequestError(error),
+        type: "Error",
+      });
+    } finally {
+      setContactSaving(false);
+    }
+  };
+
   const handleCancel = () => {
-    if (submitting || revokingUserId || effortEnterSaving || pendingSelfRevoke) return;
+    if (submitting || revokingUserId || effortEnterSaving || contactSaving || pendingSelfRevoke) return;
     onClose();
   };
 
@@ -322,6 +415,16 @@ const GrantTicketAccessPanel = ({
 
     setSubmitting(true);
     try {
+      try {
+        await persistCustomerEffortContact();
+      } catch (error) {
+        dispatchAlert({
+          message: "Müşteri yetkili bilgisi güncellenemedi: " + formatRequestError(error),
+          type: "Error",
+        });
+        return;
+      }
+
       const response = await axiosInstance.post<{ status?: number; statusText?: string }>(
         "/api/Ticket/GrantTicketAccess",
         {
@@ -394,6 +497,7 @@ const GrantTicketAccessPanel = ({
       revokingUserId ||
       submitting ||
       effortEnterSaving ||
+      contactSaving ||
       pendingSelfRevoke
     ) {
       return;
@@ -449,7 +553,7 @@ const GrantTicketAccessPanel = ({
           type="button"
           onClick={handleCancel}
           disabled={
-            submitting || revokingUserId != null || effortEnterSaving || pendingSelfRevoke != null
+            submitting || revokingUserId != null || effortEnterSaving || contactSaving || pendingSelfRevoke != null
           }
           aria-label="Vazgeç"
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"
@@ -637,6 +741,44 @@ const GrantTicketAccessPanel = ({
           />
         </label>
 
+        {contactVisible && (
+          <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label="Müşteri Yetkili Bilgisi">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-700">Müşteri Yetkili Bilgisi</span>
+              {!isEffortProcessLocked && (
+                <button
+                  type="button"
+                  onClick={() => void handleSaveCustomerEffortContact()}
+                  disabled={isFormLocked}
+                  aria-label="Müşteri yetkili bilgisini güncelle"
+                  className="h-7 rounded-md border border-slate-200 px-2.5 text-[11px] font-semibold text-[#3e5d8f] hover:bg-slate-50 disabled:opacity-40"
+                >
+                  {contactSaving ? "Kaydediliyor" : "Güncelle"}
+                </button>
+              )}
+            </div>
+            {isEffortProcessLocked ? (
+              <div
+                className="max-h-36 overflow-auto rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-sm leading-5 text-slate-700 [&_p]:mb-1"
+                dangerouslySetInnerHTML={{ __html: customerEffortContact }}
+              />
+            ) : (
+              <ReactQuill
+                className="customer-effort-quill customer-effort-quill-dialog"
+                theme="snow"
+                value={customerEffortContact}
+                onChange={(value, _delta, source) => {
+                  if (source === "user") setCustomerEffortContact(value);
+                }}
+                modules={customerEffortModules}
+                formats={customerEffortFormats}
+                readOnly={isFormLocked}
+                placeholder="Müşteri yetkili bilgisi"
+              />
+            )}
+          </div>
+        )}
+
         <div className="rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2">
           <p className="mb-1.5 text-xs font-semibold text-slate-700">Efor istenen kişiler</p>
           {listLoading ? (
@@ -700,7 +842,7 @@ const GrantTicketAccessPanel = ({
           type="button"
           onClick={handleCancel}
           disabled={
-            submitting || revokingUserId != null || effortEnterSaving || pendingSelfRevoke != null
+            submitting || revokingUserId != null || effortEnterSaving || contactSaving || pendingSelfRevoke != null
           }
           className="h-9 rounded-lg border border-rose-200 px-4 text-sm font-semibold text-rose-500 hover:bg-rose-50 disabled:opacity-40"
         >
