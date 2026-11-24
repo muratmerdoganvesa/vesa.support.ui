@@ -57,6 +57,7 @@ export const buildApprovedEffortHtml = (
     detail.canViewActualHours !== false && efforts?.canViewActualHours !== false;
   const generatedAt = formatDateTime(new Date().toISOString());
   const descriptionText = stripHtmlToText(detail.description);
+  const customerEffortContactText = stripHtmlToText(detail.customerEffortContact);
   const isApproved = detail.status === TicketEffortStatus.CustomerApproved;
   const statusLabel = detail.statusText?.trim() || (isApproved ? "Onaylandı" : "—");
   const reportTitle = isApproved ? "Onaylanan Efor Raporu" : "Efor Raporu";
@@ -133,6 +134,13 @@ export const buildApprovedEffortHtml = (
     ? `<section class="card">
         <h2>Talep açıklaması</h2>
         <p class="body-text">${multilineHtml(descriptionText)}</p>
+      </section>`
+    : "";
+
+  const customerEffortContactBlock = customerEffortContactText
+    ? `<section class="card">
+        <h2>Müşteri Yetkili Bilgisi</h2>
+        <p class="body-text">${multilineHtml(customerEffortContactText)}</p>
       </section>`
     : "";
 
@@ -495,6 +503,7 @@ export const buildApprovedEffortHtml = (
         </section>
 
         ${descriptionBlock}
+        ${customerEffortContactBlock}
         ${approvalNote}
 
         <section class="card">

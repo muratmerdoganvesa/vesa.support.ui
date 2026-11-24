@@ -53,3 +53,42 @@
 .ql-toolbar button {
   margin: 0 2px;
 }
+
+.customer-effort-quill {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.customer-effort-quill .ql-toolbar.ql-snow {
+  flex: 0 0 auto;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 12px 12px 0 0;
+  padding: 4px 6px;
+}
+
+.customer-effort-quill .ql-container.ql-snow {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: none;
+  overflow: auto;
+  font-size: 13px;
+  border-radius: 0 0 12px 12px;
+}
+
+.customer-effort-quill .ql-editor {
+  min-height: 0 !important;
+  height: 100%;
+  padding: 10px 12px;
+}
+
+.customer-effort-quill-dialog {
+  height: 9.5rem;
+}
