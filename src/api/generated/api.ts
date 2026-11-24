@@ -16833,6 +16833,12 @@ export interface TicketInsertDto {
      */
     'addedMailAddresses'?: string | null;
     /**
+     * Müşteri yetkili bilgisi. Zorunlu değildir.
+     * @type {string}
+     * @memberof TicketInsertDto
+     */
+    'customerEffortContact'?: string | null;
+    /**
      * 
      * @type {boolean}
      * @memberof TicketInsertDto
@@ -17141,6 +17147,12 @@ export interface TicketListDto {
      * @memberof TicketListDto
      */
     'addedMailAddresses'?: string | null;
+    /**
+     * Müşteri yetkili bilgisi. Zorunlu değildir.
+     * @type {string}
+     * @memberof TicketListDto
+     */
+    'customerEffortContact'?: string | null;
     /**
      * 
      * @type {boolean}
@@ -19072,6 +19084,12 @@ export interface TicketUpdateDto {
      * @memberof TicketUpdateDto
      */
     'addedMailAddresses'?: string | null;
+    /**
+     * Müşteri yetkili bilgisi. Zorunlu değildir.
+     * @type {string}
+     * @memberof TicketUpdateDto
+     */
+    'customerEffortContact'?: string | null;
     /**
      * 
      * @type {string}

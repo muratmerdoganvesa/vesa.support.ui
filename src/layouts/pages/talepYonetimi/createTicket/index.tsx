@@ -683,6 +683,31 @@ const AssignTimeline = ({
 // Main Component
 // ---------------------------------------------------------------------------
 
+const hasVisibleRichText = (html?: string | null): boolean => {
+  if (!html) return false;
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#160;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > 0;
+};
+
+const normalizeCustomerEffortContact = (html?: string | null): string | null =>
+  hasVisibleRichText(html) ? (html ?? "").trim() : null;
+
+const customerEffortModules = {
+  toolbar: [
+    ["bold", "italic", "underline"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link"],
+    ["clean"],
+  ],
+};
+
+const customerEffortFormats = ["bold", "italic", "underline", "list", "bullet", "link"];
+
 function CreateRequest({ ...rest }: createTicketProps) {
   const [searchByName, setSearchByName] = useState<UserAppDto[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
@@ -777,6 +802,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccInputValue, setCcInputValue] = useState("");
+  const [customerEffortContact, setCustomerEffortContact] = useState("");
+  const [loginUserName, setLoginUserName] = useState("");
 
   // ── Görevler sekmesi state ─────────────────────────────────────────────────
   const [existingTasks, setExistingTasks] = useState<TicketTaskListDto[]>([]);
@@ -837,12 +864,29 @@ function CreateRequest({ ...rest }: createTicketProps) {
   ];
 
   const showTabs = true;
+  const isVesaconsUser = loginUserName.toLowerCase().includes("vesacons");
+  const showCustomerEffortEditor = !isSolveTicket && isVesaconsUser;
+  const showCustomerEffortReadOnly = isSolveTicket && hasVisibleRichText(customerEffortContact);
+  const customerEffortLocked = Boolean(review) || (Boolean(id) && isOpen && !canEditTicket);
 
   // ── Business logic (all preserved) ────────────────────────────────────────
 
   useEffect(() => {
     console.log(source);
   }, [source]);
+
+  useEffect(() => {
+    const loadLoginUser = async () => {
+      try {
+        const api = new UserApi(getConfiguration());
+        const response = await api.apiUserGetLoginUserGet();
+        setLoginUserName(response.data?.userName ?? "");
+      } catch {
+        setLoginUserName("");
+      }
+    };
+    void loadLoginUser();
+  }, []);
 
   useEffect(() => {
     if (!id) {
@@ -1006,6 +1050,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
               .filter(Boolean)
           );
         }
+        setCustomerEffortContact(ticketData.customerEffortContact ?? "");
 
         const relUsers: UserApp[] = [];
         if (ticketData.ticketNotificationsListDto) {
@@ -1338,9 +1383,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
       if (encodedHtml || newSelectedFiles.length > 0) {
         const fileDataArray = await Promise.all(newSelectedFiles.map(async (file) => ({ fileName: file.name, base64: await fileToBase64(file), fileType: file.type })));
         const newComment = { body: encodedHtml, files: fileDataArray };
-        await api.apiTicketPost(1, null, { ...ticketForm, isFromEmail: false, isSend, ticketComment: [...ticketForm.ticketComment, newComment], addedMailAddresses: normalizedAddedMailAddresses, tasks: null });
+        await api.apiTicketPost(1, null, { ...ticketForm, isFromEmail: false, isSend, ticketComment: [...ticketForm.ticketComment, newComment], addedMailAddresses: normalizedAddedMailAddresses, customerEffortContact: normalizeCustomerEffortContact(customerEffortContact), tasks: null });
       } else {
-        await api.apiTicketPost(1, null, { ...ticketForm, isFromEmail: false, isSend, ticketComment: [], addedMailAddresses: normalizedAddedMailAddresses, tasks: null });
+        await api.apiTicketPost(1, null, { ...ticketForm, isFromEmail: false, isSend, ticketComment: [], addedMailAddresses: normalizedAddedMailAddresses, customerEffortContact: normalizeCustomerEffortContact(customerEffortContact), tasks: null });
       }
 
       const taskMsg = "";
@@ -1370,8 +1415,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
       ticketCode: ticketForm.ticketCode,
       workCompanySystemInfoId: ticketForm.workCompanySystemInfoId,
       customerRefId: ticketForm.customerRefId,
+      customerEffortContact: normalizeCustomerEffortContact(customerEffortContact),
     });
-  }, [ticketForm]);
+  }, [ticketForm, customerEffortContact, id]);
 
   const handleUpdateTicket = async (isSend?: boolean, isEdit?: boolean) => {
     try {
@@ -1388,7 +1434,8 @@ function CreateRequest({ ...rest }: createTicketProps) {
       const conf = getConfiguration();
       const api = new TicketApi(conf);
       const normalizedAddedMailAddresses = normalizeEmails(ccEmails.join(" "));
-      const baseDtoWithDept = { ...updatedTicketForm, isSend, ticketDepartmentId: selectedDepartment.id, addedMailAddresses: normalizedAddedMailAddresses };
+      const normalizedCustomerEffortContact = normalizeCustomerEffortContact(customerEffortContact);
+      const baseDtoWithDept = { ...updatedTicketForm, isSend, ticketDepartmentId: selectedDepartment.id, addedMailAddresses: normalizedAddedMailAddresses, customerEffortContact: normalizedCustomerEffortContact };
 
       if (!isOpen && isSend) {
         await api.apiTicketUpdateStartTicketPost(1, false, baseDtoWithDept);
@@ -1401,6 +1448,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
           isSend: isSend,
           ticketDepartmentId: selectedDepartment.id,
           addedMailAddresses: normalizedAddedMailAddresses,
+          customerEffortContact: normalizedCustomerEffortContact,
         });
         dispatchAlert({ message: "Talep başarıyla güncellendi", type: "Success" });
       } else if (isSend == false) {
@@ -1409,6 +1457,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
           isSend: isSend,
           ticketDepartmentId: selectedDepartment.id,
           addedMailAddresses: normalizedAddedMailAddresses,
+          customerEffortContact: normalizedCustomerEffortContact,
         });
         dispatchAlert({ message: "Talep başarıyla güncellendi", type: "Success" });
       }
@@ -1724,14 +1773,15 @@ function CreateRequest({ ...rest }: createTicketProps) {
             <div className="p-6 flex flex-col gap-5">
 
               {/* 3-column grid: left (1) | right (2) */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-3">
 
                 {/* ── Left: User & Company ── */}
                 <SectionCard
                   title={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailHeaderProps.KullaniciVeIsOrtaklari")}
                   icon={<Users className="w-3.5 h-3.5" />}
+                  className="flex h-full min-h-0 flex-col overflow-hidden"
                 >
-                  <div className="flex flex-col gap-4">
+                  <div className="flex min-h-0 flex-1 flex-col gap-4">
                     <FormField label={t("ns1:TicketDetailPage.TicketDetailPage.TicketDetailInputProps.Sirket")}>
                       <Combobox
                         options={toOpts(companyData, "id", "name")}
@@ -1779,6 +1829,40 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           disabled={isOpen}
                         />
                       </FormField>
+                    )}
+
+                    {showCustomerEffortEditor && (
+                      <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label="Müşteri Yetkili Bilgisi">
+                        <label className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
+                          Müşteri Yetkili Bilgisi
+                        </label>
+                        <div className="flex h-40 min-h-0 flex-col overflow-hidden lg:h-auto lg:min-h-0 lg:flex-1">
+                          <ReactQuill
+                            className="customer-effort-quill"
+                            theme="snow"
+                            value={customerEffortContact}
+                            onChange={(value, _delta, source) => {
+                              if (source === "user") setCustomerEffortContact(value);
+                            }}
+                            modules={customerEffortModules}
+                            formats={customerEffortFormats}
+                            readOnly={customerEffortLocked}
+                            placeholder="Ad, telefon veya e-posta"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {showCustomerEffortReadOnly && (
+                      <div className="flex flex-col gap-1.5" role="group" aria-label="Müşteri Yetkili Bilgisi">
+                        <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
+                          Müşteri Yetkili Bilgisi
+                        </span>
+                        <div
+                          className="max-h-48 overflow-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-5 text-slate-700 [&_p]:mb-1"
+                          dangerouslySetInnerHTML={{ __html: customerEffortContact }}
+                        />
+                      </div>
                     )}
                   </div>
                 </SectionCard>
@@ -2424,7 +2508,7 @@ function CreateRequest({ ...rest }: createTicketProps) {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
 
                 {/* General assignment settings */}
                 <SectionCard
@@ -2490,8 +2574,9 @@ function CreateRequest({ ...rest }: createTicketProps) {
                 <SectionCard
                   title={t("ns1:TicketDetailPage.GenelAtalamalar.AtanilanKisiYadaTakim")}
                   icon={<Users className="w-3.5 h-3.5" />}
+                  className="flex h-full min-h-0 flex-col overflow-hidden"
                 >
-                  <div className="flex flex-col gap-4">
+                  <div className="flex min-h-0 flex-1 flex-col gap-4">
                     {nameOfAssigned && (
                       <div className="rounded-xl bg-[#3e5d8f]/5 border border-[#3e5d8f]/12 px-4 py-3">
                         <p className="text-[10px] font-bold tracking-widest uppercase text-[#3e5d8f]/60 mb-1">
@@ -2544,6 +2629,18 @@ function CreateRequest({ ...rest }: createTicketProps) {
                           disabled={isEffortApprovalLocked}
                         />
                       </FormField>
+                    )}
+
+                    {hasVisibleRichText(customerEffortContact) && (
+                      <div className="flex min-h-0 flex-1 flex-col gap-1.5" role="group" aria-label="Müşteri Yetkili Bilgisi">
+                        <span className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
+                          Müşteri Yetkili Bilgisi
+                        </span>
+                        <div
+                          className="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-5 text-slate-700 [&_p]:mb-1"
+                          dangerouslySetInnerHTML={{ __html: customerEffortContact }}
+                        />
+                      </div>
                     )}
                   </div>
                 </SectionCard>
